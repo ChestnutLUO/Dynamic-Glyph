@@ -1,0 +1,341 @@
+name: DynamicGlyph
+options:
+  bundleIdPrefix: org.szres
+  # iOS 27 captures through ScreenCaptureKit, iOS 18-26 through the ReplayKit
+  # broadcast extension below. 18 is also the floor of the header OCR and of
+  # the frame ring's atomics.
+  deploymentTarget:
+    iOS: "18.0"
+  createIntermediateGroups: true
+  developmentLanguage: en
+
+packages:
+  GlyphRecognition:
+    path: ../../Packages/GlyphRecognition
+
+schemes:
+  DynamicGlyph:
+    build:
+      targets:
+        # Not `all`: the app imports ScreenCaptureKit, which the simulator SDK
+        # does not have, so it cannot be built for the test destination.
+        DynamicGlyph: [run, profile, analyze, archive]
+    run:
+      config: Release
+    # ⌘U runs the app's tests and the recognition package's together. Pick an
+    # iOS 27 simulator: the app target is not built for testing (see above).
+    # The package's own `make test` remains the fast Mac-only path.
+    test:
+      config: Debug
+      gatherCoverageData: true
+      targets:
+        - DynamicGlyphTests
+        - package: GlyphRecognition/GlyphRecognitionTests
+
+# One version for the app and the extension together -- they must match or App
+# Store Connect rejects the upload. The marketing version is bumped here, in a
+# commit. The build number comes from the Xcode Cloud run (see
+# ci_scripts/ci_post_clone.sh), so a local build reads 0 and is never mistaken
+# for an uploaded one.
+settings:
+  base:
+    DG_MARKETING_VERSION: 1.1
+    DG_BUILD_NUMBER: 0
+    # Localizable text is extracted into each target's Localizable.xcstrings
+    # at build time. English is the source; ja, zh-Hans and zh-Hant are
+    # translated in the catalogs (see Docs/TRANSLATION.md).
+    SWIFT_EMIT_LOC_STRINGS: YES
+    LOCALIZATION_PREFERS_STRING_CATALOGS: YES
+
+targets:
+  DynamicGlyph:
+    type: application
+    platform: iOS
+    sources:
+      - Sources
+      # Shared with the widget extension: the activity model, the SwiftUI
+      # diagram shape, the Control Center switch's intents and state, and the
+      # Statistics figures the Summary widget shares, and nothing that touches
+      # capture or the app's @main.
+      - Shared
+      - FrameTransport
+      - Media.xcassets
+      - DynamicGlyph.icon
+    dependencies:
+      - package: GlyphRecognition
+        product: GlyphRecognition
+      - package: GlyphRecognition
+        product: GlyphRecognitionImages
+      - target: GlyphWidget
+      - target: GlyphBroadcast
+    # The app group is shared with the broadcast extension, for the frame
+    # ring, and with the widget extension, for the Summary widget's copy of
+    # the saved results' totals and its period choice, and for the Control
+    # Center switch's capture report and stop request. iCloud is the player's
+    # private CloudKit database, used only when they turn on result sync; its
+    # silent pushes deliver other iPhones' changes.
+    entitlements:
+      path: Sources/Resources/DynamicGlyph.entitlements
+      properties:
+        com.apple.security.application-groups: [group.org.szres.DynamicGlyph]
+        com.apple.developer.icloud-container-identifiers: [iCloud.org.szres.DynamicGlyph]
+        com.apple.developer.icloud-services: [CloudKit]
+        aps-environment: development
+    configFiles:
+      Debug: ../../Config/Build.xcconfig
+      Release: ../../Config/Build.xcconfig
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.szres.DynamicGlyph
+        ASSETCATALOG_COMPILER_APPICON_NAME: DynamicGlyph
+        MARKETING_VERSION: "$(DG_MARKETING_VERSION)"
+        CURRENT_PROJECT_VERSION: "$(DG_BUILD_NUMBER)"
+        SWIFT_VERSION: "5.0"
+        CODE_SIGN_STYLE: Automatic
+        TARGETED_DEVICE_FAMILY: "1"
+    info:
+      path: Sources/Resources/Info.plist
+      properties:
+        # `screen-capture` is what keeps the stream alive while another app is
+        # frontmost. `audio` is what Picture in Picture requires; the session is
+        # configured to mix with others and plays nothing, so Ingress stays
+        # audible. Both are needed -- neither replaces the other.
+        # `remote-notification` lets iCloud result sync wake for other iPhones'
+        # changes; it does nothing while sync is off.
+        UIBackgroundModes: [screen-capture, audio, remote-notification]
+        UIFileSharingEnabled: true
+        LSSupportsOpeningDocumentsInPlace: true
+        NSSupportsLiveActivities: true
+        # Add-only: recordings the player keeps are saved to Photos, and the
+        # app never reads the library. Translated in InfoPlist.xcstrings.
+        NSPhotoLibraryAddUsageDescription: Dynamic Glyph saves the screen recordings you ask for to Photos.
+        CFBundleDisplayName: Dynamic Glyph
+        # Declared here, not as INFOPLIST_KEY_* build settings: those apply only
+        # when Xcode generates the plist, and XcodeGen writes this one itself,
+        # so they were silently dropped. App Store Connect rejects an upload
+        # with no launch screen key (TN3208); an empty dictionary is the plain
+        # system background.
+        UILaunchScreen: {}
+        # Ingress is portrait-only, and so are the capture geometry fractions.
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        # No networking and no cryptography beyond what iOS itself provides.
+        # Declared so each TestFlight build does not wait on the export
+        # compliance question.
+        ITSAppUsesNonExemptEncryption: false
+        # XcodeGen generates this plist, so these have to be declared here or
+        # its defaults of 1.0 / 1 win and the build settings are ignored.
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+
+  # WidgetKit extension for the Dynamic Island, Lock Screen, the Control
+  # Center switch and the Home Screen widget. It gets the shared model and the
+  # recognition package's geometry, and deliberately none of the app's
+  # sources: no @main, no capture, no results store. It reads the totals the
+  # app writes to the app group, and keeps the period chosen on the Summary
+  # widget there. For the Control Center switch it also reads the app's
+  # capture report and the frame ring's header, and leaves a stop request in
+  # each.
+  GlyphWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - Widget
+      - Shared
+      - FrameTransport
+    dependencies:
+      - package: GlyphRecognition
+        product: GlyphRecognition
+    configFiles:
+      Debug: ../../Config/Build.xcconfig
+      Release: ../../Config/Build.xcconfig
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.szres.DynamicGlyph.GlyphWidget
+        PRODUCT_NAME: GlyphWidget
+        MARKETING_VERSION: "$(DG_MARKETING_VERSION)"
+        CURRENT_PROJECT_VERSION: "$(DG_BUILD_NUMBER)"
+        SWIFT_VERSION: "5.0"
+        CODE_SIGN_STYLE: Automatic
+        TARGETED_DEVICE_FAMILY: "1"
+        SKIP_INSTALL: YES
+    entitlements:
+      path: Widget/GlyphWidget.entitlements
+      properties:
+        com.apple.security.application-groups: [group.org.szres.DynamicGlyph]
+    info:
+      path: Widget/Info.plist
+      properties:
+        CFBundleDisplayName: Glyph display
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+
+  # ReplayKit broadcast upload extension for iOS 18-26. It scales frames and
+  # publishes them into the frame ring (Docs/FRAME_TRANSPORT.md); recognition
+  # stays in the app. No package dependency: it recognizes nothing. It reloads
+  # the Control Center switch when its broadcast starts or ends.
+  GlyphBroadcast:
+    type: app-extension
+    platform: iOS
+    sources:
+      - Broadcast
+      - FrameTransport
+    configFiles:
+      Debug: ../../Config/Build.xcconfig
+      Release: ../../Config/Build.xcconfig
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.szres.DynamicGlyph.GlyphBroadcast
+        PRODUCT_NAME: GlyphBroadcast
+        MARKETING_VERSION: "$(DG_MARKETING_VERSION)"
+        CURRENT_PROJECT_VERSION: "$(DG_BUILD_NUMBER)"
+        SWIFT_VERSION: "5.0"
+        CODE_SIGN_STYLE: Automatic
+        TARGETED_DEVICE_FAMILY: "1"
+        SKIP_INSTALL: YES
+    entitlements:
+      path: Broadcast/GlyphBroadcast.entitlements
+      properties:
+        com.apple.security.application-groups: [group.org.szres.DynamicGlyph]
+    info:
+      path: Broadcast/Info.plist
+      properties:
+        CFBundleDisplayName: Dynamic Glyph
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.broadcast-services-upload
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).SampleHandler
+          RPBroadcastProcessMode: RPBroadcastProcessModeSampleBuffer
+
+  # Not hosted in the app: the app links ScreenCaptureKit, which the iOS
+  # Simulator SDK does not ship, and Xcode Cloud runs tests only on simulators.
+  # Instead the app sources under test are compiled straight into the bundle,
+  # which also keeps the recorder's fault-injection hooks out of every app
+  # build. Add a source here when its tests need it; anything importing
+  # ScreenCaptureKit, UIKit scenes or ActivityKit cannot be added.
+  DynamicGlyphTests:
+    type: bundle.unit-test
+    platform: iOS
+    # The tests run only on iOS 27 simulators and use iOS 26 AVFoundation API.
+    deploymentTarget: "27.0"
+    sources:
+      - Tests/DynamicGlyphTests
+      # Game screenshots, copied in by name from the Screenshots folder of the
+      # private test-assets submodule at Fixtures/Assets (the package's tests
+      # read the same files). They are not distributed with the source, so a checkout may
+      # have none: `includes` adds only the files that are there, and the tests
+      # that read them skip without them (TestFixtures.swift). The path is the
+      # always-present Fixtures folder so a missing submodule folder is fine.
+      - path: ../../Packages/GlyphRecognition/Tests/GlyphRecognitionTests/Fixtures
+        buildPhase: resources
+        includes:
+          # Two field frames for the snapshot schedule and the live output.
+          - Assets/Screenshots/Phases/field-00443.png
+          - Assets/Screenshots/Phases/field-00456.png
+          # A masked item panel, for the gear-only path.
+          - Assets/Screenshots/Gear/five-base.png
+          # Its bonus panel and a hack's result, read after the hack ends.
+          - Assets/Screenshots/Gear/five-bonus.png
+          - Assets/Screenshots/Results/four-final.png
+          # The map, for the analysis gate's quiet screen.
+          - Assets/Screenshots/Frames/frame-02092.jpg
+          # Real notice-band pixels for the shared command/header lane test.
+          - Assets/Screenshots/Commands/simple.png
+          # A hack from command channel to completion, for the recording benchmark's movie.
+          - Assets/Screenshots/Phases/field-00381.png
+          # The drone view's footer, for drone mode through a drawn command.
+          - Assets/Screenshots/Phases/field-00666.png
+          - Assets/Screenshots/Phases/field-00472.png
+          - Assets/Screenshots/Phases/field-00492.png
+          - Assets/Screenshots/Phases/field-00615.png
+      - Sources/Recording/DebugRecordingPolicy.swift
+      - Sources/Recording/DebugScreenRecorder.swift
+      - Sources/Recording/AlbumRecording.swift
+      - Sources/Recording/RecordingLimitWarning.swift
+      - Sources/Recording/RecordingLimitNotifications.swift
+      - Sources/Diagnostics/CaptureCounters.swift
+      - Sources/Diagnostics/PowerMeter.swift
+      - Sources/Diagnostics/RecordingBenchmark.swift
+      - Sources/Capture/CapturedFrame.swift
+      - Sources/Capture/CaptureBackend.swift
+      - Sources/Capture/CaptureRequest.swift
+      - Sources/Capture/FrameFacts.swift
+      - Sources/Capture/LiveGlyphOutput.swift
+      - Sources/Capture/PowerConditions.swift
+      - Sources/Capture/LatestFrameSlot.swift
+      - FrameTransport/FrameRing.swift
+      - FrameTransport/BroadcastChannel.swift
+      - Sources/Capture/BroadcastContinuity.swift
+      - Sources/Diagnostics/SnapshotSchedule.swift
+      - Sources/LiveActivity/ActivityUpdateSchedule.swift
+      - Sources/FloatingWindow/SampleBufferHostView.swift
+      - Sources/FloatingWindow/PiPStartRequest.swift
+      - Sources/FloatingWindow/GlyphFrameFactory.swift
+      - Sources/FloatingWindow/IdleWindowPreview.swift
+      - Sources/FloatingWindow/ReadingModeTint.swift
+      - Sources/App/AppPreferences.swift
+      - Sources/App/GlyphAssistance.swift
+      - Sources/Setup/SetupFlow.swift
+      - Sources/Setup/DynamicIslandSupport.swift
+      - Sources/App/IngressLauncher.swift
+      - Sources/Diagnostics/SessionReportStore.swift
+      - Sources/Diagnostics/GearReport.swift
+      - Sources/Diagnostics/GlyphSnapshotWriter.swift
+      - Sources/Diagnostics/ResultEvidenceWriter.swift
+      - Sources/Diagnostics/GearEvidenceWriter.swift
+      - Sources/Diagnostics/CommandEvidenceWriter.swift
+      - Sources/Capture/GameHeaderReader.swift
+      - Sources/Results/HackResultStore.swift
+      - Sources/Results/HackResults.swift
+      - Sources/Results/HackStatistics.swift
+      - Sources/Results/StatisticsRange.swift
+      - Sources/Results/StatisticsRangeText.swift
+      - Sources/Results/StatisticsComparisonText.swift
+      - path: Sources/Resources/Localizable.xcstrings
+        buildPhase: resources
+      - Sources/Results/StatisticsTimeline.swift
+      - Sources/Results/StatisticsPageModel.swift
+      - Sources/Capture/InterfacePublishGate.swift
+      - Sources/Results/StatisticsTimelineBar.swift
+      - Sources/Results/StatisticsRangeControls.swift
+      - Sources/Results/HackCommandText.swift
+      - Sources/Results/HackStatisticsCharts.swift
+      - Sources/Results/ICloudSyncStatus.swift
+      - Sources/Results/GearExport.swift
+      - Sources/Results/StatisticsWidgetSummary+Records.swift
+      - Sources/Results/SummaryWidgetPublisher.swift
+      - Sources/Capture/CaptureOrigin+Current.swift
+      - Sources/Settings/SupportContact.swift
+      - Shared/GlyphActivityContentState.swift
+      - Shared/IslandProgress.swift
+      - Shared/ControlStartRequest.swift
+      - Shared/ControlCaptureState.swift
+      - Shared/StatisticsPeriod.swift
+      - Shared/StatisticsParts.swift
+      - Shared/StatisticsFigures.swift
+      - Shared/StatisticsWidgetSummary.swift
+      - Shared/AppLink.swift
+      - Shared/StatisticsPanel.swift
+      - Sources/App/PresentationClearance.swift
+      - Sources/Intents/StartCaptureAnswer.swift
+      - Sources/Intents/StopCaptureOutcome.swift
+      - Sources/Intents/StatisticsShortcutPeriod.swift
+      - Sources/Intents/StatisticsOpenInbox.swift
+    dependencies:
+      - package: GlyphRecognition
+        product: GlyphRecognition
+      - package: GlyphRecognition
+        product: GlyphRecognitionImages
+    configFiles:
+      Debug: ../../Config/Build.xcconfig
+      Release: ../../Config/Build.xcconfig
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.szres.DynamicGlyph.Tests
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_VERSION: "5.0"
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) DEBUG_RECORDING_TESTING"
+        CODE_SIGN_STYLE: Automatic
+        TARGETED_DEVICE_FAMILY: "1"

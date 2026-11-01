@@ -1,0 +1,4 @@
+// Copy to Local.xcconfig (gitignored) and set your own Apple Developer team.
+// Find it in the Apple Developer portal under Membership, or in Xcode's
+// Signing & Capabilities tab.
+DEVELOPMENT_TEAM = YOUR_TEAM_ID

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Workspace version = "1.0">
+   <!-- The package is a top-level item, not merely a dependency of the project.
+        That distinction is the whole point of this file: when a local package is
+        only referenced by a project, Xcode builds its library products but never
+        surfaces its test target, so 159 tests were invisible in the test
+        navigator. At workspace root, Xcode generates schemes for its targets,
+        tests included. -->
+   <FileRef location = "group:DynamicGlyph.xcodeproj"/>
+   <FileRef location = "group:../../Packages/GlyphRecognition"/>
+</Workspace>

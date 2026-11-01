@@ -1,0 +1,21 @@
+{
+  "source": "DynamicGlyph-spikeB-2026-10-02T18-06-56Z",
+  "note": "Human-checked Portal and Bonus video frames, in display order. Group 10 shows Portal only. Totals and coverage assertions do not assert every item identity or FIFO ownership.",
+  "groups": [
+    {"recognizedQuantity": 13, "bothPanelsRead": true},
+    {"recognizedQuantity": 14, "bothPanelsRead": true},
+    {"recognizedQuantity": 12, "bothPanelsRead": true},
+    {"recognizedQuantity": 7, "bothPanelsRead": true},
+    {"recognizedQuantity": 8, "bothPanelsRead": true},
+    {"recognizedQuantity": 15, "bothPanelsRead": true},
+    {"recognizedQuantity": 9, "bothPanelsRead": true},
+    {"recognizedQuantity": 11, "bothPanelsRead": true},
+    {"recognizedQuantity": 10, "bothPanelsRead": true},
+    {"recognizedQuantity": 10, "bothPanelsRead": false},
+    {"recognizedQuantity": 16, "bothPanelsRead": true},
+    {"recognizedQuantity": 11, "bothPanelsRead": true},
+    {"recognizedQuantity": 15, "bothPanelsRead": true},
+    {"recognizedQuantity": 15, "bothPanelsRead": true},
+    {"recognizedQuantity": 9, "bothPanelsRead": true}
+  ]
+}

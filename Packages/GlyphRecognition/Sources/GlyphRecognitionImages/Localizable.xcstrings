@@ -1,0 +1,328 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "%lld Glyphs" : {
+      "comment" : "How many Glyphs this hack has.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Glyph"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Glyphs"
+                }
+              }
+            }
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "グリフ %lld 個"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 个 Glyph"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 個 Glyph"
+          }
+        }
+      }
+    },
+    "%lld sequences still possible · %@" : {
+      "comment" : "Prediction line. First: how many sequences fit so far. Second: the hack's length, e.g. '4 Glyphs'.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%#@sequences@ still possible · %2$@"
+          },
+          "substitutions" : {
+            "sequences" : {
+              "argNum" : 1,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg sequence"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg sequences"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "候補のシーケンス %1$lld 件 · %2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "仍有 %1$lld 个可能的序列 · %2$@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "仍有 %1$lld 個可能的序列 · %2$@"
+          }
+        }
+      }
+    },
+    "Doesn't match any known sequence · shown as seen" : {
+      "comment" : "Prediction line: the Glyphs seen fit no sequence in the list, so they are shown unchanged.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "既知のシーケンスと一致しません · 見えたまま表示"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "与任何已知序列都不匹配 · 按所见显示"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "與任何已知序列都不相符 · 依所見顯示"
+          }
+        }
+      }
+    },
+    "Get ready — the sequence is coming." : {
+      "comment" : "Floating window, before the sequence is shown.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "準備してください。シーケンスが始まります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "准备好——序列即将出现。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "準備好——序列即將出現。"
+          }
+        }
+      }
+    },
+    "Length doesn't fit what was seen · %@" : {
+      "comment" : "Prediction line. The placeholder is the hack's length, e.g. '4 Glyphs'.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "長さが観測内容と合いません · %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "长度与观测到的不符 · %@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "長度與觀測到的不符 · %@"
+          }
+        }
+      }
+    },
+    "One sequence matches what was seen · %@" : {
+      "comment" : "Prediction line. The placeholder is the hack's length, e.g. '4 Glyphs'.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "観測内容に一致するシーケンスが 1 件 · %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "有一个序列与观测结果相符 · %@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "有一個序列與觀測結果相符 · %@"
+          }
+        }
+      }
+    },
+    "One sequence matches, and it may already be complete · %@" : {
+      "comment" : "Prediction line. The placeholder is the hack's length, e.g. '4 Glyphs'.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "一致するシーケンスが 1 件あり、すでに完了している可能性があります · %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "有一个序列相符，且可能已经完整 · %@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "有一個序列相符，且可能已經完整 · %@"
+          }
+        }
+      }
+    },
+    "Predictions off · %@" : {
+      "comment" : "Prediction line: no sequence list. The placeholder is the hack's length, e.g. '4 Glyphs'.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "予測オフ · %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "预测已关闭 · %@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "預測已關閉 · %@"
+          }
+        }
+      }
+    },
+    "Start a Glyph hack in Ingress." : {
+      "comment" : "Floating window, when no hack is on screen. 'Glyph hack' is an Ingress term.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ingress でグリフハックを始めてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 Ingress 中开始 Glyph Hack。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 Ingress 中開始 Glyph Hack。"
+          }
+        }
+      }
+    },
+    "This hack's sequence wasn't caught." : {
+      "comment" : "Floating window, after a hack with no collected Glyphs.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このハックのシーケンスは読み取れませんでした。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未能读取这次 Hack 的序列。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未能讀取這次 Hack 的序列。"
+          }
+        }
+      }
+    },
+    "Waiting for the first Glyph · %@" : {
+      "comment" : "Prediction line. The placeholder is the hack's length, e.g. '4 Glyphs'.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "最初のグリフを待っています · %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在等待第一个 Glyph · %@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在等待第一個 Glyph · %@"
+          }
+        }
+      }
+    },
+    "length not seen yet" : {
+      "comment" : "The number of Glyphs in this hack is not known yet.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "長さは未確認"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "长度尚不明确"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "長度尚不明確"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

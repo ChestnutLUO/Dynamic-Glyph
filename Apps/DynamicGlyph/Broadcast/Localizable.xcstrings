@@ -1,0 +1,29 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Dynamic Glyph stopped watching the screen." : {
+      "comment" : "Shown by iOS when the player stops Dynamic Glyph and the screen broadcast ends.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Dynamic Glyph が画面の読み取りを停止しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Dynamic Glyph 已停止读取屏幕。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Dynamic Glyph 已停止讀取螢幕。"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

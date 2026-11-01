@@ -1,0 +1,9 @@
+{"hacks":[
+  {"hackID":1,"presentation":"complex","gear":"noKey"},
+  {"hackID":2,"presentation":"simple","gear":"requestKey"},
+  {"hackID":3,"presentation":"simple","gear":"requestKey"},
+  {"hackID":4,"presentation":"complex","gear":"keysOnly"},
+  {"hackID":5,"presentation":"complex","gear":"noKey"},
+  {"hackID":6,"presentation":"complex","gear":"keysOnly"},
+  {"hackID":7,"presentation":"complex","gear":"requestKey"}
+]}

@@ -1,0 +1,9 @@
+{
+  "source": "DynamicGlyph-spikeB-2026-10-02T18-00-57Z",
+  "note": "Three displayed Portal/Bonus pairs; sparks cross the first Bonus panel without a departure. Counts and coverage do not assert FIFO ownership.",
+  "groups": [
+    {"recognizedQuantity": 13, "bothPanelsRead": true},
+    {"recognizedQuantity": 8, "bothPanelsRead": true},
+    {"recognizedQuantity": 15, "bothPanelsRead": true}
+  ]
+}

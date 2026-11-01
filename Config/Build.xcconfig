@@ -1,0 +1,13 @@
+// Values that vary per machine, kept out of the repository.
+//
+// Both includes are optional, so generation and building still work when
+// neither file is present -- which is what a fresh clone or a fork looks like.
+//
+// `Local.xcconfig` is yours: copy Local.xcconfig.example to it and put your
+// Apple Developer team in it. Without it Xcode simply has no team and you set
+// one in the target's Signing & Capabilities tab.
+//
+// `CI.xcconfig` is written by Apps/DynamicGlyph/ci_scripts/ci_post_clone.sh and carries the
+// build number the CI run was given. It comes last so it wins.
+#include? "Local.xcconfig"
+#include? "CI.xcconfig"

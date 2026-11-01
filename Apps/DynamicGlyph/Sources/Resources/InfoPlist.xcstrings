@@ -1,0 +1,62 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "CFBundleDisplayName" : {
+      "comment" : "The app name, which is never translated.",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Dynamic Glyph"
+          }
+        }
+      },
+      "shouldTranslate" : false
+    },
+    "CFBundleName" : {
+      "comment" : "The app name, which is never translated.",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "DynamicGlyph"
+          }
+        }
+      },
+      "shouldTranslate" : false
+    },
+    "NSPhotoLibraryAddUsageDescription" : {
+      "comment" : "Shown by iOS when the app first asks to add a recording to Photos.",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Dynamic Glyph saves the screen recordings you ask for to Photos."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Dynamic Glyph は、あなたが依頼した画面録画を写真に保存します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Dynamic Glyph 会将你要求的屏幕录制保存到“照片”。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Dynamic Glyph 會將你要求的螢幕錄影儲存到「照片」。"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

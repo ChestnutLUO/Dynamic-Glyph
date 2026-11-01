@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "groups": [{
+    "startedBetween": [40.3, 41.0],
+    "recognizedQuantity": 16,
+    "unidentifiedQuantity": 0,
+    "bothPanelsRead": true,
+    "hackID": 1,
+    "association": "ordered",
+    "entries": [
+      ["portal", "XMP Burster", 6, 2], ["portal", "Resonator", 8, 1],
+      ["bonus", "Power Cube", 6, 1], ["bonus", "XMP Burster", 7, 1],
+      ["bonus", "XMP Burster", 6, 6], ["bonus", "XMP Burster", 5, 2],
+      ["bonus", "Resonator", 6, 3]
+    ]
+  }]
+}

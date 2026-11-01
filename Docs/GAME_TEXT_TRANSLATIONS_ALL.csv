@@ -1,0 +1,44 @@
+Section,English (as the game shows it),Where it appears,Notes,Simplified Chinese,Traditional Chinese,Japanese,Korean
+Header,COMMAND CHANNEL OPEN,"Top of the Glyph hack screen, before the sequence",When commands can be drawn,命令频道正在打开…,開啟指令頻道…,コマンドチャンネルを開いています...,명령 채널 열림…
+Header,INCOMING GLYPH SEQUENCE,Top of the Glyph hack screen,While the Glyphs are shown,正在接收符文序列…,正在接收 GLYPH 序列…,グリフを受信中…,글리프 시퀀스 수신 중...
+Header,GO!,Top of the Glyph hack screen,When you start drawing,开始！,GO!,Go!,GO!
+Header,GLYPH HACK COMPLETE,Top of the Glyph hack screen,After the last Glyph,符文入侵完成,符文入侵完成,ハック完了。ボーナスを計算中…,해킹 완료. 보너스 계산 중...
+Command notice,SIMPLE HACK,Small box under the header,Speed command,简单入侵,簡單入侵,SIMPLE ハック,간단한 해킹
+Command notice,COMPLEX HACK,Small box under the header,Speed command,复杂入侵,複雜入侵,COMPLEX ハック,복잡한 해킹
+Command notice,REQUEST KEY,Small box under the header,Key command (MORE),请求钥匙,請求鑰匙,ポータルキーを要求,키 요청
+Command notice,NO KEY,Small box under the header,Key command (LESS),没有钥匙,沒有鑰匙,NO KEY,키 없음
+Command notice,ONLY KEY,Small box under the header,Key command (SPEED),只有钥匙,僅獲取鑰匙,キーのみ,키만
+Command notice,INVALID COMMAND,Small box under the header,Rejected command,指令无效,指令無效,無効なコマンド,잘못된 명령
+Drone,DRONE FOOTAGE,Footer at the bottom of a drone hack,,遥控机画面,遙控機畫面,ドローンの映像,드론 화면
+Result screen,HACKING BONUS:,Label above the percentage,,入侵奖励：,入侵獎勵：,HACK BONUS:,해킹 보너스:
+Result screen,SPEED BONUS:,Label above the percentage,,速度奖励：,速度獎勵：,SPEED BONUS:,속도 보너스:
+Result screen,"Glyph names (DESTINY, CIVILIZATION, …)",Above the bonuses on the result screen,Write 'English' if they stay English,English,English,English,English
+Item panel,Bonus items:,Title of the Bonus panel,,奖励物品：,獎勵物品：,ボーナス アイテム:,보너스 아이템:
+Item panel,Bounty Claimed,Title of the daily assignment panel,Must be ignored,已申领小目标,已申領小目標,依頼完了,현상금 완료
+Item panel,Portal running hot. Cooldown in Ns,Shown instead of drops,N is a number,能量塔过热。尚需N秒冷却。,能量塔過熱。尚需N秒冷卻。,ポータルはまだヒート状態です。クールダウンまで残りN秒,포탈 과열! 필요 냉각 시간: N초
+Item panel,Portal not in range,Shown instead of drops,,能量塔不在行动范围内。,能量塔不在行動範圍內。,有効範囲外,범위 벗어남.
+Item panel,Scanner overload. Too many items.,Shown instead of drops,,扫描器超负荷。物品过多。,掃描器超載。物品過多。,スキャナーが過負荷状態です。アイテムが多すぎます。,스캐너 과부하. 아이템이 너무 많음
+Item panel,ITO EN (+) applied.,Effect line under the panel title,Also check 'ITO EN Transmuter (+) applied.',ITO EN Transmuter (+) 已应用。,已使用 ITO EN Transmuter (+)。,ITO EN Transmuter (+)を適用しました。,ITO EN Transmuter (+)이(가) 적용되었습니다.
+Item panel,ITO EN (-) applied.,Effect line under the panel title,Also check 'ITO EN Transmuter (-) applied.',ITO EN Transmuter (-) 已应用。,已使用 ITO EN Transmuter (-)。,ITO EN Transmuter (-)を適用しました。,ITO EN Transmuter (-)이(가) 적용되었습니다.
+"Item, levelled",Resonator,Item panels and inventory,L1–L8,共振器,共振器,レゾネーター,레저네이터
+"Item, levelled",XMP Burster,Item panels and inventory,L1–L8,XMP 能量炮,XMP 能量炮,XMPバースター,XMP 버스터
+"Item, levelled",Ultra Strike,Item panels and inventory,L1–L8,破甲弹,破甲彈,ウルトラ ストライク,울트라 스트라이크
+"Item, levelled",Power Cube,Item panels and inventory,L1–L8,Power Cube,Power Cube,パワーキューブ,파워 큐브
+"Item, mod",Portal Shield,Item panels and inventory,,能量塔护盾,能量塔護盾,ポータル シールド,포탈 쉴드
+"Item, mod",Aegis Shield,Item panels and inventory,,埃癸斯盾,埃癸斯盾,Aegis シールド,이지스 실드
+"Item, mod",Turret,Item panels and inventory,,Turret,Turret,ターレット,터렛
+"Item, mod",Force Amp,Item panels and inventory,,Force Amp,Force Amp,フォースアンプ,포스 앰프
+"Item, mod",Heat Sink,Item panels and inventory,,Heat Sink,Heat Sink,ヒートシンク,히트 싱크
+"Item, mod",Multi-Hack,Item panels and inventory,,多次入侵模组,多次入侵模組,マルチハック,멀티핵
+"Item, mod",Link Amp,Item panels and inventory,,Link Amp,Link Amp,リンクアンプ,링크 앰프
+"Item, mod",SoftBank Ultra Link,Item panels and inventory,,SoftBank 超连结,SoftBank 超連線,SoftBank ウルトラリンク,SoftBank 울트라 링크
+"Item, mod",ITO EN Transmuter (+),Item panels and inventory,,ITO EN Transmuter (+),ITO EN Transmuter (+),ITO EN Transmuter (+),ITO EN Transmuter (+)
+"Item, mod",ITO EN Transmuter (-),Item panels and inventory,,ITO EN Transmuter (-),ITO EN Transmuter (-),ITO EN Transmuter (-),ITO EN Transmuter (-)
+"Item, other",Portal Key,Item panels and inventory,,Portal Key,能量塔鑰匙,ポータルキー,포탈 키
+"Item, other",Hypercube,Item panels and inventory,,Hypercube,Hypercube,ハイパーキューブ,하이퍼 큐브
+"Item, other",ADA Refactor,Item panels and inventory,,ADA Refactor,ADA Refactor,ADA リファクター,ADA 리팩터
+"Item, other",JARVIS Virus,Item panels and inventory,,Jarvis Virus,Jarvis Virus,ジャービス ウイルス,자비스 바이러스
+"Item, other",Capsule,Item panels and inventory,,储存胶囊,Capsule,カプセル,캡슐
+"Item, other",Kinetic Capsule,Item panels and inventory,,动能储存胶囊,動能儲存膠囊,キネティックカプセル,키네틱 캡슐
+"Item, other",Media,Item panels and inventory,,媒体,媒體,メディア,미디어
+"Item, shortened",Kinetic C…,Item panels when a name is too long,Note any name cut short with '…',动能储存胶囊,動能儲存膠囊,キネティックカプセル,키네틱 캡슐

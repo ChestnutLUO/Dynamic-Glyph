@@ -1,0 +1,4 @@
+[submodule "test-assets"]
+	path = Packages/GlyphRecognition/Tests/GlyphRecognitionTests/Fixtures/Assets
+	url = https://github.com/szres/dynamic-glyph-assets.git
+	branch = main

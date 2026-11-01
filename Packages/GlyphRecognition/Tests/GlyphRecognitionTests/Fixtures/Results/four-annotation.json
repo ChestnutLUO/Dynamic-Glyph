@@ -1,0 +1,9 @@
+{
+  "sourceArchive": "DynamicGlyph-spikeB-2026-09-23T23-00-56Z.zip",
+  "glyphs": ["truth", "idea", "discover", "xm"],
+  "outcomes": ["accepted", "accepted", "accepted", "accepted"],
+  "finalHackingBonus": 120,
+  "finalSpeedBonus": 55,
+  "finalValidatorAttempts": [3, 4, 5, null],
+  "notes": "Two apparent Redo presses from button pulses plus highlight 2 -> 1 -> 0. Final TRUTH and IDEA belong to attempts 3 and 4. No validator attempt exists for final XM."
+}

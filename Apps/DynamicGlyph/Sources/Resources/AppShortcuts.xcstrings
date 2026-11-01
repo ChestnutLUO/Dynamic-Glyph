@@ -1,0 +1,209 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Start ${applicationName}" : {
+      "comment" : "Siri phrase for Start Dynamic Glyph. ${applicationName} is the app's name.",
+      "localizations" : {
+        "ja" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName}を開始"
+            ]
+          }
+        },
+        "zh-Hans" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "启动 ${applicationName}"
+            ]
+          }
+        },
+        "zh-Hant" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "啟動 ${applicationName}"
+            ]
+          }
+        }
+      }
+    },
+    "Start reading with ${applicationName}" : {
+      "comment" : "Siri phrase for Start Dynamic Glyph. ${applicationName} is the app's name.",
+      "localizations" : {
+        "ja" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName}で読み取りを開始"
+            ]
+          }
+        },
+        "zh-Hans" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "用 ${applicationName} 开始读取"
+            ]
+          }
+        },
+        "zh-Hant" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "用 ${applicationName} 開始讀取"
+            ]
+          }
+        }
+      }
+    },
+    "Stop ${applicationName}" : {
+      "comment" : "Siri phrase for Stop Dynamic Glyph. ${applicationName} is the app's name.",
+      "localizations" : {
+        "ja" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName}を停止"
+            ]
+          }
+        },
+        "zh-Hans" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "停止 ${applicationName}"
+            ]
+          }
+        },
+        "zh-Hant" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "停止 ${applicationName}"
+            ]
+          }
+        }
+      }
+    },
+    "Stop reading with ${applicationName}" : {
+      "comment" : "Siri phrase for Stop Dynamic Glyph. ${applicationName} is the app's name.",
+      "localizations" : {
+        "ja" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName}の読み取りを停止"
+            ]
+          }
+        },
+        "zh-Hans" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "停止 ${applicationName} 的读取"
+            ]
+          }
+        },
+        "zh-Hant" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "停止 ${applicationName} 的讀取"
+            ]
+          }
+        }
+      }
+    },
+    "Show ${applicationName} statistics" : {
+      "comment" : "Siri phrase for Open Statistics. ${applicationName} is the app's name.",
+      "localizations" : {
+        "ja" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName}の統計を見せて"
+            ]
+          }
+        },
+        "zh-Hans" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "查看 ${applicationName} 统计"
+            ]
+          }
+        },
+        "zh-Hant" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "查看 ${applicationName} 統計"
+            ]
+          }
+        }
+      }
+    },
+    "Open statistics in ${applicationName}" : {
+      "comment" : "Siri phrase for Open Statistics. ${applicationName} is the app's name.",
+      "localizations" : {
+        "ja" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName}で統計を開く"
+            ]
+          }
+        },
+        "zh-Hans" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "在 ${applicationName} 中打开统计"
+            ]
+          }
+        },
+        "zh-Hant" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "在 ${applicationName} 中打開統計"
+            ]
+          }
+        }
+      }
+    },
+    "Show ${period} in ${applicationName}" : {
+      "comment" : "Siri phrase for Open Statistics on a period. ${period} is Today, Last 7 days or All records; ${applicationName} is the app's name.",
+      "localizations" : {
+        "ja" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "${applicationName}で${period}を表示"
+            ]
+          }
+        },
+        "zh-Hans" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "在 ${applicationName} 中查看${period}"
+            ]
+          }
+        },
+        "zh-Hant" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "在 ${applicationName} 中查看${period}"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

@@ -1,0 +1,81 @@
+{
+  "commits": 5,
+  "confirmedPrefix": [
+    "see",
+    "truth",
+    "see",
+    "future",
+    "begin"
+  ],
+  "durationSeconds": 10.0,
+  "expectedSlotCount": 5,
+  "failures": [],
+  "frames": 200,
+  "hacks": 1,
+  "headerObstructedFrames": 0,
+  "headerPhases": {
+    "command": 55,
+    "input": 41,
+    "presenting": 50,
+    "unknown": 54
+  },
+  "inferredEntries": 0,
+  "phaseSources": {
+    "headerText": 106,
+    "inputTimer": 40,
+    "none": 44,
+    "retained": 10
+  },
+  "prediction": {
+    "candidates": 1,
+    "predictedSuffix": [],
+    "state": "resolved"
+  },
+  "sampleRate": 20,
+  "slotRejections": {
+    "inconsistentMarkerWidths": 44,
+    "noMarkers": 55
+  },
+  "slots": [
+    {
+      "boundaryReason": "indicator advanced to slot 2",
+      "glyph": "see",
+      "index": 0,
+      "samples": 5,
+      "status": "confirmed"
+    },
+    {
+      "boundaryReason": "indicator advanced to slot 3",
+      "glyph": "truth",
+      "index": 1,
+      "samples": 6,
+      "status": "confirmed"
+    },
+    {
+      "boundaryReason": "indicator advanced to slot 4",
+      "glyph": "see",
+      "index": 2,
+      "samples": 6,
+      "status": "confirmed"
+    },
+    {
+      "boundaryReason": "indicator advanced to slot 5",
+      "glyph": "future",
+      "index": 3,
+      "samples": 5,
+      "status": "confirmed"
+    },
+    {
+      "boundaryReason": "presentation ended, player input began",
+      "glyph": "begin",
+      "index": 4,
+      "samples": 6,
+      "status": "confirmed"
+    }
+  ],
+  "source": "ScreenRecording_09-17-2026 23-56-50_1.MP4",
+  "startSeconds": 20.0,
+  "stripObstructedFrames": 0,
+  "trackingState": "input",
+  "usesSourceTimestamps": false
+}

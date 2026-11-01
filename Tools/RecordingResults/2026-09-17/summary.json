@@ -1,0 +1,82 @@
+{
+  "source": "ScreenRecording_09-17-2026 23-56-50_1.MP4",
+  "sha256": "832832fae84a9f14864a105893bf9e32b6fa0bed5d5b92f60b42f5d71c0891b9",
+  "sampleRate": 20,
+  "sampleIntervalSeconds": [
+    20,
+    30
+  ],
+  "analysisSize": [
+    603,
+    1311
+  ],
+  "calibrationSampleMilliseconds": 25150,
+  "totalSamples": 200,
+  "labeledPresentationSamples": 28,
+  "blankPresentationSamples": 12,
+  "manuallyAnnotatedSequence": [
+    "see",
+    "truth",
+    "see",
+    "future",
+    "begin"
+  ],
+  "slots": [
+    {
+      "startMilliseconds": 25450,
+      "endMillisecondsExclusive": 25700,
+      "glyph": "see",
+      "edges": [
+        "0-3"
+      ],
+      "representativeMilliseconds": 25500
+    },
+    {
+      "startMilliseconds": 25800,
+      "endMillisecondsExclusive": 26100,
+      "glyph": "truth",
+      "edges": [
+        "3-5",
+        "3-6",
+        "4-5",
+        "4-7",
+        "5-6",
+        "5-7"
+      ],
+      "representativeMilliseconds": 25900
+    },
+    {
+      "startMilliseconds": 26200,
+      "endMillisecondsExclusive": 26500,
+      "glyph": "see",
+      "edges": [
+        "0-3"
+      ],
+      "representativeMilliseconds": 26300
+    },
+    {
+      "startMilliseconds": 26600,
+      "endMillisecondsExclusive": 26850,
+      "glyph": "future",
+      "edges": [
+        "2-4",
+        "4-7",
+        "7-9"
+      ],
+      "representativeMilliseconds": 26700
+    },
+    {
+      "startMilliseconds": 26950,
+      "endMillisecondsExclusive": 27250,
+      "glyph": "begin",
+      "edges": [
+        "0-6",
+        "6-a",
+        "7-a"
+      ],
+      "representativeMilliseconds": 27100
+    }
+  ],
+  "failures": [],
+  "limits": "One recording; manual phase/slot annotations; 20 Hz sampling; not an end-to-end live test."
+}

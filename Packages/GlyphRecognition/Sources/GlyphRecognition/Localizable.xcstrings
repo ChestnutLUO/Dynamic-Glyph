@@ -1,0 +1,1407 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Common" : {
+      "comment" : "Item rarity badge, read from one green bar.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Common"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "コモン"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "普通"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "普通"
+          }
+        }
+      }
+    },
+    "Rare" : {
+      "comment" : "Item rarity badge, read from two purple bars.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rare"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "レア"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "稀有"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "稀有"
+          }
+        }
+      }
+    },
+    "Very rare" : {
+      "comment" : "Item rarity badge, read from three pink bars.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Very rare"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ベリーレア"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "非常稀有"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "非常稀有"
+          }
+        }
+      }
+    },
+    "Rarity unread" : {
+      "comment" : "Item rarity badge: its meter could not be confirmed.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rarity unread"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "レア度未読"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "稀有度未识别"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "稀有度未辨識"
+          }
+        }
+      }
+    },
+    "Waiting for gear…" : {
+      "comment" : "Floating display: keep the game visible until item panels arrive.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waiting for gear…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アイテムを待っています…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在等待物品…"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在等待物品…"
+          }
+        }
+      }
+    },
+    "Reading gear…" : {
+      "comment" : "Floating display: item panels are being read.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reading gear…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アイテムを読み取り中…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在识别物品…"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在辨識物品…"
+          }
+        }
+      }
+    },
+    "%lld items read" : {
+      "comment" : "Floating display: count of recognized items in both panels, not total inventory.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld item read"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld items read"
+                }
+              }
+            }
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 個のアイテムを読み取りました"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已识别 %lld 件物品"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已辨識 %lld 件物品"
+          }
+        }
+      }
+    },
+    "Gear partly read · %lld recognized" : {
+      "comment" : "Floating display: count of identified items; some evidence is missing.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Gear partly read · %lld recognized"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Gear partly read · %lld recognized"
+                }
+              }
+            }
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "一部読み取り · %lld 個を認識"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "物品部分识别 · 已识别 %lld 件"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "物品部分辨識 · 已辨識 %lld 件"
+          }
+        }
+      }
+    },
+    "Gear read · hack uncertain" : {
+      "comment" : "Floating display: a drop group cannot be assigned to a hack.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gear read · hack uncertain"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アイテム読み取り済み · 対象のハックは不明"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已识别物品 · 所属 Hack 不确定"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已辨識物品 · 所屬 Hack 不確定"
+          }
+        }
+      }
+    },
+    "Gear not read" : {
+      "comment" : "Floating display: waiting for item panels ended without a reading.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gear not read"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アイテムを読み取れませんでした"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未识别到物品"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未辨識到物品"
+          }
+        }
+      }
+    },
+    "Earlier hack · %@" : {
+      "comment" : "Floating display: the placeholder is the gear status of an earlier queued hack.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Earlier hack · %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "前のハック · %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "较早的 Hack · %@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "較早的 Hack · %@"
+          }
+        }
+      }
+    },
+    "%lld Glyphs" : {
+      "comment" : "Hack result card: how many Glyphs the hack had.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Glyph"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Glyphs"
+                }
+              }
+            }
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 個のグリフ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 个 Glyph"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 個 Glyph"
+          }
+        }
+      }
+    },
+    "%lld options" : {
+      "comment" : "Slot caption: this many Glyphs could still fill the slot.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld option"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld options"
+                }
+              }
+            }
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "候補 %lld 件"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 个候选"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 個候選"
+          }
+        }
+      }
+    },
+    "Accepted" : {
+      "comment" : "Under a Glyph on the hack result card: the game accepted this drawing.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "受付"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已接受"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已接受"
+          }
+        }
+      }
+    },
+    "Best guess · positions unverified" : {
+      "comment" : "Status line: the sequence order was inferred, not read.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "推測 · 位置は未確認"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "推测 · 位置未经验证"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "推測 · 位置未經驗證"
+          }
+        }
+      }
+    },
+    "Get ready · the sequence is coming" : {
+      "comment" : "Status line: the game is about to show the Glyph sequence.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "準備して · シーケンスが始まります"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "准备 · 序列即将出现"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "準備 · 序列即將出現"
+          }
+        }
+      }
+    },
+    "Getting ready" : {
+      "comment" : "Status line while starting.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "準備中"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "准备中"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "準備中"
+          }
+        }
+      }
+    },
+    "Getting ready · %@" : {
+      "comment" : "Status line while starting. The placeholder is a short reason, e.g. 'waiting for the first frame'.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "準備中 · %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "准备中 · %@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "準備中 · %@"
+          }
+        }
+      }
+    },
+    "Glyph %lld differs — expected %@" : {
+      "comment" : "Completed player drawing differs. First placeholder is its one-based slot number; second is an untranslated Glyph name.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "グリフ%lldが異なります — 正しいグリフは%@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Glyph %lld 不匹配 — 应为 %@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Glyph %lld 不符 — 應為 %@"
+          }
+        }
+      }
+    },
+    "Glyph %lld matches" : {
+      "comment" : "Completed player drawing matches. Placeholder is its one-based slot number.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "グリフ%lldは一致しています"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Glyph %lld 匹配"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Glyph %lld 相符"
+          }
+        }
+      }
+    },
+    "Glyph %lld, %@: accepted by the game" : {
+      "comment" : "VoiceOver. First placeholder: one-based slot number. Second: untranslated Glyph name.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Glyph %1$lld, %2$@: accepted by the game"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "グリフ %lld、%@：ゲームに受け付けられました"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Glyph %lld，%@：游戏已接受"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Glyph %lld，%@：遊戲已接受"
+          }
+        }
+      }
+    },
+    "Glyph %lld, %@: rejected by the game" : {
+      "comment" : "VoiceOver. First placeholder: one-based slot number. Second: untranslated Glyph name.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Glyph %1$lld, %2$@: rejected by the game"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "グリフ %lld、%@：ゲームに拒否されました"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Glyph %lld，%@：游戏已拒绝"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Glyph %lld，%@：遊戲已拒絕"
+          }
+        }
+      }
+    },
+    "Glyph %lld, %@: the game's verdict couldn't be read" : {
+      "comment" : "VoiceOver. First placeholder: one-based slot number. Second: untranslated Glyph name.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Glyph %1$lld, %2$@: the game's verdict couldn't be read"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "グリフ %lld、%@：ゲームの判定を読み取れませんでした"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Glyph %lld，%@：无法读取游戏的判定"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Glyph %lld，%@：無法讀取遊戲的判定"
+          }
+        }
+      }
+    },
+    "Glyph %lld: the game accepted it, the app's check warned" : {
+      "comment" : "Hack result card. Placeholder: one-based slot number.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "グリフ %lld：ゲームは受理、Appの判定は警告"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Glyph %lld：游戏判定通过，应用的判定为警告"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Glyph %lld：遊戲判定通過，App 的判定為警告"
+          }
+        }
+      }
+    },
+    "Glyph %lld: the game rejected it, the app's check matched" : {
+      "comment" : "Hack result card. Placeholder: one-based slot number.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "グリフ %lld：ゲームは不受理、Appの判定は一致"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Glyph %lld：游戏判定未通过，应用的判定为一致"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Glyph %lld：遊戲判定未通過，App 的判定為一致"
+          }
+        }
+      }
+    },
+    "Hack complete" : {
+      "comment" : "Status line: the Glyph hack finished.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ハック完了"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Hack 完成"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Hack 完成"
+          }
+        }
+      }
+    },
+    "Inferred · position unverified" : {
+      "comment" : "Slot note: seen, but its place in the sequence was guessed.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "推測 · 位置は未確認"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "推测 · 位置未经验证"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "推測 · 位置未經驗證"
+          }
+        }
+      }
+    },
+    "Lost sight of the game" : {
+      "comment" : "Status line: the app can no longer tell what the game is showing.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ゲーム画面を見失いました"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "看不到游戏画面了"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "看不到遊戲畫面了"
+          }
+        }
+      }
+    },
+    "Missed" : {
+      "comment" : "Slot caption: the slot passed with nothing readable.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "見逃し"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "错过"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "錯過"
+          }
+        }
+      }
+    },
+    "No evidence" : {
+      "comment" : "Slot note: nothing was seen for this slot.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "記録なし"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无记录"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "無記錄"
+          }
+        }
+      }
+    },
+    "No result screen seen" : {
+      "comment" : "Hack result card: the game's result screen never appeared, for example after pressing Done early.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "結果画面は表示されませんでした"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未看到结果画面"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未看到結果畫面"
+          }
+        }
+      }
+    },
+    "Not running" : {
+      "comment" : "Status line: capture is off.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "停止中"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未运行"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未執行"
+          }
+        }
+      }
+    },
+    "Not settled" : {
+      "comment" : "Slot note: the evidence did not settle on one Glyph.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未確定"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未确定"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未確定"
+          }
+        }
+      }
+    },
+    "Observed" : {
+      "comment" : "Slot note: this Glyph was seen in the game's sequence.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "観測済み"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已观测"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已觀測"
+          }
+        }
+      }
+    },
+    "Observing…" : {
+      "comment" : "Slot note: the shape is still being shown.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "観測中…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "观测中…"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "觀測中…"
+          }
+        }
+      }
+    },
+    "Observing… +%lld longer" : {
+      "comment" : "Slot note: shape still visible; the number is how many longer Glyphs it could grow into.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "観測中… さらに長い候補 %lld 件"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "观测中… 另有 %lld 个更长的"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "觀測中… 另有 %lld 個更長的"
+          }
+        }
+      }
+    },
+    "Paused" : {
+      "comment" : "Status line: the screen feed stopped sending new frames.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "一時停止"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已暂停"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已暫停"
+          }
+        }
+      }
+    },
+    "Predicted" : {
+      "comment" : "Slot note: taken from the sequence list, not seen.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "予測"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "预测"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "預測"
+          }
+        }
+      }
+    },
+    "Rejected" : {
+      "comment" : "Under a Glyph on the hack result card: the game rejected this drawing.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "拒否"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已拒绝"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已拒絕"
+          }
+        }
+      }
+    },
+    "Result partly read" : {
+      "comment" : "Hack result card: some fields on the game's result screen could not be read.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "結果を一部読み取りました"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已读取部分结果"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已讀取部分結果"
+          }
+        }
+      }
+    },
+    "Result read" : {
+      "comment" : "Hack result card: every field was read from the game's result screen.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "結果を読み取りました"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已读取结果"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已讀取結果"
+          }
+        }
+      }
+    },
+    "Slot count changed · positions unreliable" : {
+      "comment" : "Status line: the number of slots in the hack changed.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "スロット数が変化 · 位置は不確か"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "槽位数量已变化 · 位置不可靠"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "槽位數量已變化 · 位置不可靠"
+          }
+        }
+      }
+    },
+    "Slot row covered · move the window" : {
+      "comment" : "Status line: something covers the game's row of hexagon slots.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "スロットの列が隠れています · ウインドウを移動"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "槽位那一排被挡住 · 请移开窗口"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "槽位那一排被擋住 · 請移開視窗"
+          }
+        }
+      }
+    },
+    "Stopped before the result screen" : {
+      "comment" : "Hack result card: screen capture stopped before the game showed its result.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "結果画面の前に停止しました"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在结果画面出现前已停止"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在結果畫面出現前已停止"
+          }
+        }
+      }
+    },
+    "Unable to check Glyph %lld" : {
+      "comment" : "Insufficient capture evidence to check a completed drawing. Placeholder is its one-based slot number.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "グリフ%lldを確認できません"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法检查 Glyph %lld"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "無法檢查 Glyph %lld"
+          }
+        }
+      }
+    },
+    "Unclear" : {
+      "comment" : "Slot caption: something was seen but it did not settle on one Glyph.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "不明瞭"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "不清楚"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "不清楚"
+          }
+        }
+      }
+    },
+    "Unread" : {
+      "comment" : "Under a Glyph on the hack result card: the game's verdict could not be read.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "読み取れず"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未读取"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未讀取"
+          }
+        }
+      }
+    },
+    "Waiting for a Glyph hack" : {
+      "comment" : "Status line: no Glyph hack on screen yet. 'Glyph hack' is an Ingress term.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "グリフハックを待っています"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在等待 Glyph Hack"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在等待 Glyph Hack"
+          }
+        }
+      }
+    },
+    "Waiting for the result screen…" : {
+      "comment" : "Hack result card while the hack is still in progress.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "結果画面を待っています…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在等待结果画面…"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在等待結果畫面…"
+          }
+        }
+      }
+    },
+    "Watching for gear" : {
+      "comment" : "Floating display, gear-only capture: no item panel yet.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watching for gear"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アイテムを監視中"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在监看装备"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在監看裝備"
+          }
+        }
+      }
+    },
+    "Watching for gear · %lld items so far" : {
+      "comment" : "Floating display, gear-only capture: items recognized since Start, not total inventory.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watching for gear · %lld items so far"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ドロップを監視中 · ここまで %lld 個"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在关注掉落 · 目前 %lld 件"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在關注掉落 · 目前 %lld 件"
+          }
+        }
+      }
+    },
+    "Watching the sequence" : {
+      "comment" : "Status line: the game is showing the Glyph sequence.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "シーケンスを読み取り中"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在读取序列"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在讀取序列"
+          }
+        }
+      }
+    },
+    "Watching the sequence · header hidden" : {
+      "comment" : "Status line: collecting the sequence while the game's header text is covered.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "シーケンスを読み取り中 · ヘッダーが隠れています"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在读取序列 · 标题栏被遮挡"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在讀取序列 · 標題列被遮擋"
+          }
+        }
+      }
+    },
+    "Your turn · draw the sequence" : {
+      "comment" : "Status line: the player now draws the Glyphs.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたの番 · シーケンスを描いてください"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "轮到你了 · 请绘制序列"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "輪到你了 · 請繪製序列"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

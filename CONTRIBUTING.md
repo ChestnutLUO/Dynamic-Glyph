@@ -5,9 +5,11 @@ ChestnutLUO a perpetual, irrevocable, worldwide, royalty-free licence to use,
 modify and distribute your contribution under any terms, including in the App
 Store app. Please do not submit anything you cannot grant that licence for.
 
-The code itself is available under the [PolyForm Strict License](LICENSE),
-which does not allow modified copies to be published. Send changes here as a
-pull request instead of publishing a fork.
+The code itself is available under the
+[PolyForm Noncommercial License](LICENSE). You may change it and share your
+version for non-commercial purposes, under its own name and icon (see
+[NOTICE](NOTICE.md)). Fixes that help everyone are most useful sent here as a
+pull request.
 
 ## Getting a project to open
 

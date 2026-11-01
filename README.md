@@ -38,19 +38,22 @@ can read. Install it understanding what you are choosing.
 
 ## What you may do with this code
 
-The code is published under the [PolyForm Strict License 1.0.0](LICENSE). In
-plain words:
+The code is published under the
+[PolyForm Noncommercial License 1.0.0](LICENSE). In plain words:
 
-- You **may** read it, and build it and use it yourself for non-commercial
-  purposes.
-- You **may not** change it, redistribute it or publish it, in any form,
-  including on the App Store.
+- You **may** read it, build it, use it, change it and share it, including
+  your changed versions, for any non-commercial purpose.
+- You **may not** use it, or anything made from it, to make money. That
+  includes selling it or charging for it or for features in it.
+- Anything you share must come with these license terms and the
+  `Required Notice:` line from LICENSE.
 - For anything else, ask: <dynamic-glyph@szres.org>.
 
 The LICENSE file is the binding text; this list only summarises it.
 
-The name "Dynamic Glyph" and its icons are not licensed, and game imagery and
-trademarks belong to their owners. See [NOTICE](NOTICE.md). Suggestions and
+The name "Dynamic Glyph" and its icons are not licensed: a copy or changed
+version you share must use its own name and icon. Game imagery and trademarks
+belong to their owners. See [NOTICE](NOTICE.md). Suggestions and
 pull requests are welcome on the terms in [CONTRIBUTING](CONTRIBUTING.md).
 
 Two kinds of test input are not distributed: the game screenshots that the
@@ -99,12 +102,8 @@ install on your own iPhone:
    `DynamicGlyph` scheme. With automatic signing, Xcode registers the App IDs,
    the App Group and the iCloud container from the Signing & Capabilities tab.
 
-Steps 2 to 4 edit the source, which the PolyForm Strict License does not
-allow by itself. As the licensor, ChestnutLUO also permits these edits, and only
-these: changing the team, bundle identifiers, App Group and iCloud container so
-that you can build and use the app on your own devices under the terms above. The
-[contributor guide](CONTRIBUTING.md#signing) covers signing and CloudKit in
-more detail.
+The [contributor guide](CONTRIBUTING.md#signing) covers signing and CloudKit
+in more detail.
 
 ## Layout
 

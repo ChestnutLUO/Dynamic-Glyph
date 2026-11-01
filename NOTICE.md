@@ -3,14 +3,16 @@
 Required Notice: Copyright (c) 2026 ChestnutLUO (https://github.com/ChestnutLUO)
 
 The code in this repository is available under the
-[PolyForm Strict License 1.0.0](LICENSE). That licence covers the code and its
+[PolyForm Noncommercial License 1.0.0](LICENSE). That licence covers the code and its
 documentation. It does not cover the things below.
 
 ## The Dynamic Glyph name and icons
 
 The name "Dynamic Glyph" and the app's icons are reserved by ChestnutLUO and
-are not licensed, under the PolyForm Strict License or otherwise. That covers
-every variant of the icon in this repository:
+are not licensed, under the PolyForm Noncommercial License or otherwise. A
+copy or changed version you share must use its own name and icon, so that
+nobody mistakes it for this app. That covers every variant of the icon in this
+repository:
 
 - `Apps/DynamicGlyph/DynamicGlyph.icon/Assets/DynamicGlyph-Box.svg`
 - `Apps/DynamicGlyph/DynamicGlyph.icon/Assets/DynamicGlyph-Cover.svg`

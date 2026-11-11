@@ -144,6 +144,57 @@ the time windows, contact sheets, limitations, and reproduction command.
 `RecordingRecognitionTests` also runs the five representative positive frames
 through the core and the sequence predictor, preserving the repeated `see`.
 
+## Portal key counting
+
+A port of [Choujingress' CountIngressKeys](https://github.com/Choujingress/CountIngressKeys)
+(MIT, see [NOTICE](../../NOTICE.md)): count how many keys to each portal the
+inventory holds, from frames of the player browsing them. The core pieces are
+`KeyCardDetector`, `NameRegionFingerprint`, `KeyCountParsing` and
+`PortalKeyCounter`; `KeyCardScreenReader` in `GlyphRecognitionImages` runs the
+OCR passes, and `glyph-recognize --keys` drives the whole pass from saved
+frames:
+
+```sh
+swift run --build-system native glyph-recognize --keys frame-0001.jpg frame-0002.jpg ...
+```
+
+One JSON row per frame (card bounds, disposition, count, name), then one
+summary row: `readings` in frame order and `totals` summed per cleaned portal
+name, which is how a key kept in a capsule and in the inventory adds up.
+
+The algorithm follows the original's:
+
+1. Threshold at 110 and flood-fill the dark regions. The key card is the
+   large dark rectangle bounded by brighter pixels; the detector walks the
+   largest components in size order and takes the first whose bounding box
+   falls in one of the two aspect-ratio bands (Inventory cards are taller
+   than wide, Capsule/Key Locker cards about as wide as tall), rather than
+   blindly taking the second largest as the original does.
+2. Crop the quantity strip (the card's top 1/10 or 1/6.2) and the name strip
+   (near the bottom), with the fractions the original measured on 2018
+   recordings — `KeyCardLayout` holds them, and they have not been
+   re-measured on Ingress Prime captures yet.
+3. Skip a frame whose name strip correlates 0.75 or more with the previous
+   one: the same card, not a new one. The pooled, mean-centred fingerprint
+   stands in for the original's raw-crop `corr2`.
+4. Parse the quantity after an `x` marker; an Inventory card without a
+   marker holds a single key. Clean the OCR punctuation off the portal name.
+5. Sum the counts per name.
+
+Limits, inherited and new: the geometry constants are device-dependent and
+need validation against real Prime captures (the original shipped per-device
+ranges for an iPhone 6 and a Moto G); the card's dark interior must stay
+connected at the threshold, which bright photo pixels can defeat; portal
+names are read with Vision's text recognition rather than Tesseract, so the
+original's letter-confusion repairs (`I`/`l` as a count, `脘` → `院`) are
+deliberately absent — an unread strip reads nothing rather than a guess.
+A live lane in the app (scheduling, a results surface) is not part of this
+port; the counter and reader are app-ready but unwired.
+
+`KeyCardDetectorTests`, `NameRegionFingerprintTests`, `KeyCountParsingTests`
+and `PortalKeyCounterTests` pin the logic on synthetic pixels;
+`KeyCardScreenReaderTests` runs the OCR passes on rendered cards.
+
 ## Validation and limits
 
 `FrameRecognitionTests` covers the three real frames, known hand-specified

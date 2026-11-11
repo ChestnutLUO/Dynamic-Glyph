@@ -33,6 +33,24 @@ not licensed here. Screenshots of the game are not included in this
 repository. The game's interface text in `Docs/GAME_TEXT_TRANSLATIONS*.csv`
 and in the recognition code is quoted only so that the app can recognise it.
 
+## Portal key counting
+
+The portal key counting in `Packages/GlyphRecognition` is a port of
+[CountIngressKeys](https://github.com/Choujingress/CountIngressKeys) by
+chouj, used under the MIT License:
+
+> Copyright (c) 2018 chouj — MIT License. Permission is hereby granted, free
+> of charge, to any person obtaining a copy of this software and associated
+> documentation files (the "Software"), to deal in the Software without
+> restriction, including without limitation the rights to use, copy, modify,
+> merge, publish, distribute, sublicense, and/or sell copies of the Software,
+> subject to including the above copyright notice and this permission notice
+> in all copies or substantial portions of the Software. THE SOFTWARE IS
+> PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED.
+
+The port rewrites the original MATLAB for Swift and Vision; its algorithm,
+thresholds and measured layout fractions carry this notice.
+
 ## Reference tables
 
 The Glyph and sequence reference tables some tests use are third-party data

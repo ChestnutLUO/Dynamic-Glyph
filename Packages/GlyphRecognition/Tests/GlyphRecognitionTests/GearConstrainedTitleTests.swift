@@ -8,7 +8,7 @@ import GlyphRecognition
 /// Constrained capture (Low Power Mode, a hot phone) reads a gear panel
 /// without retries. It used to skip title recovery too, so a portal panel
 /// whose name is only CJK characters, which the English item pass doesn't
-/// read, was no panel at all (2026-10-28 session, hack 1). Now a missing or
+/// read, was no panel at all (hack 1 of a field session). Now a missing or
 /// unclear title gets one recovery pass in one language family. Titles here
 /// are synthetic text drawn over the committed `four-base` fixture, or, where
 /// a test depends on the score Vision gives a drawn name, scripted
@@ -71,7 +71,7 @@ struct GearConstrainedTitleTests {
     @Test("Constrained, a portal panel with a Chinese-only name is read, with one title pass",
           arguments: GearConstrainedTitleFixtures.recoveredTitles)
     func chineseOnlyTitle(_ title: String) throws {
-        // Scripted (build 102c): whether a drawn name reads at 1.0 on the
+        // Scripted: whether a drawn name reads at 1.0 on the
         // panel crop is up to the machine's Vision. Here the first family
         // reads it at 1.0 there, as on the Simulator.
         typealias Scripted = GearScriptedTitleRead
@@ -80,7 +80,7 @@ struct GearConstrainedTitleTests {
         let expected = GearDropTextParser().read(lines: [Scripted.title("Reference", 1)] + Scripted.rows,
                                                  bounds: Scripted.bounds, at: 0)
         try #require(expected.stage == .portal && !expected.entries.isEmpty)
-        // The English item pass reads no title line (2026-10-28 hack 1) or one at 0.3.
+        // The English item pass reads no title line (the field session's hack 1) or one at 0.3.
         for panelTitle in [nil, 0.3] as [Double?] {
             let panel = Scripted.rows + (panelTitle.map { [Scripted.title(title, $0)] } ?? [])
             // The English item pass had no title it could use.
@@ -99,9 +99,9 @@ struct GearConstrainedTitleTests {
 
     @Test("A name every family reads at 0.5 stays unread: the 0.7 floor is unchanged; it is an untitled panel")
     func halfConfidenceName() throws {
-        // As 2026-10-28 hack 3: the English pass has no title line and every
+        // As the field session's hack 3: the English pass has no title line and every
         // family scores the name 0.5, in either crop, unconstrained as well.
-        // Scripted (build 102c): a drawn name's score is up to the machine's
+        // Scripted: a drawn name's score is up to the machine's
         // Vision (a Mac's zh-Hant pass read this one at 1.0, the Simulator
         // at 0.5); this checks the 0.7 floor itself.
         typealias Scripted = GearScriptedTitleRead
@@ -213,14 +213,14 @@ struct GearConstrainedTitleTests {
 
 enum GearConstrainedTitleFixtures {
     /// Synthetic Chinese-only names the English item pass doesn't read (no
-    /// title line, as on 2026-10-28 hack 1's frames) or reads at 0.3; the
+    /// title line, as on the field session's hack 1 frames) or reads at 0.3; the
     /// first family reads each at 1.0 on the Simulator. Scripted lines'
     /// text (`chineseOnlyTitle`).
     static let recoveredTitles = ["測試傳送", "參考地標", "測試用傳送門"]
 }
 
 /// A gear read's title recovery with a scripted recognizer in place of
-/// Vision (build 102c, Ato 1908). The score Vision gives a title drawn at run
+/// Vision. The score Vision gives a title drawn at run
 /// time differs by machine: on a Mac the 2x zh-Hant pass read a name at 1.0
 /// that the Simulator reads at 0.5. Tests of the 0.7 floor and of the title
 /// passes script those reads instead.

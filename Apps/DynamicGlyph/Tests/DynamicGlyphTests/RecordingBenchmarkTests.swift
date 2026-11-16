@@ -175,6 +175,60 @@ struct RecordingBenchmarkTests {
         #expect(BenchmarkReport.clock(61.25, tenths: true) == "1:01.2" || BenchmarkReport.clock(61.25, tenths: true) == "1:01.3")
     }
 
+    @Test("A run's report counts the header work, the window mask's and cover skip's skips and what the plane gate, the settle cuts and the gear read cuts held back")
+    func reportWorkRows() {
+        let meter = PowerMeter(clock: { 0 }, cpuTime: { 0 }, thermalState: { 0 })
+        meter.reset()
+        meter.count(.headerInHack, 30)
+        meter.count(.footerGated, 12)
+        meter.count(.portalHeld, 18)
+        meter.count(.gearHeld, 44)
+        meter.count(.resultHeld, 27)
+        meter.count(.gearRedRowSkipped, 702)
+        meter.count(.gearEmptyCellSkipped, 141)
+        meter.count(.gearQuantitySkipped, 33)
+        meter.count(.gearLanguageSkipped, 58)
+        meter.count(.headerMaskedInHack, 33)
+        meter.count(.headerCoveredOutside, 61)
+        for pace in [BenchmarkPace.accuracy, .realTime] {
+            var run = BenchmarkRunResult(powerSaving: true, pace: pace)
+            run.movieDuration = 120; run.covered = 120; run.wallSeconds = 121
+            run.power = meter.snapshot()
+            let lines = BenchmarkReport.lines(run)
+            let titles = ["header work", "plane gate", "settle", "gear skipped"]
+            let rows = titles.compactMap { title in lines.first { $0.hasPrefix(title) } }
+            #expect(rows.count == 4, "\(pace.label)")
+            for (metric, count) in [(PowerMetric.gearRedRowSkipped, "702"), (.gearEmptyCellSkipped, "141"),
+                                    (.gearQuantitySkipped, "33"), (.gearLanguageSkipped, "58")] {
+                let row = lines.first { $0.hasPrefix(metric.label) }
+                #expect(row?.split(separator: " ").contains(Substring(count)) == true, "\(pace.label) \(metric.label)")
+            }
+            #expect(rows.allSatisfy { $0.hasSuffix("/min") } == (pace == .realTime), "\(pace.label)")
+            let held = lines.first { $0.hasPrefix(PowerMetric.portalHeld.label) }
+            #expect(held?.split(separator: " ").contains("18") == true, "\(pace.label)")
+            // Eighteen in two minutes of movie.
+            #expect((held?.split(separator: " ").contains("9") == true) == (pace == .realTime), "\(pace.label)")
+            let gear = lines.first { $0.hasPrefix(PowerMetric.gearHeld.label) }
+            #expect(gear?.split(separator: " ").contains("44") == true, "\(pace.label)")
+            let result = lines.first { $0.hasPrefix(PowerMetric.resultHeld.label) }
+            #expect(result?.split(separator: " ").contains("27") == true, "\(pace.label)")
+            let masked = lines.first { $0.hasPrefix(PowerMetric.headerMaskedInHack.label) }
+            #expect(masked?.split(separator: " ").contains("33") == true, "\(pace.label)")
+            let covered = lines.first { $0.hasPrefix(PowerMetric.headerCoveredOutside.label) }
+            #expect(covered?.split(separator: " ").contains("61") == true, "\(pace.label)")
+            #expect(lines.allSatisfy { $0.count <= BenchmarkReport.width }, "\(lines.filter { $0.count > 42 })")
+        }
+        // Without them, the cuts' sections stay out of the report.
+        var quiet = BenchmarkRunResult(powerSaving: true, pace: .realTime)
+        quiet.covered = 120
+        let lines = BenchmarkReport.lines(quiet)
+        #expect(lines.contains { $0.hasPrefix("header work") })
+        #expect(!lines.contains {
+            $0.hasPrefix("plane gate") || $0.hasPrefix("settle") || $0.hasPrefix("gear skipped")
+                || $0.hasPrefix("masked") || $0.hasPrefix("cover")
+        })
+    }
+
     @Test("The full report compares Glyphs at the accuracy pace and power at the real pace")
     func fullReport() {
         func run(_ powerSaving: Bool, _ pace: BenchmarkPace, hacks: [BenchmarkHack]) -> BenchmarkRunResult {

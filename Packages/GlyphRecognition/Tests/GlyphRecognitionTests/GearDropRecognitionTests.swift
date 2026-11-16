@@ -295,7 +295,7 @@ struct GearDropRecognitionTests {
         #expect(tracker.finish(at: late + 0.1, reason: "test")?.recognizedQuantity == 0)
     }
 
-    /// A tester's drop (iPhone 14 Pro, Glyph assistance, English): every row
+    /// A reported drop (Glyph assistance, English): every row
     /// was read right, but reads came about 0.9 s apart and none confirmed.
     func reportedPanel(_ time: Double, stage: GearDropStage) -> GearDropFrameEvidence {
         func entry(_ column: Int, _ row: Int, _ item: String, _ level: Int?, _ quantity: Int) -> GearDropEntry {
@@ -779,7 +779,7 @@ struct GearDropRecognitionTests {
 
     @Test("An effect line is recorded, not read as an unreadable item row")
     func effectLine() {
-        // Tester report: a portal panel showed "ITO EN (+) applied." under its
+        // A field report: a portal panel showed "ITO EN (+) applied." under its
         // title and was marked partly read.
         let value = parser.read(lines: [line("Test location", x: 0.3, y: 0.31),
             line("ITO EN (+) applied.", x: 0.28, y: 0.34, width: 0.44),

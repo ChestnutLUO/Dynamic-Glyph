@@ -23,7 +23,7 @@ public struct PiPCanvasConfiguration: Sendable, Equatable {
     }
 
     /// The floating window's corner radius, in window points. iOS does not
-    /// publish it. Measured from a 2026-09-22 device capture, where a window
+    /// publish it. Measured from a device capture, where a window
     /// 53 capture pixels tall had corners of about 12 (≈ 8.5 pt); rounded up,
     /// because an inner corner slightly too round still sits inside the
     /// window while one too tight shows its square end.

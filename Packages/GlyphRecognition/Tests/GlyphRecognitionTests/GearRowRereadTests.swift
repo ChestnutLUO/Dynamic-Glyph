@@ -6,7 +6,7 @@ import GlyphRecognition
 /// Which rows a gear read rereads on its own frame. Constrained capture (Low
 /// Power Mode, a hot phone) used to reread none; it now rereads, once, a row
 /// the panel read left unparsed, as a red "x1 Portal Key" was in all five
-/// reads of a 2026-10-27 portal panel.
+/// reads of a portal panel in a field report.
 @Suite("Gear row rereads")
 struct GearRowRereadTests {
     static func entry(_ column: Int, _ row: Int, item: String? = "Resonator", level: Int? = 7,
@@ -50,5 +50,32 @@ struct GearRowRereadTests {
                                      level: nil, quantity: 2, multiplied: false)]
         #expect(rereads([0, 1, 2, 3, 4, 5], entries, unreadable: 0, .unresolved, asked: &asked) == [1, 2, 3, 4, 5])
         #expect(asked == [0, 1, 3], "colour is asked only when it decides")
+    }
+
+    @Test("Lean: no reread of a clearly red row read whole or of an empty cell; the others as unresolved")
+    func leanRows() {
+        var asked: [Int] = []
+        let entries = [Self.entry(0, 0, red: false), Self.entry(1, 0, red: true), Self.entry(0, 1, item: nil),
+                       Self.entry(1, 1, red: nil),
+                       GearDropEntry(column: 0, row: 2, item: "XMP Burster", levelState: .unreadable,
+                                     level: nil, quantity: 2, multiplied: true)]
+        // Position 5, beside the unread level, is the empty half of the third row.
+        #expect(rereads([0, 1, 2, 3, 4, 5], entries, unreadable: 0, .lean, asked: &asked) == [2, 3, 4])
+        #expect(asked == [0, 1, 3], "colour is asked only when it decides")
+        // A red row without a name, and one with its level unread, are still reread.
+        let red = [Self.entry(0, 0, item: nil, red: true),
+                   GearDropEntry(column: 1, row: 0, item: "Resonator", levelState: .unreadable, level: nil,
+                                 quantity: 1, multiplied: true)]
+        #expect(rereads([0, 1], red, unreadable: 0, .lean, asked: &asked) == [0, 1])
+        #expect(asked.isEmpty)
+        // With an unreadable row counted, a cell without an entry may be that row.
+        #expect(rereads([0, 1, 2, 3], [Self.entry(0, 0), Self.entry(1, 0), Self.entry(0, 1)], unreadable: 1, .lean,
+                        asked: &asked) == [3])
+        // Every lean reread is one the unresolved rule makes too.
+        for unreadable in [0, 1] {
+            let lean = rereads([0, 1, 2, 3, 4, 5], entries, unreadable: unreadable, .lean, asked: &asked)
+            let all = rereads([0, 1, 2, 3, 4, 5], entries, unreadable: unreadable, .unresolved, asked: &asked)
+            #expect(Set(lean).isSubset(of: all))
+        }
     }
 }

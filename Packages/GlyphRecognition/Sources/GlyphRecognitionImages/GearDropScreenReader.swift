@@ -38,21 +38,56 @@ public final class GearTitleLanguageMemory: @unchecked Sendable {
 final class GearReadPassLog: @unchecked Sendable {
     private let lock = NSLock()
     private var passes: [GearReadPass] = []
+    private var left = GearReadWithheld()
     func append(_ pass: GearReadPass) { lock.withLock { passes.append(pass) } }
     var all: [GearReadPass] { lock.withLock { passes } }
+    /// A pass the read's cuts left out.
+    func withhold(_ kind: GearReadWithheld.Kind) { lock.withLock { left.add(kind) } }
+    var withheld: GearReadWithheld { lock.withLock { left } }
 }
 
 /// Reads only the summary box. Animation cards, even immediately below the
 /// box, are never submitted to OCR. No title string escapes this operation.
 public struct GearDropScreenReader: Sendable {
+    /// The text logic a read uses: the Swift `GearDropTextParser` and
+    /// `GameText`, or a logic arm's (`RecognitionLogicSet`). Each is made
+    /// when a read needs it, as the Swift values were.
+    public struct Logic: Sendable {
+        public var textParser: @Sendable (GameLanguage) -> any GearDropTextParsing
+        /// `GearDropTextParsing.position(of:in:)` of the same arm.
+        public var position: @Sendable (ResultTextLine, GearDropPanelBounds) -> Int?
+        public var text: @Sendable (GameLanguage) -> any GameTextMatching
+
+        public init(textParser: @escaping @Sendable (GameLanguage) -> any GearDropTextParsing,
+                    position: @escaping @Sendable (ResultTextLine, GearDropPanelBounds) -> Int?,
+                    text: @escaping @Sendable (GameLanguage) -> any GameTextMatching) {
+            self.textParser = textParser
+            self.position = position
+            self.text = text
+        }
+
+        public static let swift = Logic(textParser: { GearDropTextParser(language: $0) },
+                                        position: { GearDropTextParser.position(of: $0, in: $1) },
+                                        text: { GameText($0) })
+    }
+
     public let language: GameLanguage
     /// Where each OCR pass is noted, when a caller asks for them.
     let passLog: GearReadPassLog?
     /// Stops the read between and during passes (`GearReadCancellation`).
     let cancellation: GearReadCancellation?
-    public init(language: GameLanguage = .english) { self.language = language; passLog = nil; cancellation = nil }
-    init(language: GameLanguage, passLog: GearReadPassLog?, cancellation: GearReadCancellation? = nil) {
-        self.language = language; self.passLog = passLog; self.cancellation = cancellation
+    /// The `gearLeanRead` cut: no reread of a clearly red row the panel pass
+    /// read whole or of an empty cell, and no numeric quantity pass
+    /// (`RowRereads.lean`).
+    let lean: Bool
+    private let logic: Logic
+    public init(language: GameLanguage = .english, logic: Logic = .swift) {
+        self.language = language; self.logic = logic; passLog = nil; cancellation = nil; lean = false
+    }
+    init(language: GameLanguage, passLog: GearReadPassLog?, cancellation: GearReadCancellation? = nil,
+         lean: Bool = false, logic: Logic = .swift) {
+        self.language = language; self.passLog = passLog; self.cancellation = cancellation; self.lean = lean
+        self.logic = logic
     }
 
     /// Item rows. English keeps Simplified Chinese second, for Chinese
@@ -62,22 +97,26 @@ public struct GearDropScreenReader: Sendable {
     static let titleFamilies = [["zh-Hant", "zh-Hans", "en-US"], ["ja-JP", "en-US"], ["ko-KR", "en-US"]]
 
     func rowPositions(in lines: [ResultTextLine], bounds: GearDropPanelBounds) -> Set<Int> {
+        let text = logic.text(language)
         let observed = lines.filter {
             $0.y + $0.height / 2 >= bounds.top + 0.045 && $0.y >= bounds.top
-                && $0.y + $0.height <= bounds.bottom + 0.003 && GameText(language).effect($0.text) == nil
-        }.compactMap { GearDropTextParser.position(of: $0, in: bounds) }
+                && $0.y + $0.height <= bounds.bottom + 0.003 && text.effect($0.text) == nil
+        }.compactMap { logic.position($0, bounds) }
         // Whole-panel OCR can omit one column entirely. Its neighbour still
         // establishes a physical row; the other crop must read its own item.
         return Set(observed.flatMap { [($0 / 2) * 2, ($0 / 2) * 2 + 1] })
     }
 
-    func readItemRow(_ image: CGImage, bounds: GearDropPanelBounds,
-                     position: Int, original: GearDropEntry?) throws -> GearDropEntry? {
-        try itemRow(image, bounds: bounds, position: position, original: original)?.entry
+    /// `numericPass` stands in for the numeric quantity pass's OCR of its
+    /// crop, so a test can give it what Vision returns on another device.
+    func readItemRow(_ image: CGImage, bounds: GearDropPanelBounds, position: Int, original: GearDropEntry?,
+                     numericPass: ((CGRect) throws -> [RecognizedLine])? = nil) throws -> GearDropEntry? {
+        try itemRow(image, bounds: bounds, position: position, original: original, numericPass: numericPass)?.entry
     }
 
     private func itemRow(_ image: CGImage, bounds: GearDropPanelBounds,
-                         position: Int, original: GearDropEntry?) throws
+                         position: Int, original: GearDropEntry?,
+                         numericPass: ((CGRect) throws -> [RecognizedLine])? = nil) throws
         -> (entry: GearDropEntry, lines: [RecognizedLine])? {
         guard (0..<14).contains(position) else { return nil }
         let row = position / 2, column = position % 2
@@ -95,42 +134,56 @@ public struct GearDropScreenReader: Sendable {
                           width: (right - left) * Double(image.width),
                           height: (bottom - top) * Double(image.height)).integral
         let recognized = try recognize(image, rect: rect, languages: itemLanguages, purpose: .row)
-        var fragments = recognized.filter { GearDropTextParser.position(of: $0.line, in: bounds) == position }
+        var fragments = recognized.filter { logic.position($0.line, bounds) == position }
             .sorted { $0.line.x < $1.line.x }
         guard !fragments.isEmpty,
               fragments.allSatisfy({ $0.line.confidence >= language.confidence.line }) else { return nil }
         let clipped = (fragments.map { $0.line.x + $0.line.width }.max() ?? 0) >= right - 0.05
-        guard let parsed = GearDropTextParser(language: language).parseEntry(
+        guard let parsed = logic.textParser(language).parseEntry(
             fragments.map { $0.line.text }.joined(separator: " "), row: row, column: column, clipped: clipped),
               let item = parsed.item, original?.item == nil || original?.item == item else { return nil }
         var quantity = parsed.quantity
-        if language != .english {
+        if language != .english, lean {
+            // The row pass's own quantity stands; the tracker's two agreeing
+            // reads are what keep a single x11 from confirming.
+            passLog?.withhold(.quantity)
+        } else if language != .english {
             // Read only ASCII quantity markers/digits with English first.
             // Chinese-first OCR can score a red x1 as x11 in this very crop.
             // Keep the name and level from the game's same-frame reader.
             let quantityLeft = (0.195 + Double(column) * 0.465) * Double(image.width)
             let quantityRect = CGRect(x: quantityLeft, y: rect.minY,
                 width: right * Double(image.width) - quantityLeft, height: rect.height).integral
-            let numbers = try recognize(image, rect: quantityRect, languages: ["en-US", "zh-Hans"], purpose: .quantity)
+            let numbers = try (numericPass?(quantityRect)
+                    ?? recognize(image, rect: quantityRect, languages: ["en-US", "zh-Hans"], purpose: .quantity))
                 .filter { $0.line.confidence >= 0.5 && $0.quantity != nil
-                    && GearDropTextParser.position(of: $0.line, in: bounds) == position }
-            guard numbers.count == 1, let number = numbers.first,
-                  let marker = Self.quantityRange(in: number.line.text),
-                  let value = Int(number.line.text[marker].dropFirst()), (1...9999).contains(value) else { return nil }
-            quantity = value
-            // Preserve item-language text and attach the numeric pass's box
-            // once, so colour comes from the actual marker and all its digits.
-            var attached = false
-            fragments = fragments.map { fragment in
-                guard !attached, let old = Self.quantityRange(in: fragment.line.text) else {
-                    return RecognizedLine(line: fragment.line, quantity: nil)
+                    && logic.position($0.line, bounds) == position }
+            if numbers.count == 1, let number = numbers.first,
+               let marker = Self.quantityRange(in: number.line.text),
+               let value = Int(number.line.text[marker].dropFirst()), (1...9999).contains(value) {
+                quantity = value
+                // Preserve item-language text and attach the numeric pass's box
+                // once, so colour comes from the actual marker and all its digits.
+                var attached = false
+                fragments = fragments.map { fragment in
+                    guard !attached, let old = Self.quantityRange(in: fragment.line.text) else {
+                        return RecognizedLine(line: fragment.line, quantity: nil)
+                    }
+                    attached = true
+                    let line = fragment.line
+                    let text = line.text.replacingCharacters(in: old, with: String(number.line.text[marker]))
+                    return RecognizedLine(line: ResultTextLine(text: text, confidence: line.confidence,
+                        x: line.x, y: line.y, width: line.width, height: line.height), quantity: number.quantity)
                 }
-                attached = true
-                let line = fragment.line
-                let text = line.text.replacingCharacters(in: old, with: String(number.line.text[marker]))
-                return RecognizedLine(line: ResultTextLine(text: text, confidence: line.confidence,
-                    x: line.x, y: line.y, width: line.width, height: line.height), quantity: number.quantity)
+            } else if quantityOnly {
+                // Without exactly one marker the numeric pass corrects
+                // nothing: a row the panel read whole stays as it read it.
+                return nil
             }
+            // A row this crop read for itself (no entry, no name or no level
+            // before) keeps its own name, level and quantity: the numeric
+            // pass finding no single marker is no reason to lose a row the
+            // screen shows.
         }
         let entry = GearDropEntry(column: column, row: row, item: item,
             levelState: quantityOnly ? original!.levelState : parsed.levelState,
@@ -207,8 +260,8 @@ public struct GearDropScreenReader: Sendable {
     /// - with `rereadsUnreadableRows`, one reread of each row the panel read
     ///   left unparsed (`rereadPositions`);
     /// - a missing or unclear title gets one title-recovery pass, in one
-    ///   language family (`recoverTitle(passes: 1)`), as build 80 always did
-    ///   with every family: a CJK-only portal name is otherwise never read.
+    ///   language family (`recoverTitle(passes: 1)`), as earlier versions always
+    ///   did with every family: a CJK-only portal name is otherwise never read.
     private func readPanel(_ image: CGImage, bounds: GearDropPanelBounds, sourceTime: Double,
                            titleMemory: GearTitleLanguageMemory? = nil, retries: Bool = true,
                            rereadsUnreadableRows: Bool = false) throws -> PanelRead {
@@ -259,20 +312,34 @@ public struct GearDropScreenReader: Sendable {
                 lines += recovered
             }
         }
-        let parser = GearDropTextParser(language: language)
+        let parser = logic.textParser(language)
         let evidence = parser.read(lines: lines, bounds: bounds, at: sourceTime)
         let untitledPanel = evidence.stage == .unknown
             && parser.showsUntitledPanel(lines: lines, bounds: bounds, at: sourceTime)
         var rowEntries = evidence.entries
         var unreadableRows = evidence.unreadableRows
-        let scope: RowRereads? = retries ? .unresolved : rereadsUnreadableRows ? .unparsed : nil
+        let scope: RowRereads? = retries ? (lean ? .lean : .unresolved) : rereadsUnreadableRows ? .unparsed : nil
         if let scope, evidence.stage == .portal || evidence.stage == .bonus {
             // Red quantities and unresolved rows are fragile in whole-panel
             // OCR. Retry each physical position at most once, within this same
             // frame/read. A retry is not another tracker vote.
-            let positions = Self.rereadPositions(rowPositions(in: lines, bounds: bounds), entries: rowEntries,
-                                                 unreadableRows: unreadableRows, scope: scope) { entry in
-                quantityColor(of: entry, lines: recognized, bounds: bounds, image: image).multiplied
+            let observed = rowPositions(in: lines, bounds: bounds)
+            var colours: [Int: Bool?] = [:]
+            func multiplied(_ entry: GearDropEntry) -> Bool? {
+                if let known = colours[entry.position] { return known }
+                let colour = quantityColor(of: entry, lines: recognized, bounds: bounds, image: image).multiplied
+                colours[entry.position] = colour
+                return colour
+            }
+            let positions = Self.rereadPositions(observed, entries: rowEntries, unreadableRows: unreadableRows,
+                                                 scope: scope, multiplied: multiplied)
+            if scope == .lean {
+                let entries = rowEntries
+                for position in Self.rereadPositions(observed, entries: entries, unreadableRows: unreadableRows,
+                                                     scope: .unresolved, multiplied: multiplied)
+                where !positions.contains(position) {
+                    passLog?.withhold(entries.contains { $0.position == position } ? .redRow : .emptyCell)
+                }
             }
             for position in positions {
                 let original = rowEntries.first { $0.position == position }
@@ -280,9 +347,9 @@ public struct GearDropScreenReader: Sendable {
                 if original == nil { unreadableRows = max(0, unreadableRows - 1) }
                 rowEntries.removeAll { $0.position == position }
                 rowEntries.append(recovered.entry)
-                recognized.removeAll { GearDropTextParser.position(of: $0.line, in: bounds) == position }
+                recognized.removeAll { logic.position($0.line, bounds) == position }
                 recognized += recovered.lines
-                lines.removeAll { GearDropTextParser.position(of: $0, in: bounds) == position }
+                lines.removeAll { logic.position($0, bounds) == position }
                 lines += recovered.lines.map(\.line)
             }
         }
@@ -306,18 +373,19 @@ public struct GearDropScreenReader: Sendable {
             titleLanguage: evidence.titleLanguage)
         // Compare the same OCR fragments without English's confidence floor:
         // a low-confidence English name still isn't localized evidence.
+        let text = logic.text(language)
         let body = lines.filter { line in
             line.y >= bounds.top && line.y + line.height <= bounds.bottom + 0.003
                 && line.x >= 0.025 && line.x + line.width <= 0.98
                 && line.y + line.height / 2 >= bounds.top + 0.045
                 && !(line.y + line.height / 2 < bounds.top + 0.09
-                    && line.confidence >= language.confidence.title && GameText(language).effect(line.text) != nil)
+                    && line.confidence >= language.confidence.title && text.effect(line.text) != nil)
         }
         let rows = Dictionary(grouping: body.compactMap { line -> (Int, ResultTextLine)? in
-            guard let position = GearDropTextParser.position(of: line, in: bounds) else { return nil }
+            guard let position = logic.position(line, bounds) else { return nil }
             return (position, line)
         }, by: { $0.0 })
-        let english = GearDropTextParser()
+        let english = logic.textParser(.english)
         let localized = entries.filter { entry in
             guard language != .english, let item = entry.item, let row = rows[entry.position] else { return false }
             let fragments = row.map { $0.1 }.sorted { $0.x < $1.x }
@@ -340,6 +408,14 @@ public struct GearDropScreenReader: Sendable {
         /// (Low Power Mode, a hot phone), where a missing row costs the drop
         /// an item but each extra crop costs a whole OCR pass.
         case unparsed
+        /// The `gearLeanRead` cut: `unresolved` less the two rereads that
+        /// changed no read on six replayed recordings. A row read whole whose
+        /// quantity the colour reader calls red is the panel pass's to keep:
+        /// 357 such rereads changed no final entry. A cell without an entry
+        /// is reread only when the panel read counted an unreadable row:
+        /// otherwise it is the empty half of an odd row, and all 297 such
+        /// rereads failed.
+        case lean
     }
 
     /// The positions to reread, in order, each once. `positions` are the
@@ -355,12 +431,15 @@ public struct GearDropScreenReader: Sendable {
                 return original.item == nil || original.levelState == .unreadable || multiplied(original) != false
             case .unparsed:
                 return original == nil && unreadableRows > 0
+            case .lean:
+                guard let original else { return unreadableRows > 0 }
+                return original.item == nil || original.levelState == .unreadable || multiplied(original) == nil
             }
         }
     }
 
     /// A text line, and where its "x2" quantity is, in source pixels.
-    private struct RecognizedLine {
+    struct RecognizedLine {
         let line: ResultTextLine
         let quantity: CGRect?
     }
@@ -370,7 +449,7 @@ public struct GearDropScreenReader: Sendable {
         // The parser takes a row's quantity from its one line with a marker;
         // any other count leaves which pixels to read unknown.
         let boxes = lines.compactMap { line -> CGRect? in
-            guard GearDropTextParser.position(of: line.line, in: bounds) == entry.position else { return nil }
+            guard logic.position(line.line, bounds) == entry.position else { return nil }
             return line.quantity
         }
         let panel = CGRect(x: 0, y: bounds.top * Double(image.height), width: Double(image.width),
@@ -397,9 +476,8 @@ public struct GearDropScreenReader: Sendable {
     /// The title zone with a margin, for the title pass's fallback without
     /// retries: from `bounds.top - 0.03` (not above the frame) to
     /// `bounds.top + 0.045 + 0.03` (not below the panel), across the panel
-    /// crop's width. On a Mac the panel crop read the CJK-only portal name
-    /// of 2026-10-28 hack 1 on 9 of 40 frames, this crop on 40 of 40
-    /// (2026-10-29 title probe, `zone0.03`).
+    /// crop's width. On a Mac the panel crop read a CJK-only portal name
+    /// from a field session on 9 of 40 frames, this crop on 40 of 40.
     static func titleZoneRect(_ panel: CGRect, bounds: GearDropPanelBounds, imageHeight: Int) -> CGRect {
         let margin = 0.03
         let top = max(0, bounds.top - margin), bottom = min(bounds.bottom, bounds.top + 0.045 + margin)
@@ -479,6 +557,19 @@ extension GearDropScreenReader {
                 || evidence.entries.contains { $0.item == nil }))
     }
 
+    /// Whether a read in the confirmed language may be of a game whose
+    /// language has changed since: anything but a portal or Bonus panel with
+    /// a name read. A changed language shows as another language's Bonus
+    /// title, a panel whose title the confirmed language can't read
+    /// (unknown), or a titled panel without a name. On six replayed
+    /// recordings, 15 reads in a confirmed language went on to the other
+    /// languages and none gained from them: 10 of a portal or Bonus panel
+    /// with a name read, which this keeps, and 5 of an unknown panel without
+    /// rows, which still go.
+    static func mayShowAnotherLanguage(_ evidence: GearDropFrameEvidence) -> Bool {
+        !((evidence.stage == .portal || evidence.stage == .bonus) && evidence.entries.contains { $0.item != nil })
+    }
+
     /// A portal read must recover localized names while preserving every
     /// quantity and known identity from the original read of this frame.
     static func improvesPortal(_ candidate: GearDropFrameEvidence, over original: GearDropFrameEvidence,
@@ -507,45 +598,63 @@ extension GearDropScreenReader {
     /// missing or unclear title adds one title pass, in one family. With
     /// `rereadsUnreadableRows`, a row that pass left unparsed is still read
     /// once more on its own: a red "x1 Portal Key" went unread in all five
-    /// reads of a hot phone's portal panel.
+    /// reads of a hot phone's portal panel. `lean`, the `gearLeanRead` cut,
+    /// leaves out the rereads and numeric passes `RowRereads.lean` names, in
+    /// every language the read tries. `settlesLanguage`, the
+    /// `gearLanguageSettle` cut, keeps a read in an automatic language that
+    /// a screen has confirmed unless it may show another language
+    /// (`mayShowAnotherLanguage`).
     public static func read(_ image: CGImage, bounds: GearDropPanelBounds, sourceTime: Double,
                             titleMemory: GearTitleLanguageMemory? = nil,
-                            languages memory: GameLanguageMemory, retries: Bool = true,
-                            rereadsUnreadableRows: Bool = false) throws -> GearDropFrameEvidence {
+                            languages memory: any GameLanguageRemembering, retries: Bool = true,
+                            rereadsUnreadableRows: Bool = false, lean: Bool = false, settlesLanguage: Bool = false,
+                            logic: Logic = .swift) throws -> GearDropFrameEvidence {
         try reading(image, bounds: bounds, sourceTime: sourceTime, titleMemory: titleMemory, languages: memory,
-                    retries: retries, rereadsUnreadableRows: rereadsUnreadableRows).evidence
+                    retries: retries, rereadsUnreadableRows: rereadsUnreadableRows, lean: lean,
+                    settlesLanguage: settlesLanguage, logic: logic).evidence
     }
 
-    /// `read`, with whether an unknown read showed an untitled panel and
-    /// each OCR pass it took (counts, confidences and times; no text).
-    /// `cancellation` stops it early: it then throws `CancellationError`
-    /// (or Vision's own error for the pass it cancelled) and returns nothing.
-    /// Once its last OCR pass has finished, it returns as usual.
+    /// `read`, with whether an unknown read showed an untitled panel, each
+    /// OCR pass it took (counts, confidences and times; no text) and what its
+    /// cuts left out. `cancellation` stops it early: it then throws
+    /// `CancellationError` (or Vision's own error for the pass it cancelled)
+    /// and returns nothing. Once its last OCR pass has finished, it returns
+    /// as usual.
     public static func reading(_ image: CGImage, bounds: GearDropPanelBounds, sourceTime: Double,
                                titleMemory: GearTitleLanguageMemory? = nil,
-                               languages memory: GameLanguageMemory, retries: Bool = true,
-                               rereadsUnreadableRows: Bool = false,
-                               cancellation: GearReadCancellation? = nil) throws -> GearPanelReading {
+                               languages memory: any GameLanguageRemembering, retries: Bool = true,
+                               rereadsUnreadableRows: Bool = false, lean: Bool = false,
+                               settlesLanguage: Bool = false, cancellation: GearReadCancellation? = nil,
+                               logic: Logic = .swift) throws -> GearPanelReading {
         let log = GearReadPassLog(), current = memory.current
-        let first = try GearDropScreenReader(language: current, passLog: log, cancellation: cancellation)
+        let first = try GearDropScreenReader(language: current, passLog: log, cancellation: cancellation, lean: lean,
+                                             logic: logic)
             .readPanel(image, bounds: bounds, sourceTime: sourceTime, titleMemory: titleMemory,
                        retries: retries, rereadsUnreadableRows: rereadsUnreadableRows)
         let evidence = try read(first.evidence, in: current, image, bounds: bounds, sourceTime: sourceTime,
-                                titleMemory: titleMemory, languages: memory, retries: retries, log: log,
-                                cancellation: cancellation)
+                                titleMemory: titleMemory, languages: memory, retries: retries, lean: lean,
+                                settlesLanguage: settlesLanguage, log: log, cancellation: cancellation, logic: logic)
         return GearPanelReading(evidence: evidence, untitledPanel: evidence.stage == .unknown && first.untitledPanel,
-                                passes: log.all)
+                                passes: log.all, withheld: log.withheld)
     }
 
     /// The other-language retries after the first read, `evidence`, in `current`.
     private static func read(_ evidence: GearDropFrameEvidence, in current: GameLanguage, _ image: CGImage,
                              bounds: GearDropPanelBounds, sourceTime: Double, titleMemory: GearTitleLanguageMemory?,
-                             languages memory: GameLanguageMemory, retries: Bool,
-                             log: GearReadPassLog, cancellation: GearReadCancellation?) throws -> GearDropFrameEvidence {
+                             languages memory: any GameLanguageRemembering, retries: Bool, lean: Bool,
+                             settlesLanguage: Bool, log: GearReadPassLog, cancellation: GearReadCancellation?,
+                             logic: Logic) throws -> GearDropFrameEvidence {
         // Only the Bonus title names a language, and no game leaves it in
         // English, so it can confirm English too.
         if evidence.titleLanguage == current { memory.found(current) }
         guard retries, needsOtherLanguages(evidence) else { return evidence }
+        let state = memory.state
+        if settlesLanguage, state.isConfirmed, state.language == current, !mayShowAnotherLanguage(evidence) {
+            // A confirmed language changes only on its own words, and the
+            // Bonus title, results and notices still find them.
+            log.withhold(.languageSweep)
+            return evidence
+        }
         let preferred = memory.panelReadingLanguage(at: sourceTime, bounds: bounds)
         var best: (language: GameLanguage, evidence: GearDropFrameEvidence)?
         var ambiguous = false
@@ -553,7 +662,8 @@ extension GearDropScreenReader {
         let alternatives = memory.alternatives(at: sourceTime, on: .panel).filter { !languages.contains($0) }
         languages += alternatives
         for language in languages {
-            let read = try GearDropScreenReader(language: language, passLog: log, cancellation: cancellation)
+            let read = try GearDropScreenReader(language: language, passLog: log, cancellation: cancellation,
+                                                lean: lean, logic: logic)
                 .readPanel(image, bounds: bounds, sourceTime: sourceTime, titleMemory: titleMemory)
             let other = read.evidence
             // Only the language's own Bonus title names it: item names such as

@@ -465,7 +465,7 @@ struct PlayerInputValidatorTests {
     @Test("Recorded truth, drawn correctly twice, is never called a different Glyph",
           .enabled(if: ReferenceData.shapesAvailable))
     func recordedTruth() throws {
-        // spikeB-2026-09-23T23-00-56Z: Ingress accepted both drawings. After
+        // A field session: Ingress accepted both drawings. After
         // lift the recognizer read every edge but 3-5, lit at 58-62% on the
         // first attempt and 75-79% after Redo, for five samples over 200 ms.
         let table = try ReferenceData.glyphTable()
@@ -497,7 +497,7 @@ struct PlayerInputValidatorTests {
         func edges(_ encoded: String) -> Set<GlyphPath.Edge> {
             GlyphGeometry.normalizedEdges(GlyphPath(encoded: encoded)!.undirectedEdges)
         }
-        // Edge sets from the IMG_2003.MP4 replay at 20 fps, 562 px wide. While
+        // Edge sets from a field recording's replay at 20 fps, 562 px wide. While
         // drawing, shield showed `4-a` for 13 samples and mind `5-6` for 3.
         // After lift shield kept `4-a` for 2 samples; mind lacked `5-a` in 3
         // of its first 4. Each run is (edge set, samples).

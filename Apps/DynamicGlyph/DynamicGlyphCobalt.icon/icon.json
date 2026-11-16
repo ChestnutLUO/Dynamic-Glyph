@@ -1,0 +1,39 @@
+{
+  "fill" : "system-light",
+  "groups" : [
+    {
+      "layers" : [
+        {
+          "image-name" : "DynamicGlyph-Cover.svg",
+          "name" : "Cover",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              0.4956598208295918,
+              -215.49999999999991
+            ]
+          }
+        },
+        {
+          "glass" : true,
+          "image-name" : "DynamicGlyph-Box.svg",
+          "name" : "Box"
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.5
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "circles" : [
+      "watchOS"
+    ],
+    "squares" : "shared"
+  }
+}

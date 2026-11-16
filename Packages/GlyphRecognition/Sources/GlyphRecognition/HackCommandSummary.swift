@@ -173,8 +173,12 @@ public struct CommandObservationSession: Sendable {
             return $0.id < $1.id
         }) {
             // An unreadable read beside clear ones is a frame caught mid-change,
-            // not a second notice; only readable reads can disagree.
-            let reads = Array(event.reads.values).filter { $0.notice != nil }
+            // not a second notice; only readable reads can disagree. In source
+            // order, then by language, so the language reported is the first
+            // read's in every process: the dictionary's own order is not.
+            let reads = event.reads.sorted { lhs, rhs in
+                lhs.key != rhs.key ? lhs.key < rhs.key : (lhs.value.language ?? "") < (rhs.value.language ?? "")
+            }.map(\.value).filter { $0.notice != nil }
             let notices = Set(reads.compactMap(\.notice))
             guard !reads.isEmpty, notices.count == 1,
                   reads.count >= 2 || reads.contains(where: \.isClear),

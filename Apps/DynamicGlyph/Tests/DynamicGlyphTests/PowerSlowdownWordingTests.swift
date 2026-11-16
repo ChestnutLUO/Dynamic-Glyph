@@ -3,7 +3,7 @@ import Testing
 
 /// What slows recognition, as Diagnostics ("Slowed: …") and the session log
 /// ("slowed: …") say it: Low Power Mode and heat apart, so a report tells
-/// one from the other. Verbatim tester text, never translated.
+/// one from the other. Text for the tester tools, never translated.
 @Suite("Power slowdown wording")
 struct PowerSlowdownWordingTests {
     typealias State = PowerConditions.State

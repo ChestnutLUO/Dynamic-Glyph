@@ -17,7 +17,7 @@ struct SnapshotScheduleTests {
 
     @Test("Every held presentation shape in the field run gets a screenshot")
     func fieldRunRetainsAllFourShapes() throws {
-        let text = try String(contentsOf: TestFixtures.url("field-2026-09-18-schedule", "jsonl"),
+        let text = try String(contentsOf: TestFixtures.url("field-run-schedule", "jsonl"),
                               encoding: .utf8)
         let rows = try text.split(separator: "\n").map {
             try JSONDecoder().decode(Row.self, from: Data($0.utf8))

@@ -374,7 +374,7 @@ struct PresentationTrackerTests {
         #expect(feed.tracker.isFrozen)
     }
 
-    /// The end of the 2026-09-17 recording, at 20 Hz: the last Glyph is shown,
+    /// The end of the first annotated recording, at 20 Hz: the last Glyph is shown,
     /// the array clears, the last indicator loses its highlight, and then the
     /// header is unreadable for half a second before the countdown bar. On a
     /// phone the last header reading is older than the frame it is applied to,
@@ -403,7 +403,7 @@ struct PresentationTrackerTests {
         #expect(feed.tracker.isFrozen)
     }
 
-    /// The 2026-09-22 field run: the Picture in Picture window sat on the
+    /// An early field run: the Picture in Picture window sat on the
     /// header, so the presentation was known only from the indicator strip.
     /// The last indicator's highlight dropping ended the phase on that frame,
     /// before the release could close the slot, and `body` was drawn as `?`

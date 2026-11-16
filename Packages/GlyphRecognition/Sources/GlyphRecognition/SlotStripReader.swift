@@ -16,8 +16,9 @@ public struct SlotStripReading: Sendable, Equatable {
     /// The player-input countdown bar is drawn. Corroborating evidence only:
     /// the header text is what names the phase.
     public let hasInputTimerBar: Bool
-    /// The tops of the indicators were hidden by a banner or a thin window,
-    /// and the row was read from what showed below its edge.
+    /// The tops of the indicators were hidden by a banner, a thin window or
+    /// our own window's lower edge, and the row was read from what showed
+    /// below its edge.
     public let isPartlyCovered: Bool
 
     public init(slotCount: Int, highlightedIndex: Int?, markerCentersX: [Double], hasInputTimerBar: Bool,
@@ -69,10 +70,37 @@ public struct SlotStripReader: Sendable {
     }
 
     public func read(_ band: FrameTopBand) -> Result<SlotStripReading, SlotStripRejection> {
-        read(band, belowOverlay: nil)
+        var cover: SlotStripWindowCover?
+        var rowBelowEdgePossible = false
+        return read(band, belowOverlay: nil, windowEdge: nil, gatesEdgeSearch: true, findsCover: false,
+                    cover: &cover, rowBelowEdgePossible: &rowBelowEdgePossible)
     }
 
-    private func read(_ band: FrameTopBand, belowOverlay: Int?) -> Result<SlotStripReading, SlotStripRejection> {
+    /// The reading, and when it failed because our own floating window
+    /// covers one side of the row, what still shows beside the window.
+    public func observe(_ band: FrameTopBand) -> SlotStripObservation {
+        observe(band, gatesEdgeSearch: true)
+    }
+
+    /// `observe(_:)`, or with `gatesEdgeSearch` false, searching for our
+    /// window's lower edge even where `couldReadBelowWindowEdge` rules out a
+    /// row: the tests' proof that the gate changes no reading.
+    func observe(_ band: FrameTopBand, gatesEdgeSearch: Bool) -> SlotStripObservation {
+        var cover: SlotStripWindowCover?
+        var rowBelowEdgePossible = false
+        let reading = read(band, belowOverlay: nil, windowEdge: nil, gatesEdgeSearch: gatesEdgeSearch,
+                           findsCover: true, cover: &cover, rowBelowEdgePossible: &rowBelowEdgePossible)
+        return SlotStripObservation(reading: reading, cover: cover)
+    }
+
+    /// `windowEdge`, set only with `belowOverlay`, is our own window's lower
+    /// edge (`windowLowerEdge`): per column, the first row read. A read below
+    /// `belowOverlay` without `windowEdge` that gets as far as segmenting
+    /// markers sets `rowBelowEdgePossible` (`couldReadBelowWindowEdge`);
+    /// otherwise it is left false.
+    private func read(_ band: FrameTopBand, belowOverlay: Int?, windowEdge: [Int]?, gatesEdgeSearch: Bool,
+                      findsCover: Bool, cover: inout SlotStripWindowCover?,
+                      rowBelowEdgePossible: inout Bool) -> Result<SlotStripReading, SlotStripRejection> {
         let stripRows = band.rows(layout.slotStripTop, layout.slotStripBottom)
         guard !stripRows.isEmpty else { return .failure(.bandUnavailable) }
         let image = band.image
@@ -99,6 +127,7 @@ public struct SlotStripReader: Sendable {
         var violetColumns = [Int](repeating: 0, count: width)
         var firstRows = [Int](repeating: image.height, count: width)
         var lastRows = [Int](repeating: -1, count: width)
+        var litColumns = [Int](repeating: 0, count: width)
         var lastCoveredRow: Int?
         for y in rows {
             var lit = 0
@@ -106,6 +135,8 @@ public struct SlotStripReader: Sendable {
                 let (r, g, b) = image[x, y]
                 if max(r, max(g, b)) < 60 { continue }
                 lit += 1
+                if let windowEdge, y < windowEdge[x] { continue }
+                litColumns[x] += 1
                 if Self.isGold(r, g, b) { goldColumns[x] += 1 }
                 else if Self.isViolet(r, g, b) { violetColumns[x] += 1 }
                 else { continue }
@@ -127,13 +158,46 @@ public struct SlotStripReader: Sendable {
             // below it. Calling that covered would warn the player to move a
             // window that is out of the way, on every screen without a strip.
             let endsAtStripTop = lastCoveredRow < stripRows.lowerBound + litRows
-            switch read(band, belowOverlay: firstUncoveredRow) {
+            var rowBelowEdgePossible = false
+            switch read(band, belowOverlay: firstUncoveredRow, windowEdge: nil, gatesEdgeSearch: gatesEdgeSearch,
+                        findsCover: false, cover: &cover, rowBelowEdgePossible: &rowBelowEdgePossible) {
             case .success(let reading): return .success(reading)
-            case .failure(let rejection): return .failure(endsAtStripTop ? rejection : .coveredByOverlay)
+            case .failure(let rejection):
+                // Our own window's lower edge across the strip cuts every
+                // indicator by the same curved edge, as a banner does with a
+                // straight one. Only when the row fails the thin-window rule,
+                // so that every row read today reads the same, and only when
+                // what showed below that rule's cut could still hold a row. A
+                // read below the cut that stopped before segmenting, at
+                // another whole lit row, left that false: the traced read
+                // shares those rows and would stop there too.
+                var unused = false
+                if rowBelowEdgePossible || !gatesEdgeSearch,
+                   let windowEdge = windowLowerEdge(band, lastCoveredRow: lastCoveredRow),
+                   case .success(let reading) = read(band, belowOverlay: firstUncoveredRow, windowEdge: windowEdge,
+                                                     gatesEdgeSearch: gatesEdgeSearch, findsCover: false,
+                                                     cover: &cover, rowBelowEdgePossible: &unused) {
+                    return .success(reading)
+                }
+                return .failure(endsAtStripTop ? rejection : .coveredByOverlay)
             }
         }
 
-        var markers: [(range: ClosedRange<Int>, gold: Int, violet: Int)] = []
+        if belowOverlay != nil, windowEdge == nil {
+            rowBelowEdgePossible = couldReadBelowWindowEdge(gold: goldColumns, violet: violetColumns,
+                                                            firstRows: firstRows, lastRows: lastRows)
+        }
+
+        // An object at the left or right edge, such as a tucked window's grey
+        // tab, is set aside rather than distrusted as a misread indicator.
+        // It covers nothing a strip needs. A run that also takes in an
+        // indicator reaches as far in as the indicator, so it is kept.
+        let edge = layout.slotEdgeColumns(frameWidth: width, maximumSlots: SequenceTable.maximumLength)
+        func isEdgeObject(_ run: ClosedRange<Int>) -> Bool {
+            (run.lowerBound < edge.margin && run.upperBound < edge.zone)
+                || (run.upperBound >= width - edge.margin && run.lowerBound >= width - edge.zone)
+        }
+        var markers: [StripMarker] = []
         var start: Int?
         var gold = 0, violet = 0
         for x in 0...width {
@@ -142,11 +206,32 @@ public struct SlotStripReader: Sendable {
                 if start == nil { start = x; gold = 0; violet = 0 }
                 gold += goldColumns[x]; violet += violetColumns[x]
             } else if let first = start {
-                markers.append((first...(x - 1), gold, violet))
+                if !isEdgeObject(first...(x - 1)) {
+                    markers.append(StripMarker(range: first...(x - 1), gold: gold, violet: violet))
+                }
                 start = nil
             }
         }
 
+        let reading = fullReading(band, markers: markers, firstRows: firstRows, lastRows: lastRows,
+                                  belowOverlay: belowOverlay, windowEdge: windowEdge, firstVisibleRow: firstVisibleRow)
+        // Our own window over one side of the row breaks the full reading
+        // with its own ring and content. Only then, and only with no banner
+        // or window edge across the strip, is what shows beside it read.
+        if findsCover, case .failure = reading, !markers.isEmpty, belowOverlay == nil, firstVisibleRow == nil {
+            cover = windowCover(band, rows: rows, litColumns: litColumns, markers: markers,
+                                firstRows: firstRows, lastRows: lastRows)
+        }
+        return reading
+    }
+
+    /// The ordinary checks on the segmented markers: width, count, height,
+    /// spacing, centring and a single highlight.
+    private func fullReading(_ band: FrameTopBand, markers: [StripMarker], firstRows: [Int], lastRows: [Int],
+                             belowOverlay: Int?, windowEdge: [Int]?, firstVisibleRow: Int?)
+        -> Result<SlotStripReading, SlotStripRejection> {
+        let image = band.image
+        let width = image.width
         let minimumWidth = layout.slotMarkerMinimumWidth * Double(width)
         let maximumWidth = layout.slotMarkerMaximumWidth * Double(width)
         let sized = markers.filter {
@@ -160,21 +245,29 @@ public struct SlotStripReader: Sendable {
         guard sized.count == markers.count else { return .failure(.inconsistentMarkerWidths) }
         guard sized.count <= SequenceTable.maximumLength else { return .failure(.tooManyMarkers) }
 
+        let edgeTolerance = layout.bannerEdgeTolerance(frameHeight: band.frameHeight)
         let markerExtents = sized.map { marker in
             (top: marker.range.map { firstRows[$0] }.min() ?? image.height,
              bottom: marker.range.map { lastRows[$0] }.max() ?? -1,
-             width: marker.range.count)
+             width: marker.range.count,
+             reachesWindowEdge: windowEdge.map { edge in
+                 marker.range.contains { firstRows[$0] <= edge[$0] + edgeTolerance }
+             } ?? false)
         }
         // A strip under PiP must retain nearly the full marker height. Reading
         // only the bottom fragments could otherwise silently shorten the row.
         // Below a banner every marker is cut by the same straight edge, so a
         // marker may instead run up to that edge, provided enough of it shows
-        // to have kept its full width.
+        // to have kept its full width. Below our own window's lower edge the
+        // same holds, with the edge traced column by column.
         guard markerExtents.allSatisfy({ extent in
             let height = Double(extent.bottom - extent.top + 1)
             if height >= Double(extent.width) * 0.8 { return true }
+            if windowEdge != nil {
+                return extent.reachesWindowEdge && height >= Double(extent.width) * layout.coveredMarkerMinimumHeight
+            }
             guard belowOverlay == nil, let firstVisibleRow else { return false }
-            return extent.top <= firstVisibleRow + layout.bannerEdgeTolerance(frameHeight: band.frameHeight)
+            return extent.top <= firstVisibleRow + edgeTolerance
                 && height >= Double(extent.width) * layout.coveredMarkerMinimumHeight
         }) else {
             return .failure(.incompleteMarkerHeight)
@@ -211,7 +304,7 @@ public struct SlotStripReader: Sendable {
             highlightedIndex: highlights.first,
             markerCentersX: centers.map { $0 / Double(width) },
             hasInputTimerBar: hasTimerBar(band),
-            isPartlyCovered: firstVisibleRow != nil || cutBelowWindow))
+            isPartlyCovered: firstVisibleRow != nil || cutBelowWindow || windowEdge != nil))
     }
 
     /// How many rows at the top of the strip something bright hangs over.

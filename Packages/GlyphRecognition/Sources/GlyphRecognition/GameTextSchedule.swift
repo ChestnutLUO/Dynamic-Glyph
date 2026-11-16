@@ -39,7 +39,8 @@ public struct GameTextSchedule: Sendable {
     /// A new gear panel (`observeGearPanel`): bounds this far (a fraction of
     /// the frame's height, top or bottom) from where the panel the last gear
     /// read started on was still. A new panel slides in about 0.03 below its settled place
-    /// (2026-10-28: top 0.3147–0.3162 on its first frame, 0.2847 settled);
+    /// (in a field session top 0.3147–0.3162 on its first frame, 0.2847
+    /// settled);
     /// pickup sparks over a border move the detected bounds by about 2 px
     /// (0.0015), a settled panel by at most 0.0007.
     public static let newPanelShift = 0.01
@@ -53,6 +54,13 @@ public struct GameTextSchedule: Sendable {
     /// That frame's time, and whether its panel was still.
     private var observedGearTime = -Double.infinity
     private var observedGearStill = false
+    /// That frame's panel and the one before it were both still: the panel
+    /// rests. A slide eases in, so its first step can be within
+    /// `stillPanelTolerance` (a field recording at 495.34 s: 0.0023, then 0.0061),
+    /// but in the 29 slides of that recording no two steps running were;
+    /// one still step taken as the rest made the panel's own slide look
+    /// like a new panel and stopped its first read.
+    private var observedGearResting = false
     /// The bounds the last gear read started on (once still, where its
     /// panel came to rest), while that read can still be followed by a new
     /// panel: an event uses it up.
@@ -86,8 +94,9 @@ public struct GameTextSchedule: Sendable {
     /// and lost its rows.
     ///
     /// A new panel: bounds more than `newPanelShift` from where the panel
-    /// the last gear read started on was still (its start bounds, or, for a
-    /// read started while the panel slid in, where it came to rest), or from
+    /// the last gear read started on rested (its start bounds, or, for a
+    /// read started while the panel slid in, where it came to rest: two
+    /// still steps running, never one), or from
     /// its start bounds after an analysed frame without any panel. For a read
     /// started while its panel slid in, also a top more than `newPanelShift`
     /// further down the screen than where it started, before the panel rests:
@@ -98,14 +107,15 @@ public struct GameTextSchedule: Sendable {
     /// misses gets none, as before.
     public mutating func observeGearPanel(_ bounds: GearDropPanelBounds?, at time: Double,
                                           previousPanelUnconfirmed: Bool = false) -> Request? {
-        let previous = observedGearBounds
+        let previous = observedGearBounds, previousStill = observedGearStill
         observedGearBounds = bounds; observedGearTime = time
         guard let bounds else {
-            observedGearStill = false
+            observedGearStill = false; observedGearResting = false
             if gearReadBounds != nil { gearAbsentSinceRead = true }
             return nil
         }
         observedGearStill = previous.map { !Self.differs(bounds, $0, by: Self.stillPanelTolerance) } ?? false
+        observedGearResting = observedGearStill && previousStill
         guard let start = gearReadBounds else { return nil }
         let moved: Bool
         if !gearReadStill, !gearAbsentSinceRead {
@@ -117,7 +127,7 @@ public struct GameTextSchedule: Sendable {
             if bounds.top - start.top > Self.newPanelShift {
                 moved = true
             } else {
-                if observedGearStill { gearReadBounds = bounds; gearReadStill = true }
+                if observedGearResting { gearReadBounds = bounds; gearReadStill = true }
                 return nil
             }
         } else {
@@ -212,7 +222,7 @@ public struct GameTextSchedule: Sendable {
             lastGearSubmission = time; gearGeometryStayed = true
             // The geometry this read starts on, if this frame's was observed.
             let observed = observedGearTime == time ? observedGearBounds : nil
-            gearReadBounds = observed; gearReadStill = observed != nil && observedGearStill
+            gearReadBounds = observed; gearReadStill = observed != nil && observedGearResting
             gearAbsentSinceRead = false; newGearPanel = false
             gearReadProtected = cancelledSinceGearRead; cancelledSinceGearRead = false
         }

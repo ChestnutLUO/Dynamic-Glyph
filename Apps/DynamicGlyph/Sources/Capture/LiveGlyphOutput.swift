@@ -4,6 +4,7 @@ import CoreMedia
 import ImageIO
 import GlyphRecognition
 import GlyphRecognitionImages
+import GlyphRecognitionCxx
 
 /// One analyzed sample, for the displays and, while logs are kept, for the
 /// Diagnostics page.
@@ -65,8 +66,37 @@ struct FrameTelemetry: @unchecked Sendable {
 // must run on the same serial queue. The one exception is the header reader,
 // which locks its own state.
 final class LiveGlyphOutput: @unchecked Sendable {
-    /// Nil without Glyph assistance: then only item panels are looked for.
-    private var session: GlyphFrameSession?
+    /// The pixel steps: the luma gate, the conversions, the panel checks, the
+    /// array hunt, the Glyph read and the slot strip. One of the two arms of
+    /// the engine A/B; everything after it is shared.
+    /// Made with a nil table without Glyph assistance: then only item panels
+    /// are looked for.
+    private let engine: FrameRecognitionEngine
+    /// The logic arm's name, "swift" or "cpp": every decision after the
+    /// engine (tracking, sessions, schedules, parsers) runs on that arm's
+    /// objects, taken from one `RecognitionLogicSet`.
+    let logicName: String
+    private let makeGearEvidenceSchedule: () -> any GearEvidenceScheduling
+    private let makePortalObserver: () -> any PortalLevelObserving
+    private let portalLevelEstimate: @Sendable (PortalScreenEvidence?, Int?, Bool) -> PortalLevelEstimate?
+    private let resultSummary: @Sendable (HackResult, [ValidatorResultComparison.Entry]) -> HackResultSummary
+    /// The `lazyImage` cut: the frame's CGImage is rendered only when the
+    /// text lane takes a read, not for every analysed frame. Nothing is
+    /// saved while the engine renders one itself, as the Swift arm does.
+    private let lazyImage: Bool
+    /// The `planeGate` cut: with `lazyImage`, a footer label or command band
+    /// that would be rendered alone is first looked at in the capture's
+    /// planes, and not rendered when they show it holds nothing.
+    private let planeGate: Bool
+    /// The `portalSettle` cut: a portal screen is offered to the text lane
+    /// only until `portalLimiter` calls its levels settled.
+    private let portalSettle: Bool
+    /// The `gearSettle` cut: a gear read due on a settled, still panel is
+    /// answered with the read that settled it (`gearLimiter`).
+    private let gearSettle: Bool
+    /// The `resultSettle` cut: a result read due on a complete, still result
+    /// panel is answered with the last read (`resultLimiter`).
+    private let resultSettle: Bool
     private let context = CIContext(options: [.useSoftwareRenderer: false])
     /// The Power section's counters: measurement only, kept whether or not
     /// logs are, so they show the cost of a session without them. The
@@ -108,11 +138,11 @@ final class LiveGlyphOutput: @unchecked Sendable {
     private let deliverDrop: @Sendable (GearDrop) -> Void
     private let gearFile: FileHandle?
     private let gearWriter: GearEvidenceWriter?
-    private var gearTracker = GearDropTracker()
-    private var gearSession = GearDropObservationSession()
-    private var gearDisplay: GearDropDisplayTracker
+    private var gearTracker: any GearDropTracking
+    private var gearSession: any GearDropSessioning
+    private var gearDisplay: any GearDropDisplaying
     private var loggedGearEvents = 0
-    private var gearEvidenceSchedule = GearEvidenceSchedule()
+    private var gearEvidenceSchedule: any GearEvidenceScheduling
     private var gearGroupOpen = false
     /// Item-panel reads in a row that found the panel geometry was no panel
     /// (`nonPanel`), up to `gearRejectionsBeforeIdle`; an accepted read clears
@@ -140,7 +170,20 @@ final class LiveGlyphOutput: @unchecked Sendable {
     private var gearContinuityBroken = false
     /// The portal screen before each hack, for its level. Kept with gear
     /// reading: it is a tester feature that logs what it read.
-    private var portalObserver = PortalLevelObserver()
+    private var portalObserver: any PortalLevelObserving
+    /// Whether the portal screen on view still needs reading. Fed only with
+    /// `portalSettle`; reset with the observer, and when a hack claims its
+    /// screen.
+    private var portalLimiter = PortalReadLimiter()
+    /// Fed only with `gearSettle`: whether the current panel's settled
+    /// reading may stand in for a read; and the frame a real gear read was
+    /// admitted at, with its signature, until that read is taken.
+    private var gearLimiter = GearSettleLimiter()
+    private var gearSettleFrame: (time: Double, signature: StillSignature?, region: PanelRegion,
+                                  bounds: GearDropPanelBounds)?
+    /// Fed only with `resultSettle`, as `gearLimiter` is.
+    private var resultLimiter = ResultSettleLimiter()
+    private var resultSettleFrame: (time: Double, signature: StillSignature?, region: PanelRegion)?
     private var portalScreens: [Int: PortalScreenEvidence] = [:]
     private var glyphCounts: [Int: Int] = [:]
     /// Carried over idle frames, which show an unchanged screen.
@@ -152,20 +195,19 @@ final class LiveGlyphOutput: @unchecked Sendable {
 
     private let sessionID: CaptureSessionID
     private let layout = GameUILayout()
-    private let slotReader: SlotStripReader
     private let headerReader: GameHeaderReader
-    private let commands = CommandNoticeCapture()
-    private var commandScreen = CommandScreenWatch()
+    private let commands: any CommandNoticeCapturing
+    private var commandScreen: any CommandScreenWatching
     private let commandFile: FileHandle?
     private let commandWriter: CommandEvidenceWriter?
-    private let predictor: SequencePredictor?
-    private var tracker: PresentationTracker
-    private var inputValidator: PlayerInputValidator?
+    private let predictor: (any SequencePredicting)?
+    private var tracker: any PresentationTracking
+    private var inputValidator: (any PlayerInputValidating)?
     private let inputFile: FileHandle?
     private let resultFile: FileHandle?
     private let resultWriter: ResultEvidenceWriter?
-    private var resultSession = ResultObservationSession()
-    private var resultEvidenceSchedule = ResultEvidenceSchedule()
+    private var resultSession: any ResultObserving
+    private var resultEvidenceSchedule: any ResultEvidenceScheduling
     private var loggedResultRevision = -1
     private var previousResultRead: GameHeaderReader.ResultRead?
 
@@ -174,8 +216,7 @@ final class LiveGlyphOutput: @unchecked Sendable {
     private var lastLooked = -Double.infinity
     /// How often frames are analyzed and whether they get the full pipeline,
     /// from a luma gate read before any conversion. See `AnalysisRateController`.
-    private var pace = AnalysisRateController()
-    private let gate = LumaGate()
+    private var pace: any AnalysisPacing
     /// The previous frame's presentation time, repeated or not.
     private var lastPresentation = -Double.infinity
     /// The last frame with a new presentation time, and when it arrived on
@@ -228,7 +269,7 @@ final class LiveGlyphOutput: @unchecked Sendable {
     /// Whether the hack's command phase is still current, from header readings
     /// and notice boxes: it lets the cached fit keep the command watch while
     /// strokes cover the array, and never once the phase has ended.
-    private var commandContext = CommandPhaseContext()
+    private var commandContext: any CommandPhaseContexting
     /// Diagnostic decomposition of that same last-frame activity. No pixels,
     /// strings or per-look collections; this never changes the pace policy.
     private var activityReasons = AnalysisGateReasons()
@@ -248,14 +289,26 @@ final class LiveGlyphOutput: @unchecked Sendable {
     private var trackingEvents = 0
 
     /// A nil `table` reads gear only, whatever `readsResults` and `readsGear` say.
+    /// `engine` runs the pixel steps; nil is the Swift arm on `table`. Of the
+    /// `cuts`, `lazyImage`, `planeGate`, `portalSettle`, `gearSettle` and `resultSettle` are applied here,
+    /// `headerStillSkip`, `gearLeanRead`, `gearLanguageSettle`,
+    /// `headerWindowMask` and `headerCoverSkip` by the header reader; the rest
+    /// belong to the engine.
+    /// `logic` is everything after the engine, made for this session from the
+    /// same `table`, `sequenceTable` and `sessionID`; nil is the Swift set
+    /// around `languages`. A given set brings its own language memory, and
+    /// `languages` is then not used.
     init(table: GlyphTable?, sequenceTable: SequenceTable?, sessionID: CaptureSessionID,
          directory: URL?, recorders: [DebugScreenRecorder] = [], readsResults: Bool,
          readsGear: Bool = false, savesGearPictures: Bool = true,
          languages: GameLanguageMemory = GameLanguageMemory(language: .english, isAutomatic: false),
          power: PowerConditions = .shared, powerSaving: Bool = true,
-         meter: PowerMeter = .shared, readingMode: ReadingModeSignal? = nil,
-         // Test seam only: nil preserves the shipped header OCR operation and scheduling.
+         engine: FrameRecognitionEngine? = nil, cuts: Set<RecognitionCut> = [],
+         logic: RecognitionLogicSet? = nil, meter: PowerMeter = .shared, readingMode: ReadingModeSignal? = nil,
+         // Test seams only: nil preserves the shipped header, portal and gear OCR operations and scheduling.
          headerOperation: GameHeaderReader.HeaderOperation? = nil,
+         portalOperation: GameHeaderReader.PortalOperation? = nil,
+         gearReadingOperation: GameHeaderReader.GearReadingOperation? = nil,
          trace: (@Sendable (LiveGlyphTrace) -> Void)? = nil,
          telemetry: @escaping @Sendable (FrameTelemetry) -> Void,
          deliverResult: @escaping @Sendable (HackResultSummary) -> Void,
@@ -263,7 +316,12 @@ final class LiveGlyphOutput: @unchecked Sendable {
          deliverDrop: @escaping @Sendable (GearDrop) -> Void = { _ in },
          deliver: @escaping @Sendable (LiveGlyphUpdate) -> Void) throws {
         assistsGlyphs = table != nil
-        session = table.map(GlyphFrameSession.init(table:))
+        self.engine = engine ?? SwiftFrameRecognitionEngine(table: table)
+        lazyImage = cuts.contains(.lazyImage)
+        planeGate = cuts.contains(.planeGate)
+        portalSettle = cuts.contains(.portalSettle)
+        gearSettle = cuts.contains(.gearSettle)
+        resultSettle = cuts.contains(.resultSettle)
         self.power = power
         self.powerSaving = powerSaving
         self.meter = meter
@@ -271,20 +329,42 @@ final class LiveGlyphOutput: @unchecked Sendable {
         // A new session starts on the window's own background.
         readingMode?.publish(.none)
         self.trace = trace
+        let logic = logic ?? makeSwiftLogicSet(table: table, sequenceTable: sequenceTable, sessionID: sessionID,
+                                               languages: languages)
+        logicName = logic.name
+        makeGearEvidenceSchedule = logic.makeGearEvidenceSchedule
+        makePortalObserver = logic.makePortalObserver
+        portalLevelEstimate = logic.portalLevelEstimate
+        resultSummary = logic.resultSummary
         headerReader = GameHeaderReader(configuration: .init(
-            skipsUnchangedHeaders: powerSaving, languages: languages,
-            allowsGearRetries: { !(powerSaving && power.isConstrained) }),
-            headerOperation: headerOperation, meter: meter)
-        predictor = table == nil ? nil : sequenceTable.map(SequencePredictor.init(table:))
+            skipsUnchangedHeaders: powerSaving, languages: logic.languageMemory,
+            allowsGearRetries: { !(powerSaving && power.isConstrained) },
+            leanGearReads: cuts.contains(.gearLeanRead),
+            settlesGearLanguage: cuts.contains(.gearLanguageSettle),
+            skipsStillHeaders: cuts.contains(.headerStillSkip),
+            masksHeaderWindow: cuts.contains(.headerWindowMask),
+            skipsCoveredHeaders: cuts.contains(.headerCoverSkip)),
+            logic: logic, headerOperation: headerOperation, gearReadingOperation: gearReadingOperation,
+            portalOperation: portalOperation, meter: meter)
+        predictor = logic.predictor
         self.sessionID = sessionID
-        tracker = PresentationTracker(sessionID: sessionID)
-        inputValidator = table.map { PlayerInputValidator(table: $0, sessionID: sessionID) }
+        tracker = logic.tracker
+        inputValidator = logic.inputValidator
+        resultSession = logic.resultSession
+        resultEvidenceSchedule = logic.resultEvidenceSchedule
+        commands = logic.commandNoticeCapture
+        commandScreen = logic.commandScreen
+        commandContext = logic.commandContext
+        gearTracker = logic.gearTracker
+        gearSession = logic.gearSession
+        gearEvidenceSchedule = logic.gearEvidenceSchedule
+        portalObserver = logic.portalObserver
+        pace = logic.pace
         commandWriter = directory.map(CommandEvidenceWriter.init(directory:))
         commandFile = try directory.map { try Self.makeFile($0.appendingPathComponent("commands.jsonl")) }
         inputFile = try directory.map { try Self.makeFile($0.appendingPathComponent("input-validation.jsonl")) }
         resultFile = try directory.map { try Self.makeFile($0.appendingPathComponent("results.jsonl")) }
         resultWriter = try directory.map(ResultEvidenceWriter.init(directory:))
-        slotReader = SlotStripReader(layout: layout)
         self.recorders = recorders
         self.deliver = deliver
         self.deliverResult = deliverResult
@@ -297,7 +377,7 @@ final class LiveGlyphOutput: @unchecked Sendable {
         self.readsGear = gear
         self.deliverGear = deliverGear
         self.deliverDrop = deliverDrop
-        gearDisplay = GearDropDisplayTracker(standalone: !assistsGlyphs)
+        gearDisplay = logic.gearDisplay
         gearFile = try directory.flatMap { gear ? try Self.makeFile($0.appendingPathComponent("gear-drops.jsonl")) : nil }
         gearWriter = directory.flatMap { gear && savesGearPictures ? GearEvidenceWriter(directory: $0) : nil }
         folderName = directory?.lastPathComponent
@@ -488,6 +568,7 @@ final class LiveGlyphOutput: @unchecked Sendable {
             commands.invalidateQueue(at: time)
             commandScreen.reset()
             commandContext.reset()
+            resultLimiter.reset(); resultSettleFrame = nil
             fitFreshnessIsCurrentEpoch = false
             sawActivity = false
             activityReasons = []
@@ -509,14 +590,13 @@ final class LiveGlyphOutput: @unchecked Sendable {
             consumeCommand()
             if commandScreen.watching, facts.status == .complete,
                let pixels = CMSampleBufferGetImageBuffer(buffer) {
+                let renderStarted = meter.now()
+                let crop = try? render(pixels, region: CommandNoticeDetector.band(width: facts.width,
+                                                                                  height: facts.height))
+                meter.finish(.bandRender, since: renderStarted)
                 let bandStarted = meter.now()
                 defer { meter.finish(.commandBand, since: bandStarted) }
-                let input = CIImage(cvPixelBuffer: pixels)
-                let band = CommandNoticeDetector.band(width: facts.width, height: facts.height)
-                // Core Image uses a bottom-left origin; detector bands use top-left.
-                let rect = CGRect(x: band.minX, y: input.extent.height - band.maxY,
-                                  width: band.width, height: band.height)
-                if let crop = context.createCGImage(input, from: rect) {
+                if let crop {
                     do {
                         try commands.observe(band: crop, at: time)
                         currentNotice = commands.showsNotice
@@ -552,7 +632,7 @@ final class LiveGlyphOutput: @unchecked Sendable {
             // pace like an unchanged frame, though it has no pixels to read.
             decision = pace.advanceStill(at: time, busy: paceBusy, inHack: inHack, constrained: analysisConstrained)
         } else {
-            gateReading = facts.status == .complete ? CMSampleBufferGetImageBuffer(buffer).flatMap(gate.read) : nil
+            gateReading = facts.status == .complete ? CMSampleBufferGetImageBuffer(buffer).flatMap(readGate) : nil
             decision = pace.decide(at: time, gate: gateReading, busy: paceBusy, inHack: inHack,
                                    constrained: analysisConstrained)
         }
@@ -582,85 +662,119 @@ final class LiveGlyphOutput: @unchecked Sendable {
         var panelCandidate = false
         var gearBounds: GearDropPanelBounds?
         var portalCandidate = false
+        var portalFaction: PortalFaction?
+        /// The portal check ran on this frame's pixels, finding a screen or not.
+        var portalChecked = false
         var observation: GlyphFrameObservation?
+        var band: FrameTopBand?
+        var slots: SlotStripReading?
+        var slotRejection: SlotStripRejection?
+        var slotCover: SlotStripWindowCover?
+        var hasInputTimerBar = false
+        /// The frame as a CGImage, once rendered: by the engine, or here on
+        /// demand through `frameImage()`.
         var image: CGImage?
+        /// The pixels the engine analysed, for a render on demand.
+        var analysedPixels: CVPixelBuffer?
         var state = "waitingForEmptyArray"
         var error: String?
         if facts.status != .complete {
             // Idle means no new image; it does not establish a Glyph boundary.
             // Other stream interruptions invalidate geometric continuity.
-            if facts.status != .idle { session?.reset(); gearContinuityBroken = true }
+            if facts.status != .idle { engine.resetSession(); gearContinuityBroken = true }
             state = "capture_\(facts.status.rawValue)"
         } else if facts.width >= facts.height || (facts.orientation != nil && facts.orientation != 1) {
-            session?.reset()
+            engine.resetSession()
             state = "unsupportedOrientation"
         } else if let pixels = CMSampleBufferGetImageBuffer(buffer) {
+            // A portal's level is matched to the Glyph hack that follows,
+            // when gear is read. With power saving the portal screen, which
+            // comes before every hack, also keeps the full pace, so the hack's
+            // empty array is fitted before its first Glyph. A quiet screen
+            // shows no array: the search for one is skipped.
+            let request = FrameAnalysisRequest(assistsGlyphs: assistsGlyphs, searchesArray: !quiet,
+                                               checksGear: readsGear,
+                                               checksPortal: assistsGlyphs && (readsGear || powerSaving),
+                                               readsStrip: assistsGlyphs)
             do {
-                let conversionStarted = meter.now()
-                let input = CIImage(cvPixelBuffer: pixels)
-                let converted = context.createCGImage(input, from: input.extent)
-                meter.finish(.conversion, since: conversionStarted)
-                guard let cgImage = converted else {
-                    throw CocoaError(.coderReadCorrupt)
+                let analysis = try FramePlanes.withLocked(pixels) { planes in
+                    try engine.analyze(FrameInput(planes: planes, time: time) { try self.render(pixels) },
+                                       request: request)
                 }
-                image = cgImage
-                // A failed panel check is no reason to lose the frame for Glyphs.
-                if readsGear {
-                    let gearStarted = meter.now()
-                    gearBounds = try? GearDropScreenReader().bounds(in: cgImage)
-                    meter.finish(.gearCheck, since: gearStarted)
+                record(analysis.timings)
+                analysedPixels = pixels
+                image = analysis.image
+                gearBounds = analysis.gearBounds
+                portalCandidate = analysis.portalCandidate
+                portalFaction = analysis.portalFaction
+                portalChecked = request.checksPortal
+                panelCandidate = analysis.resultCandidate
+                observation = analysis.observation
+                band = analysis.topBand
+                switch analysis.slots {
+                case .success(let reading)?: slots = reading
+                case .failure(let rejection)?: slotRejection = rejection
+                case nil: break
                 }
-                // A portal's level is matched to the Glyph hack that follows,
-                // when gear is read. With power saving the portal screen,
-                // which comes before every hack, also keeps the full pace, so
-                // the hack's empty array is fitted before its first Glyph.
-                if assistsGlyphs, readsGear || powerSaving {
-                    let portalStarted = meter.now()
-                    portalCandidate = (try? PortalScreenReader().isCandidate(cgImage)) == true
-                    meter.finish(.portalCheck, since: portalStarted)
-                }
+                slotCover = analysis.slotCover
+                hasInputTimerBar = analysis.hasInputTimerBar
                 if assistsGlyphs {
-                    let decodeStarted = meter.now()
-                    let luminance = try ImageDecoder.decode(cgImage)
-                    meter.finish(.decode, since: decodeStarted)
-                    let panelStarted = meter.now()
-                    panelCandidate = ResultPanelDetector().isCandidate(luminance)
-                    meter.finish(.resultCheck, since: panelStarted)
-                    // A quiet screen shows no array: the search for one is skipped.
-                    if !quiet, session != nil {
-                        let glyphStarted = meter.now()
-                        observation = session?.observe(luminance, at: time)
-                        // The session times its own hunt for the node array;
-                        // the rest of `observe` is reading the Glyph.
-                        let total = meter.now() &- glyphStarted
-                        let huntTime = session?.lastGridHuntNanoseconds
-                        if huntTime != nil, session?.validatedAt == time,
-                           observation?.state == .noStroke, observation?.calibration != nil {
-                            fitFreshnessIsCurrentEpoch = true
-                        }
-                        let hunt = min(huntTime ?? 0, total)
-                        if huntTime != nil { meter.record(.gridHunt, nanoseconds: hunt) }
-                        meter.record(.glyphRead, nanoseconds: total - hunt)
+                    // A hunt that ran this frame and matched all the rings is
+                    // a fit on the current clock epoch.
+                    if analysis.timings.gridHunt != nil, engine.sessionValidatedAt == time,
+                       observation?.state == .noStroke, observation?.calibration != nil {
+                        fitFreshnessIsCurrentEpoch = true
                     }
                     state = quiet ? "quietScreen" : observation?.state.rawValue ?? "waitingForEmptyArray"
                 } else {
                     state = "gearOnly"
                 }
             } catch let failure {
-                session?.reset()
+                engine.resetSession()
                 state = "conversionFailed"
                 error = String(describing: failure)
             }
         } else {
-            session?.reset()
+            engine.resetSession()
             state = "missingPixels"
+        }
+        let hasAnalysis = analysedPixels != nil
+        /// The frame as a CGImage, rendered here if the engine left it to the
+        /// text lane; nil when nothing was analysed or the render failed. The
+        /// render is timed as conversion, like the engine's own.
+        func frameImage() -> CGImage? {
+            if let image { return image }
+            guard let analysedPixels else { return nil }
+            let started = meter.now()
+            image = try? render(analysedPixels)
+            meter.finish(.conversion, since: started)
+            return image
+        }
+        /// A top-left rectangle of the analysed frame rendered on its own,
+        /// timed as `metric` so that `conversion` keeps counting whole frames.
+        /// It equals the same rectangle cut from a whole render, byte for byte
+        /// (`RegionRenderTests`). Nil when nothing was analysed or the render
+        /// failed.
+        func regionImage(_ rect: CGRect, timedAs metric: PowerMetric) -> CGImage? {
+            guard let analysedPixels else { return nil }
+            let started = meter.now()
+            defer { meter.finish(metric, since: started) }
+            return try? render(analysedPixels, region: rect)
+        }
+        /// The frame as the lazy text lane takes it. A header read's rectangle
+        /// is cut from the frame when that is rendered already, exactly as the
+        /// read would crop it, so no frame is rendered twice; otherwise only
+        /// the rectangle is rendered.
+        let lazyFrame = GameHeaderReader.LazyFrame(width: facts.width, height: facts.height,
+                                                   whole: frameImage) { rect in
+            image.flatMap { $0.cropping(to: rect) } ?? regionImage(rect, timedAs: .headerRender)
         }
         samples += 1
         // Panel geometry keeps the pace until its reads have kept finding no
         // panel; an open group or a read panel keeps it regardless (`paceBusy`).
         if gearBounds != nil {
             lastGearBoundsTime = time
-        } else if image != nil, time < lastGearBoundsTime || time - lastGearBoundsTime > Self.gearRejectionsForgetAfter {
+        } else if hasAnalysis, time < lastGearBoundsTime || time - lastGearBoundsTime > Self.gearRejectionsForgetAfter {
             gearRejections = 0
         }
         let gearRejected = gearBounds != nil && gearRejections >= Self.gearRejectionsBeforeIdle
@@ -679,13 +793,23 @@ final class LiveGlyphOutput: @unchecked Sendable {
         }
         if readsResults, powerSaving {
             consumeCommand()
-            // After the throttle, cut from the frame already converted rather
-            // than rendered again: a notice lasts at least one 20-Hz sample.
-            if commandScreen.watching, let image {
+            // After the throttle: a notice lasts at least one 20-Hz sample.
+            // Cut from the frame when it is rendered, or about to be for a text
+            // lane without `lazyImage`; otherwise only the band is rendered,
+            // and with `planeGate` not even that when the planes show it dark.
+            if commandScreen.watching, hasAnalysis {
+                let rect = CommandNoticeDetector.band(width: facts.width, height: facts.height)
+                let frame = lazyImage ? image : frameImage()
+                let alone = lazyImage && frame == nil
+                let dark = alone && planeGate && analysedPixels.map(bandIsEmpty) == true
+                let region = alone && !dark ? regionImage(rect, timedAs: .bandRender) : nil
                 let bandStarted = meter.now()
                 defer { meter.finish(.commandBand, since: bandStarted) }
-                if let crop = Self.copy(image, cropping: CommandNoticeDetector.band(width: facts.width,
-                                                                                    height: facts.height)) {
+                if dark {
+                    commands.observeEmptyBand(at: time)
+                    currentNotice = commands.showsNotice
+                    meter.count(.bandGated)
+                } else if let crop = region ?? frame.flatMap({ Self.copy($0, cropping: rect) }) {
                     do {
                         try commands.observe(band: crop, at: time)
                         currentNotice = commands.showsNotice
@@ -705,11 +829,20 @@ final class LiveGlyphOutput: @unchecked Sendable {
         gearContinuityBroken = false
         if readsGear, gearSession.prepareFrame(at: time, continuityLost: continuityLost) {
             headerReader.invalidateGear()
-            portalObserver = PortalLevelObserver()
+            portalObserver = makePortalObserver()
+            portalLimiter.reset()
+            gearLimiter.reset(); gearSettleFrame = nil
             gearRejections = 0
             if let closed = gearTracker.loseContinuity(at: time) { closeGear(closed) }
             lastInputVisible = false; lastGameProgressVisible = false
             drainGearEvents()
+        }
+        if portalSettle, readsGear, portalChecked {
+            if let portalFaction {
+                portalLimiter.candidate(at: time, faction: portalFaction)
+            } else {
+                portalLimiter.absent(at: time)
+            }
         }
         consumeResult()
         consumeGear()
@@ -720,54 +853,78 @@ final class LiveGlyphOutput: @unchecked Sendable {
         let layoutConsistent = observation?.calibration.map(layout.isConsistent) ?? false
         let hasValidCalibration = observation?.calibration != nil && layoutConsistent
         let freshFit = fitFreshnessIsCurrentEpoch && hasValidCalibration
-            && session?.validatedAt.map { time >= $0 && time - $0 <= Self.freshFitWindow } == true
-        var band: FrameTopBand?
-        var slots: SlotStripReading?
-        var slotRejection: SlotStripRejection?
-        var hasInputTimerBar = false
+            && engine.sessionValidatedAt.map { time >= $0 && time - $0 <= Self.freshFitWindow } == true
         var header: HeaderReading?
-        if let image, facts.status == .complete, !assistsGlyphs {
+        /// The header reader issued `header` again for a still header.
+        var headerReused = false
+        if hasAnalysis, !assistsGlyphs {
             // Only a panel needs reading: no header, no slot row.
             if let gearBounds {
-                headerReader.submit(image, at: time, session: sessionID, gearBounds: gearBounds, readsHeader: false,
-                                    constrained: constrained, gearPanelSettled: gearTracker.currentPanelSettled,
-                                    gearPanelUnconfirmed: gearPanelUnconfirmed, inHack: false)
+                let reissues = gearSettleReissues(at: time, bounds: gearBounds, pixels: analysedPixels)
+                var submission = GameHeaderReader.Submission.none
+                if lazyImage {
+                    submission = headerReader.submit(lazyFrame, at: time, session: sessionID, gearBounds: gearBounds,
+                                                     readsHeader: false, constrained: constrained,
+                                                     gearPanelSettled: gearTracker.currentPanelSettled,
+                                                     gearPanelUnconfirmed: gearPanelUnconfirmed, inHack: false,
+                                                     reissues: reissues)
+                } else if let image = frameImage() {
+                    submission = headerReader.submit(image, at: time, session: sessionID, gearBounds: gearBounds,
+                                                     readsHeader: false, constrained: constrained,
+                                                     gearPanelSettled: gearTracker.currentPanelSettled,
+                                                     gearPanelUnconfirmed: gearPanelUnconfirmed, inHack: false,
+                                                     reissues: reissues)
+                }
+                noteGearSubmission(submission, at: time, bounds: gearBounds, pixels: analysedPixels)
             } else {
+                if gearSettle { gearLimiter.reset() }
                 // The new-panel check needs the frames without a panel too.
                 headerReader.observeGearPanel(nil, at: time)
             }
-        } else if let image, facts.status == .complete {
-            let slotStarted = meter.now()
-            band = try? ImageDecoder.topBand(image, layout: layout)
-            if let band {
-                switch slotReader.read(band) {
-                case .success(let reading): slots = reading
-                case .failure(let rejection): slotRejection = rejection
-                }
-            }
-            meter.finish(.slotStrip, since: slotStarted)
-            hasInputTimerBar = band.map(slotReader.hasTimerBar) == true
+        } else if hasAnalysis {
             // Current evidence can precede the tracker entering a hack. Bypass
             // only content suppression, retaining the outside OCR cadence.
             let requiresFreshHeader = slots != nil || hasInputTimerBar || freshFit
             // Text recognition runs behind the sampler on its own schedule.
             // Between hacks the header only has to notice the next one.
-            let headerInterval = powerSaving ? AnalysisRateController.headerInterval(
+            let headerInterval = powerSaving ? type(of: pace).headerInterval(
                 mode: decision.mode, inHack: inHack, constrained: constrained) : nil
-            headerReader.submit(image, at: time, session: sessionID,
-                                resultContext: resultSession.context, panelCandidate: panelCandidate,
-                                keepResultImage: keepsDiagnostics, gearBounds: gearBounds,
-                                headerPriority: tracker.state == .presenting || tracker.state == .input,
-                                portalCandidate: readsGear && portalCandidate,
-                                // Commands come before presentation; the header
-                                // has the lane to itself while a hack is shown.
-                                commands: readsResults && tracker.state != .presenting && tracker.state != .input
-                                    ? commands : nil,
-                                readsHeader: !powerSaving || headerInterval != nil, headerInterval: headerInterval,
-                                constrained: constrained, gearPanelSettled: gearTracker.currentPanelSettled,
-                                gearPanelUnconfirmed: gearPanelUnconfirmed, inHack: inHack,
-                                requiresFreshHeader: requiresFreshHeader, topBand: band)
-            header = headerReader.reading(for: time, session: sessionID)
+            let headerPriority = tracker.state == .presenting || tracker.state == .input
+            // Commands come before presentation; the header has the lane to
+            // itself while a hack is shown.
+            let commandCapture = readsResults && tracker.state != .presenting && tracker.state != .input
+                ? commands : nil
+            let readsHeader = !powerSaving || headerInterval != nil
+            let offersPortal = readsGear && portalCandidate && (!portalSettle || portalLimiter.wantsRead(at: time))
+            if readsGear, portalCandidate, !offersPortal { meter.count(.portalHeld) }
+            var reissues = gearSettleReissues(at: time, bounds: gearBounds, pixels: analysedPixels)
+            reissues.result = resultSettleReading(at: time, panelCandidate: panelCandidate, pixels: analysedPixels)
+            var submission = GameHeaderReader.Submission.none
+            if lazyImage {
+                // Rendered only if the lane takes this frame: see `GameHeaderReader`.
+                submission = headerReader.submit(lazyFrame, at: time, session: sessionID,
+                                    resultContext: resultSession.context, panelCandidate: panelCandidate,
+                                    keepResultImage: keepsDiagnostics, gearBounds: gearBounds,
+                                    headerPriority: headerPriority, portalCandidate: offersPortal,
+                                    commands: commandCapture, readsHeader: readsHeader, headerInterval: headerInterval,
+                                    constrained: constrained, gearPanelSettled: gearTracker.currentPanelSettled,
+                                    gearPanelUnconfirmed: gearPanelUnconfirmed, inHack: inHack,
+                                    requiresFreshHeader: requiresFreshHeader, topBand: band, reissues: reissues)
+            } else if let image = frameImage() {
+                submission = headerReader.submit(image, at: time, session: sessionID,
+                                    resultContext: resultSession.context, panelCandidate: panelCandidate,
+                                    keepResultImage: keepsDiagnostics, gearBounds: gearBounds,
+                                    headerPriority: headerPriority, portalCandidate: offersPortal,
+                                    commands: commandCapture, readsHeader: readsHeader, headerInterval: headerInterval,
+                                    constrained: constrained, gearPanelSettled: gearTracker.currentPanelSettled,
+                                    gearPanelUnconfirmed: gearPanelUnconfirmed, inHack: inHack,
+                                    requiresFreshHeader: requiresFreshHeader, topBand: band, reissues: reissues)
+            }
+            noteGearSubmission(submission, at: time, bounds: gearBounds, pixels: analysedPixels)
+            noteResultSubmission(submission, at: time, pixels: analysedPixels)
+            let issued = headerReader.issuedReading(for: time, session: sessionID)
+            header = issued?.reading
+            headerReused = issued?.reused == true
         }
 
         let evidence = FrameEvidence(
@@ -776,18 +933,22 @@ final class LiveGlyphOutput: @unchecked Sendable {
             slots: slots, slotRejection: slotRejection,
             shape: observation.map(ShapeEvidence.init) ?? .unavailable,
             hasValidCalibration: hasValidCalibration,
-            hasInputTimerBar: hasInputTimerBar)
+            hasInputTimerBar: hasInputTimerBar,
+            partialSlots: slotCover?.row,
+            hasPartialInputTimerBar: slotCover?.hasPartialInputTimerBar == true)
         // Hack signs that a slow look reads keep the next frames at the full
         // pace: the node array fitted where the layout expects it, the slot
-        // strip, the input countdown. A resting look searches for the array;
-        // a quiet one (no candidate, so no hack screen) does not.
+        // strip, the input countdown, whole or beside our own window. A
+        // resting look searches for the array; a quiet one (no candidate, so
+        // no hack screen) does not.
+        let countdown = evidence.hasInputTimerBar || evidence.hasPartialInputTimerBar
         if freshPixels {
-            if powerSaving, slots != nil || evidence.hasInputTimerBar || freshFit {
+            if powerSaving, slots != nil || countdown || freshFit {
                 sawActivity = true
             }
             activityReasons.set(.calibration, powerSaving && freshFit)
             activityReasons.set(.slots, powerSaving && slots != nil)
-            activityReasons.set(.timer, powerSaving && evidence.hasInputTimerBar)
+            activityReasons.set(.timer, powerSaving && countdown)
         }
         let events = tracker.accept(evidence)
         if events.contains(where: { $0.kind == .hackStarted }) { gearRejections = 0 }
@@ -814,7 +975,9 @@ final class LiveGlyphOutput: @unchecked Sendable {
             // recognised nothing, unless a notice of this window has been
             // read: while a command is drawn the header mostly reads that
             // way. Retained tracker phase and stale notice state never
-            // qualify.
+            // qualify. With `headerStillSkip` a reading issued again for a
+            // still header counts at the skipped frame's time, as a read of
+            // that frame would: a header that changed is read, never reused.
             if let latest = headerReader.latestReading(session: sessionID) {
                 commandContext.header(latest)
             }
@@ -831,20 +994,36 @@ final class LiveGlyphOutput: @unchecked Sendable {
             case .cancel: commands.cancel(); commandContext.noticeRead(at: nil)
             case .none: break
             }
-            if !evidence.hasValidCalibration, let image {
-                let probeStarted = meter.now()
-                // An item panel on screen, or its group still being read, is
-                // no time for a drone check: see `observeMode`.
-                _ = try? commands.observeMode(in: image, at: time,
-                                              panelShowing: gearBounds != nil || gearTracker.isObserving)
-                meter.finish(.footerProbe, since: probeStarted)
+            // An item panel on screen, or its group still being read, is no
+            // time for a drone check: see `observeMode`. Asked before the
+            // render, so a frame the probe would skip is not rendered for it.
+            // With `lazyImage` a frame not rendered yet renders only the
+            // footer's label.
+            let panelShowing = gearBounds != nil || gearTracker.isObserving
+            if !evidence.hasValidCalibration, commands.modeProbeDue(at: time, panelShowing: panelShowing) {
+                if let frame = lazyImage ? image : frameImage() {
+                    let probeStarted = meter.now()
+                    _ = try? commands.observeMode(in: frame, at: time, panelShowing: panelShowing)
+                    meter.finish(.footerProbe, since: probeStarted)
+                } else if lazyImage, planeGate, let analysedPixels, !footerMayHoldCandidate(analysedPixels) {
+                    // The planes show too little yellow for a candidate:
+                    // `observeMode` would find none and change nothing.
+                    meter.count(.footerGated)
+                } else if lazyImage,
+                          let footer = regionImage(DroneFooterProbe.textRect(width: facts.width, height: facts.height),
+                                                   timedAs: .footerRender) {
+                    let probeStarted = meter.now()
+                    _ = try? commands.observeMode(footer: footer, frameWidth: facts.width, frameHeight: facts.height,
+                                                  at: time, panelShowing: panelShowing)
+                    meter.finish(.footerProbe, since: probeStarted)
+                }
             }
         }
         if readsGear { notePortal(events) }
         let previousComparison = resultSession.comparison
         if readsResults,
            let retired = resultSession.observe(evidence, presentation: tracker, panelCandidate: panelCandidate,
-                                               imageAnalyzed: image != nil,
+                                               imageAnalyzed: hasAnalysis,
                                                commands: readsResults ? commands.summary(hackID: tracker.hackID) : nil) {
             publishResult(retired, comparison: previousComparison)
             loggedResultRevision = -1
@@ -858,7 +1037,7 @@ final class LiveGlyphOutput: @unchecked Sendable {
         }
         if !events.isEmpty { record(events, elapsed: elapsed) }
         logResult()
-        if readsGear { observeGear(at: time, evidence: evidence, slots: slots, analyzed: image != nil,
+        if readsGear { observeGear(at: time, evidence: evidence, slots: slots, analyzed: hasAnalysis,
                                    gearBounds: gearBounds, resultPage: panelCandidate) }
 
         let snapshot = makeSnapshot(observation: observation, arrivalUptime: arrived, sourceTime: time)
@@ -876,7 +1055,8 @@ final class LiveGlyphOutput: @unchecked Sendable {
         var snapshotName: String?
         // Retain eligibility after a throttled transition; otherwise a blank
         // can consume the allowance just before a short presentation starts.
-        if let snapshotWriter, let image, observation != nil, snapshotSchedule.wantsSnapshot(key: key, at: time) {
+        if let snapshotWriter, observation != nil, snapshotSchedule.wantsSnapshot(key: key, at: time),
+           let image = frameImage() {
             let name = String(format: "glyph-%05d.png", samples)
             if snapshotWriter.enqueue(image, name: name, sample: samples) {
                 snapshotSchedule.didQueue(key: key, at: time)
@@ -922,11 +1102,22 @@ final class LiveGlyphOutput: @unchecked Sendable {
             row["slotStripPartlyCovered"] = slots.isPartlyCovered
         }
         if let slotRejection { row["slotRejection"] = slotRejection.rawValue }
+        if let slotCover {
+            row["windowCover"] = slotCover.side.rawValue
+            row["windowCoveredFrom"] = slotCover.coveredFrom
+            row["windowCoveredTo"] = slotCover.coveredTo
+            row["partialInputTimerBar"] = slotCover.hasPartialInputTimerBar
+            if let partial = slotCover.row {
+                row["partialSlotCenters"] = partial.markerCentersX
+                row["partialSlotHighlight"] = partial.highlightedMarker ?? -1
+            }
+        }
         if let header {
             row["headerPhase"] = header.phase.rawValue
             row["headerText"] = header.matchedText
             row["headerConfidence"] = header.confidence
             row["headerSourceTime"] = header.sourceTime
+            if headerReused { row["headerReused"] = true }
         }
         if let orientation = facts.orientation { row["orientation"] = orientation }
         if let fit {
@@ -954,8 +1145,77 @@ final class LiveGlyphOutput: @unchecked Sendable {
                 ?? (slotRejection?.rawValue ?? "no strip read"),
             headerSummary: String(format: "%d read, %d dropped, %.0f ms",
                                   headerMetrics.completed, headerMetrics.droppedBusy,
-                                  headerMetrics.lastLatencyMilliseconds),
+                                  headerMetrics.lastLatencyMilliseconds)
+                + Self.stillSummary(headerMetrics, reused: headerReused),
             counters: counters, lastFacts: lastFacts)))
+    }
+
+    /// The header cuts' part of the Diagnostics page's header line: looks
+    /// skipped on a still header, those the `headerWindowMask` cut skipped
+    /// once the window was left out, header reads the `headerCoverSkip` cut
+    /// left out under the window, and whether this frame's reading was
+    /// issued again rather than read. Empty without any skip.
+    private static func stillSummary(_ metrics: GameHeaderReader.Metrics, reused: Bool) -> String {
+        let skipped = metrics.headerSkippedStillInHack + metrics.headerSkippedStillOutside
+        let masked = metrics.headerSkippedMaskedInHack + metrics.headerSkippedMaskedOutside
+        let covered = metrics.headerSkippedCoveredInHack + metrics.headerSkippedCoveredOutside
+        guard skipped + masked + covered > 0 else { return "" }
+        return ", \(skipped) still" + (masked > 0 ? ", \(masked) masked" : "")
+            + (covered > 0 ? ", \(covered) covered" : "") + (reused ? " (reused)" : "")
+    }
+
+    // MARK: - The engine's frame
+
+    /// The luma gate straight from the capture's pixels, through the engine.
+    /// Nil for a format it doesn't read, which then never slows analysis down.
+    private func readGate(_ pixels: CVPixelBuffer) -> LumaGateReading? {
+        FramePlanes.withLocked(pixels) { planes in planes.flatMap { engine.gate($0, step: LumaGate().step) } }
+    }
+
+    /// `RegionGate`'s prefilters straight from the capture's pixels, which
+    /// are valid only while locked. A format they don't read is rendered
+    /// and detected as without the cut.
+    private func footerMayHoldCandidate(_ pixels: CVPixelBuffer) -> Bool {
+        FramePlanes.withLocked(pixels) { planes in planes.map(RegionGate.footerMayHoldCandidate) ?? true }
+    }
+
+    private func bandIsEmpty(_ pixels: CVPixelBuffer) -> Bool {
+        FramePlanes.withLocked(pixels) { planes in planes.map(RegionGate.bandIsEmpty) ?? false }
+    }
+
+    /// The frame through Core Image, as the Swift arm and the text lane need it.
+    private func render(_ pixels: CVPixelBuffer) throws -> CGImage {
+        let input = CIImage(cvPixelBuffer: pixels)
+        guard let image = context.createCGImage(input, from: input.extent) else {
+            throw CocoaError(.coderReadCorrupt)
+        }
+        return image
+    }
+
+    /// One top-left `.integral` rectangle of the frame through Core Image,
+    /// alone: the drone footer's label or the command band. Core Image
+    /// renders into memory of its own, so the image holds none of the
+    /// capture's planes.
+    private func render(_ pixels: CVPixelBuffer, region: CGRect) throws -> CGImage {
+        let input = CIImage(cvPixelBuffer: pixels)
+        // Core Image uses a bottom-left origin; frame regions use top-left.
+        let rect = CGRect(x: region.minX, y: input.extent.height - region.maxY, width: region.width,
+                          height: region.height)
+        guard let image = context.createCGImage(input, from: rect) else { throw CocoaError(.coderReadCorrupt) }
+        return image
+    }
+
+    /// The engine's step times, into the Power section under the same names
+    /// as when the steps ran here. A step that did not run is not counted.
+    private func record(_ timings: FrameStepTimings) {
+        let steps: [(PowerMetric, UInt64?)] = [
+            (.conversion, timings.conversion), (.decode, timings.decode), (.gearCheck, timings.gearCheck),
+            (.portalCheck, timings.portalCheck), (.resultCheck, timings.resultCheck), (.gridHunt, timings.gridHunt),
+            (.glyphRead, timings.glyphRead), (.slotStrip, timings.slotStrip)
+        ]
+        for (metric, nanoseconds) in steps {
+            if let nanoseconds { meter.record(metric, nanoseconds: nanoseconds) }
+        }
     }
 
     // MARK: - Snapshot
@@ -1000,8 +1260,11 @@ final class LiveGlyphOutput: @unchecked Sendable {
         defer { if keepsDiagnostics { previousResultRead = read } }
         let before = resultSession.tracker?.result
         resultSession.accept(read.evidence)
+        if resultSettle, !read.reissued { noteResultRead(read.evidence) }
         guard keepsDiagnostics else { return }
-        append(read.evidence.diagnosticRow, to: resultFile)
+        var readRow = read.evidence.diagnosticRow
+        if read.reissued { readRow["reissued"] = true }
+        append(readRow, to: resultFile)
         let after = resultSession.tracker?.result
         let decision = before?.outcomes != after?.outcomes
             || before?.finalHackingBonus != after?.finalHackingBonus
@@ -1029,6 +1292,50 @@ final class LiveGlyphOutput: @unchecked Sendable {
         logResult()
     }
 
+    /// `resultSettle`: the last reading to issue for a result read due at
+    /// this frame, when the result is complete and the panel still against
+    /// the read that completed it. The frame's signature is built only while
+    /// a reading is anchored.
+    private func resultSettleReading(at time: Double, panelCandidate: Bool,
+                                     pixels: CVPixelBuffer?) -> ResultFrameEvidence? {
+        guard resultSettle else { return nil }
+        let signature = resultLimiter.isSettled
+            ? resultLimiter.region.flatMap { region in pixels.flatMap { resultSignature($0, over: region) } } : nil
+        return resultLimiter.look(at: time, context: resultSession.context, panelCandidate: panelCandidate,
+                                  signature: signature)
+    }
+
+    /// `resultSettle`: a real result read started on this frame.
+    private func noteResultSubmission(_ submission: GameHeaderReader.Submission, at time: Double,
+                                      pixels: CVPixelBuffer?) {
+        guard resultSettle, submission == .read(.result), let pixels,
+              let region = ResultSettleLimiter.region(width: CVPixelBufferGetWidth(pixels),
+                                                      height: CVPixelBufferGetHeight(pixels)) else { return }
+        resultSettleFrame = (time, resultSignature(pixels, over: region), region)
+    }
+
+    /// `resultSettle`: a real result read the session accepted. It settles
+    /// the limiter when the result is complete after it and the read agrees
+    /// with the one before.
+    private func noteResultRead(_ evidence: ResultFrameEvidence) {
+        defer { resultSettleFrame = nil }
+        guard let frame = resultSettleFrame, frame.time == evidence.sourceTime else {
+            resultLimiter.reset(); return
+        }
+        resultLimiter.accept(evidence, complete: resultSession.tracker?.result.state == .complete,
+                             signature: frame.signature, region: frame.region)
+    }
+
+    private func resultSignature(_ pixels: CVPixelBuffer, over region: PanelRegion) -> StillSignature? {
+        FramePlanes.withLocked(pixels) { planes in
+            planes.flatMap {
+                StillSignature(planes: $0, left: region.left, top: region.top, width: region.width,
+                               height: region.height, columns: ResultSettleLimiter.columns,
+                               rows: ResultSettleLimiter.rows)
+            }
+        }
+    }
+
     // MARK: - Gear drops
 
     private func consumeGear() {
@@ -1046,6 +1353,7 @@ final class LiveGlyphOutput: @unchecked Sendable {
         row["schemaVersion"] = 1; row["kind"] = "reading"
         row["disposition"] = gearTracker.readingDisposition.rawValue
         let readsPanel = gearTracker.readingDisposition == .accepted
+        if read.reissued { row["reissued"] = true } else if gearSettle { noteGearRead(evidence, accepted: readsPanel) }
         // Debug log only: counts and confidences of each OCR pass, no text.
         if read.untitledPanel { row["untitledPanel"] = true }
         if !read.passes.isEmpty { row["passes"] = read.passes.map(\.logRow) }
@@ -1058,10 +1366,13 @@ final class LiveGlyphOutput: @unchecked Sendable {
         default: break
         }
         if readsPanel, gearTracker.isObserving, !gearGroupOpen {
-            gearGroupOpen = true; gearEvidenceSchedule = GearEvidenceSchedule(); gearPictures = []
+            gearGroupOpen = true; gearEvidenceSchedule = makeGearEvidenceSchedule(); gearPictures = []
         }
-        if readsPanel, let bounds = evidence.bounds, let image = read.image, let writer = gearWriter {
-            if gearEvidenceSchedule.shouldSave(stage: evidence.stage, at: evidence.sourceTime) {
+        // A reissued reading kept its frame only when the schedule wanted it.
+        if readsPanel, let bounds = evidence.bounds, read.image != nil || read.reissued, let writer = gearWriter {
+            if !gearEvidenceSchedule.shouldSave(stage: evidence.stage, at: evidence.sourceTime) {
+                row["imageStatus"] = "evidenceSchedule"
+            } else if let image = read.image {
                 let saved = writer.enqueue(image, bounds: bounds, sourceTime: evidence.sourceTime)
                 if saved.file != nil {
                     gearEvidenceSchedule.didEnqueue(stage: evidence.stage, at: evidence.sourceTime)
@@ -1070,9 +1381,61 @@ final class LiveGlyphOutput: @unchecked Sendable {
                     gearPictures.append(HackGearPicture(path: "\(folderName)/\(file)", stage: evidence.stage))
                 }
                 row["image"] = saved.file; row["imageStatus"] = saved.status
-            } else { row["imageStatus"] = "evidenceSchedule" }
+            } else {
+                row["imageStatus"] = "notRendered"
+            }
         }
         append(row, to: gearFile)
+    }
+
+    /// `gearSettle`: the settled reading to issue for a gear read due at this
+    /// frame, when the current panel is settled and still against the read
+    /// that settled it. The frame's signature is built only while a reading
+    /// is anchored, from the capture's planes.
+    private func gearSettleReissues(at time: Double, bounds: GearDropPanelBounds?,
+                                    pixels: CVPixelBuffer?) -> GameHeaderReader.Reissues {
+        guard gearSettle, gearLimiter.isSettled else { return GameHeaderReader.Reissues() }
+        let signature = gearLimiter.region.flatMap { region in pixels.flatMap { gearSignature($0, over: region) } }
+        guard let reading = gearLimiter.look(at: time, settled: gearTracker.currentPanelSettled,
+                                             signature: signature, bounds: bounds) else {
+            return GameHeaderReader.Reissues()
+        }
+        // A read would have kept its frame for the evidence pictures.
+        let keepsImage = gearWriter != nil && gearEvidenceSchedule.shouldSave(stage: reading.stage, at: time)
+        return GameHeaderReader.Reissues(gear: reading, keepsGearImage: keepsImage)
+    }
+
+    /// `gearSettle`: a real gear read started on this frame. Its signature,
+    /// over the panel it reads, is what later frames are compared with once
+    /// the read settles the panel.
+    private func noteGearSubmission(_ submission: GameHeaderReader.Submission, at time: Double,
+                                    bounds: GearDropPanelBounds?, pixels: CVPixelBuffer?) {
+        guard gearSettle, submission == .read(.gear), let bounds, let pixels,
+              let region = GearSettleLimiter.region(bounds, width: CVPixelBufferGetWidth(pixels),
+                                                    height: CVPixelBufferGetHeight(pixels)) else { return }
+        gearSettleFrame = (time, gearSignature(pixels, over: region), region, bounds)
+    }
+
+    /// `gearSettle`: a real gear read was taken. It anchors the limiter when
+    /// the tracker accepted it and calls the panel settled after it; any
+    /// other read ends the anchor.
+    private func noteGearRead(_ evidence: GearDropFrameEvidence, accepted: Bool) {
+        defer { gearSettleFrame = nil }
+        guard accepted, let frame = gearSettleFrame, frame.time == evidence.sourceTime else {
+            gearLimiter.reset(); return
+        }
+        gearLimiter.accept(evidence, settled: gearTracker.currentPanelSettled, signature: frame.signature,
+                           region: frame.region, bounds: frame.bounds)
+    }
+
+    private func gearSignature(_ pixels: CVPixelBuffer, over region: PanelRegion) -> StillSignature? {
+        FramePlanes.withLocked(pixels) { planes in
+            planes.flatMap {
+                StillSignature(planes: $0, left: region.left, top: region.top, width: region.width,
+                               height: region.height, columns: GearSettleLimiter.columns,
+                               rows: GearSettleLimiter.rows)
+            }
+        }
     }
 
     private func observeGear(at time: Double, evidence: FrameEvidence, slots: SlotStripReading?, analyzed: Bool,
@@ -1141,6 +1504,7 @@ final class LiveGlyphOutput: @unchecked Sendable {
     private func consumePortal() {
         guard readsGear, let screen = headerReader.takePortal() else { return }
         portalObserver.accept(screen)
+        if portalSettle { portalLimiter.accept(screen) }
         var row = encodedRow(screen) ?? [:]
         row["schemaVersion"] = 1; row["kind"] = "portalScreen"
         append(row, to: gearFile)
@@ -1151,6 +1515,7 @@ final class LiveGlyphOutput: @unchecked Sendable {
     private func notePortal(_ events: [TrackingEvent]) {
         for event in events where event.kind == .hackStarted {
             if let screen = portalObserver.claim(at: event.time) { portalScreens[event.hackID] = screen }
+            portalLimiter.reset()
         }
         if tracker.state == .input, tracker.hackID > 0, let count = tracker.expectedSlotCount, count > 0 {
             glyphCounts[tracker.hackID] = count
@@ -1163,9 +1528,8 @@ final class LiveGlyphOutput: @unchecked Sendable {
     /// Once per hack, when its gear is delivered, and logged with every source.
     private func portalLevel(for hackID: Int) -> PortalLevelEstimate? {
         // Commands are read with results, which gear reading with Glyphs needs.
-        let estimate = PortalLevelRules.estimate(screen: portalScreens[hackID], glyphCount: glyphCounts[hackID],
-                                                 glyphCountSettled: readsResults
-                                                     && commands.summary(hackID: hackID).settlesGlyphCount)
+        let estimate = portalLevelEstimate(portalScreens[hackID], glyphCounts[hackID],
+                                           readsResults && commands.summary(hackID: hackID).settlesGlyphCount)
         portalScreens[hackID] = nil; glyphCounts[hackID] = nil
         if let estimate {
             var row = encodedRow(estimate) ?? [:]
@@ -1219,10 +1583,10 @@ final class LiveGlyphOutput: @unchecked Sendable {
     }
 
     /// Delivered whether or not logs are kept; only the log row needs them.
-    private func publishResult(_ result: HackResult, comparison: ValidatorResultComparison?) {
+    private func publishResult(_ result: HackResult, comparison: (any ValidatorResultComparing)?) {
         if readsGear { gearSession.accept(result) }
         let entries = comparison?.compare(result) ?? []
-        deliverResult(HackResultSummary(result: result, comparison: entries))
+        deliverResult(resultSummary(result, entries))
         guard keepsDiagnostics else { return }
         var row = result.diagnosticRow
         row["commands"] = result.context.commands.flatMap(encodedRow)

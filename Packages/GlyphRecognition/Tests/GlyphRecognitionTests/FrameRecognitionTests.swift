@@ -409,7 +409,7 @@ struct FrameRecognitionTests {
 
     @Test("An AssistiveTouch button beside the array leaves it empty and calibratable")
     func assistiveTouchBesideArray() throws {
-        // The 2026-09-26 report: the button's rim reaches into the corner of
+        // A field report: the button's rim reaches into the corner of
         // the array's bounding box, and the second and third hacks were lost.
         let image = try touchFrame("01903")
         let result = GlyphFrameRecognizer(table: try tinyTable()).calibrateAndObserve(image)

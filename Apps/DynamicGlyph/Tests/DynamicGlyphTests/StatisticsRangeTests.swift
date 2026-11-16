@@ -370,7 +370,7 @@ struct StatisticsRangeTests {
                                              calendar: calendar) == "Yesterday")
     }
 
-    // MARK: - Rev 3 corrections (Colo msg 783, Camo msg 782)
+    // MARK: - Comparisons, window edges and the Other slot
 
     @Test("Last 3 hours compares with the 3 hours before it: kept and empty is a measured zero")
     func quickComparisonAgainstEmptyWindow() throws {
@@ -478,7 +478,7 @@ struct StatisticsRangeTests {
     static let catalog = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
         .deletingLastPathComponent().appendingPathComponent("Sources/Resources/Localizable.xcstrings")
 
-    @Test("The spoken Other slot is plural by items in English and one form in ja/zh, as copy-rev3 words it",
+    @Test("The spoken Other slot is plural by items in English and one form in ja/zh, as the catalog words it",
           .enabled(if: FileManager.default.fileExists(atPath: catalog.path)))
     func otherSlotPlural() throws {
         let json = try JSONSerialization.jsonObject(with: Data(contentsOf: Self.catalog)) as? [String: Any]

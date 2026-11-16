@@ -63,7 +63,7 @@ struct PortalLevelTests {
         func line(_ text: String) -> ResultTextLine {
             ResultTextLine(text: text, confidence: 1, x: 0.05, y: 0.4, width: 0.1, height: 0.02)
         }
-        let read = parser.read(lines: ["L8", "B1gHack3r", "l6 A", "I7", "18", "L 5", "ChestnutL..", "A L4", "k3r 9"].map(line),
+        let read = parser.read(lines: ["L8", "B1gHack3r", "l6 A", "I7", "18", "L 5", "TidepoolL..", "A L4", "k3r 9"].map(line),
                                badgeHue: nil, at: 1)
         #expect(read.resonators == [8, 6, 7, 8, 5, 4])
         #expect(read.unreadSlots == 2)
@@ -205,7 +205,7 @@ struct PortalLevelTests {
 
     @Test("The recorded L1 misread resolves to high confidence without a conflict")
     func yellowEstimate() throws {
-        // Local Vision probe of the 2026-10-05 Machina screen: six L1s
+        // A local Vision read of a recorded Machina screen: six L1s
         // and one L7 before correction; the seventh L is yellow.
         let lines = ["L1", "L1", "L1", "L1", "L1", "L1", "L7"].map {
             ResultTextLine(text: $0, confidence: 1, x: 0, y: 0, width: 0.1, height: 0.02)

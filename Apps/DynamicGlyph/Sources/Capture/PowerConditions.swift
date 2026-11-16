@@ -1,6 +1,7 @@
 import CoreVideo
 import Foundation
 import GlyphRecognition
+import GlyphRecognitionImages
 
 /// Low Power Mode and the device's thermal state, read where recognition
 /// decides how much work a frame gets.
@@ -84,27 +85,54 @@ final class PowerConditions: @unchecked Sendable {
     }
 }
 
-extension LumaGate {
-    /// The gate straight from a captured buffer's luma, without converting it.
-    /// Nil for a format it doesn't know, which then never slows analysis down.
-    func read(_ pixels: CVPixelBuffer) -> LumaGateReading? {
-        let format = CVPixelBufferGetPixelFormatType(pixels)
-        guard CVPixelBufferLockBaseAddress(pixels, .readOnly) == kCVReturnSuccess else { return nil }
+extension FramePlanes {
+    /// Locks `pixels` for reading around `body`, which gets the buffer's
+    /// planes as an engine reads them: both biplanar 4:2:0 variants and
+    /// BGRA. Nil for any other format, or when the buffer can't be locked;
+    /// the engine then falls back to the rendered image, or the gate stays
+    /// silent and never slows analysis down. The planes are valid only
+    /// inside `body`.
+    static func withLocked<Result>(_ pixels: CVPixelBuffer,
+                                   _ body: (FramePlanes?) throws -> Result) rethrows -> Result {
+        guard CVPixelBufferLockBaseAddress(pixels, .readOnly) == kCVReturnSuccess else { return try body(nil) }
         defer { CVPixelBufferUnlockBaseAddress(pixels, .readOnly) }
+        return try body(locked(pixels))
+    }
+
+    /// The planes of a buffer the caller has locked; see `withLocked`.
+    private static func locked(_ pixels: CVPixelBuffer) -> FramePlanes? {
+        let format = CVPixelBufferGetPixelFormatType(pixels)
         switch format {
         case kCVPixelFormatType_420YpCbCr8BiPlanarFullRange, kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange:
             guard CVPixelBufferGetPlaneCount(pixels) >= 1,
-                  let base = CVPixelBufferGetBaseAddressOfPlane(pixels, 0) else { return nil }
-            return read(plane: base, width: CVPixelBufferGetWidthOfPlane(pixels, 0),
-                        height: CVPixelBufferGetHeightOfPlane(pixels, 0),
-                        bytesPerRow: CVPixelBufferGetBytesPerRowOfPlane(pixels, 0),
-                        videoRange: format == kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange)
+                  let luma = CVPixelBufferGetBaseAddressOfPlane(pixels, 0) else { return nil }
+            // The gate needs only luma; a buffer without its chroma plane
+            // still gets that much.
+            let chroma = CVPixelBufferGetPlaneCount(pixels) >= 2 ? CVPixelBufferGetBaseAddressOfPlane(pixels, 1) : nil
+            return FramePlanes(format: .nv12(videoRange: format == kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange),
+                               width: CVPixelBufferGetWidthOfPlane(pixels, 0),
+                               height: CVPixelBufferGetHeightOfPlane(pixels, 0),
+                               base: UnsafeRawPointer(luma), bytesPerRow: CVPixelBufferGetBytesPerRowOfPlane(pixels, 0),
+                               chroma: chroma.map(UnsafeRawPointer.init),
+                               chromaBytesPerRow: chroma == nil ? 0 : CVPixelBufferGetBytesPerRowOfPlane(pixels, 1))
         case kCVPixelFormatType_32BGRA:
             guard let base = CVPixelBufferGetBaseAddress(pixels) else { return nil }
-            return read(bgra: base, width: CVPixelBufferGetWidth(pixels), height: CVPixelBufferGetHeight(pixels),
-                        bytesPerRow: CVPixelBufferGetBytesPerRow(pixels))
+            return FramePlanes(format: .bgra, width: CVPixelBufferGetWidth(pixels), height: CVPixelBufferGetHeight(pixels),
+                               base: UnsafeRawPointer(base), bytesPerRow: CVPixelBufferGetBytesPerRow(pixels))
         default:
             return nil
+        }
+    }
+}
+
+extension LumaGate {
+    /// The gate straight from a captured buffer's luma, without converting it.
+    /// Nil for a format it doesn't know. Live capture reads the gate through
+    /// its engine; this is the same reading on the Swift arm, for tests and
+    /// tools that have only the buffer.
+    func read(_ pixels: CVPixelBuffer) -> LumaGateReading? {
+        FramePlanes.withLocked(pixels) { planes in
+            planes.flatMap { SwiftFrameRecognitionEngine(table: nil).gate($0, step: step) }
         }
     }
 }

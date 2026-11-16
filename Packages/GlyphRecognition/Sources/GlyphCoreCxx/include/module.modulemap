@@ -1,0 +1,8 @@
+module GlyphCoreCxx {
+    umbrella header "GlyphCoreCxx.h"
+    export *
+    // The core is C++ behind a C ABI. A static library cannot record that it
+    // needs libc++, so the module does: whatever imports it links libc++,
+    // which the binary xcframework needs and the source target has anyway.
+    link "c++"
+}

@@ -11,6 +11,9 @@ struct SummaryWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: StatisticsWidgetSummary.kind, provider: SummaryWidgetProvider()) { entry in
             SummaryWidgetView(entry: entry)
+                // The chosen theme's tint for the item icons, as in
+                // the app's Statistics; nil keeps the system blue.
+                .tint(AppTheme.mirrored.appTint)
                 // The Statistics card's own background.
                 .containerBackground(Color(uiColor: .secondarySystemBackground), for: .widget)
                 .widgetURL(AppLink.statistics(entry.period).url)
@@ -255,11 +258,11 @@ private struct SmallSummary: View {
             HStack(alignment: .top, spacing: 8) {
                 if figures.onlyDrops {
                     // Drop groups, never relabelled hacks.
-                    tile("Drops", value: "\(figures.drops)",
+                    tile("Drops", value: figures.drops.formatted(),
                          spoken: Text("\(figures.drops) drops",
                                       comment: "Summary widget: drop groups no Glyph hack claimed, in the period."))
                 } else {
-                    tile("Hacks", value: "\(figures.hacks)",
+                    tile("Hacks", value: figures.hacks.formatted(),
                          spoken: Text("\(figures.hacks) hacks", comment: "Summary widget: Glyph hacks in the period."))
                 }
                 // Unknown gear is a dash, not a zero; an empty period has none.
@@ -267,7 +270,7 @@ private struct SmallSummary: View {
                 let isEmpty = figures.hacks == 0 && figures.drops == 0
                 let itemsKnown = figures.hasGearReading || isEmpty
                 if figures.hasGear || isEmpty {
-                    tile("Items", value: itemsKnown ? "\(figures.items)" : "—",
+                    tile("Items", value: itemsKnown ? figures.items.formatted() : "—",
                          spoken: itemsKnown
                             ? Text("\(figures.items) items", comment: "Statistics gear: items recognized in the period.")
                             : nil,

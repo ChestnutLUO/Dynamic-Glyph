@@ -157,6 +157,68 @@ struct AppPreferences {
         stored || !toolsAvailable
     }
 
+    /// Which engine runs a capture's pixel steps, read when a capture starts.
+    /// Set by Settings' Old or New (`RecognitionEngineSelection`) or by
+    /// Diagnostics' picker; a stored choice always wins over the default.
+    static let recognitionEngineKey = "diagnostics.recognitionEngine"
+    /// The engine of a player who never chose one: C++, with
+    /// `defaultRecognitionCuts`. Also the default of the views that store
+    /// the choice.
+    static let defaultRecognitionEngine = RecognitionEngineChoice.cpp
+    var recognitionEngine: RecognitionEngineChoice {
+        get {
+            defaults.string(forKey: Self.recognitionEngineKey).flatMap(RecognitionEngineChoice.init(rawValue:))
+                ?? Self.defaultRecognitionEngine
+        }
+        nonmutating set { defaults.set(newValue.rawValue, forKey: Self.recognitionEngineKey) }
+    }
+
+    /// Which arm of the logic layer (tracker, sessions, schedules, parsers)
+    /// a capture runs, read when it starts. Beside the engine, which reads
+    /// the pixels; set with it by Settings, or alone in Diagnostics.
+    static let recognitionLogicKey = "diagnostics.recognitionLogic"
+    /// Swift: the logic the default engine and cuts were measured with on
+    /// phones. The C++ logic is not expected to save power.
+    static let defaultRecognitionLogic = RecognitionLogicChoice.swift
+    var recognitionLogic: RecognitionLogicChoice {
+        get {
+            defaults.string(forKey: Self.recognitionLogicKey).flatMap(RecognitionLogicChoice.init(rawValue:))
+                ?? Self.defaultRecognitionLogic
+        }
+        nonmutating set { defaults.set(newValue.rawValue, forKey: Self.recognitionLogicKey) }
+    }
+
+    /// The power cuts the engine runs with, read when a capture starts. Stored
+    /// as the cuts' names; one this build doesn't know is ignored. A stored
+    /// list wins over the default, an empty one too: a tester who turned
+    /// every cut off keeps them off.
+    static let recognitionCutsKey = "diagnostics.recognitionCuts"
+    /// The cuts of a player who never set them, with the C++ engine: the arm
+    /// measured on an iPhone 13 mini, 30.1 CPU seconds per movie
+    /// minute against 33.3 for the Swift engine without cuts, reading the same
+    /// Glyphs, slots and bonuses over 14 hacks; and `headerStillSkip`, which on
+    /// that phone took a Simplified Chinese recording from 28.9 to 23.9 CPU
+    /// seconds per movie minute with the same sequences and results; and
+    /// `planeGate`, which on that phone read the same sequences and results
+    /// with no measurable change in CPU time, while footer label renders fell
+    /// from about 1,630 to 504 per run and command band renders from 1,523
+    /// to 980: Core Image work on the graphics processor; and `gearLeanRead`,
+    /// which on that phone took the same recording from 24.3 to 23.6 CPU
+    /// seconds per movie minute and its gear passes from 908 to 374 per run,
+    /// with the same sequences, results and gear.
+    static let defaultRecognitionCuts: Set<RecognitionCut> = [.directPlanes, .lazyImage, .huntBand, .huntHalf,
+                                                               .planeGate, .headerStillSkip, .gearLeanRead]
+    var recognitionCuts: Set<RecognitionCut> {
+        get {
+            // Nothing stored, or something that is not a list of names.
+            guard let names = defaults.stringArray(forKey: Self.recognitionCutsKey) else {
+                return Self.defaultRecognitionCuts
+            }
+            return Set(names.compactMap(RecognitionCut.init(rawValue:)))
+        }
+        nonmutating set { defaults.set(newValue.sorted().map(\.rawValue), forKey: Self.recognitionCutsKey) }
+    }
+
     /// Colours the floating window's background by the analysis gate's mode.
     /// A TestFlight-only debug switch in Diagnostics, off until a tester asks.
     static let colorsFloatingWindowByModeKey = "diagnostics.floatingWindowModeColors"

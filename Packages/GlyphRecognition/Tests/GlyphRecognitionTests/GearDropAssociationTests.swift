@@ -1,8 +1,7 @@
 import Testing
 @testable import GlyphRecognition
 
-/// A tester's session (TestFlight build 95, iPhone18,1, English game, Glyph
-/// assistance): two Glyph hacks, whose drops the game then showed back to
+/// A field session (English game, Glyph assistance): two Glyph hacks, whose drops the game then showed back to
 /// back. Pickup sparks covered the first drop's Bonus panel's left side and
 /// bottom edge, so the detector lost the panel for about 1.1 s while it stayed
 /// on screen. One frame found it again just before it left; that read opened a
@@ -158,7 +157,7 @@ struct GearDropAssociationTests {
 
     @Test("Without the hold, the panel found again opens an empty group that claims no hack")
     func repeatedBonusPanel() throws {
-        // The first two groups as build 95 logged them, before the hold. A
+        // The first two groups as an earlier version logged them, before the hold. A
         // group whose Bonus rows were confirmed still closes at once, so the
         // same panel found again can still open a group like the second.
         let bonus = GearDropSummary.Panel(stage: .bonus, entries: [], partial: true)

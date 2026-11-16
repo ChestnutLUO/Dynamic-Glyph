@@ -9,12 +9,13 @@ public struct GearDropTracker: Sendable {
     public struct Policy: Sendable {
         public var minimumSpan = 0.1
         /// The longest wait between two agreeing reads of one row. On a phone
-        /// in Glyph assistance a panel read can take 0.5–1 s: a tester's two
-        /// identical Bonus reads came 0.91 s apart, and at 0.35 s every row
-        /// of both panels was discarded. The gap need not prove the reads saw
-        /// the same panel: per-frame geometry closes the group 0.15 s after
-        /// the panel leaves, a stage change saves the panel and clears its
-        /// rows, and a contradicting read drops the runs it contradicts. It
+        /// in Glyph assistance a panel read can take 0.5–1 s: in a field
+        /// session two identical Bonus reads came 0.91 s apart, and at 0.35 s
+        /// every row of both panels was discarded. The gap need not prove the
+        /// reads saw the same panel: per-frame geometry closes the group
+        /// 0.15 s after the panel leaves, a stage change saves the panel and
+        /// clears its rows, and a contradicting read drops the runs it
+        /// contradicts. It
         /// only bounds how stale a supporting read can be, so 1.2 s leaves
         /// headroom over one slow read and stays well inside `groupLimit`.
         /// Time a held Bonus panel was away (`bonusReturnWindow`) does not
@@ -22,10 +23,11 @@ public struct GearDropTracker: Sendable {
         public var maximumReadingGap = 1.2
         public var departureSpan = 0.15
         /// A Bonus panel that leaves with rows unconfirmed keeps its group
-        /// open this long after the departure. Pickup sparks hid a tester's
-        /// Bonus panel from the detector for 1.05 s while it stayed on
-        /// screen; if a Bonus panel shows again in time, its reads join the
-        /// group. Otherwise the group closes as it would have at departure.
+        /// open this long after the departure. In a field recording pickup
+        /// sparks hid a Bonus panel from the detector for 1.05 s while it
+        /// stayed on screen; if a Bonus panel shows again in time, its reads
+        /// join the group. Otherwise the group closes as it would have at
+        /// departure.
         public var bonusReturnWindow = 2.0
         /// A request from this group's source interval may finish after the
         /// panel leaves. Drain it before publishing, but bound a stuck reader.
@@ -37,6 +39,8 @@ public struct GearDropTracker: Sendable {
     /// Agreement for one row and column of the current panel. A read votes
     /// for its own value and for each less specific version of it, so two
     /// reads that both lost a level still confirm the item and quantity.
+    /// A confirmed value stays confirmed; when two contradict, the reads
+    /// that support each settle it, or leave the cell unread when close.
     private struct Slot: Sendable {
         struct Run: Sendable {
             let value: GearDropEntry
@@ -46,7 +50,10 @@ public struct GearDropTracker: Sendable {
         }
         var runs: [Run] = []
         var confirmed: [GearDropEntry] = []
-        /// A contradicting read since the last read of the resolved value.
+        /// Every read of this cell, counted by the value read.
+        var tallies: [(value: GearDropEntry, count: Int)] = []
+        /// A contradicting read since the last read of the resolved value,
+        /// unless a value it contradicts far outweighs it.
         var conflictPending = false
         /// Each read's quantity colour, by the quantity it was read with.
         /// Colour is voted apart from the entry: an unclear or contradicting
@@ -63,16 +70,50 @@ public struct GearDropTracker: Sendable {
             return nil
         }
 
-        /// The most specific confirmed value, or nil when two confirmed
-        /// values contradict each other.
-        var resolved: GearDropEntry? {
-            guard var best = confirmed.first else { return nil }
-            for value in confirmed.dropFirst() {
-                if value.refines(best) { best = value }
-                else if !best.refines(value) { return nil }
-            }
-            return best
+        /// The reads that said `value` or something more specific: a read
+        /// that lost a detail does not support that detail.
+        func support(for value: GearDropEntry) -> Int {
+            tallies.reduce(0) { $0 + ($1.value == value || $1.value.refines(value) ? $1.count : 0) }
         }
+
+        /// Whether `strong` reads settle a contradiction against `weak` ones.
+        /// Two agreeing reads confirm a value, and misreads come in runs on
+        /// neighbouring frames: the red "x2" cell of one field recording read
+        /// as x21 on 6 of 40 frames, all in adjacent pairs. So one misread can
+        /// confirm a wrong value with two reads, and 2 against 2 or 3 against
+        /// 2 cannot say which is the misread. Twice the support, and at least
+        /// two reads more, takes a second independent pair of agreeing reads:
+        /// 4 against 2, 6 against 3. Against one stray read, three reads
+        /// settle and a value read only twice does not.
+        static func outweighs(_ strong: Int, _ weak: Int) -> Bool {
+            strong >= 2 * weak && strong >= weak + 2
+        }
+
+        /// Confirmed values with their support, leaving out each one that a
+        /// contradicting value left in far outweighs. A value that outweighs
+        /// another has more support, so taking them from the most supported
+        /// down decides each against values already decided, and the result
+        /// does not depend on the order the values were confirmed in.
+        var standing: [(value: GearDropEntry, support: Int)] {
+            let ranked = confirmed.map { (value: $0, support: support(for: $0)) }.sorted { $0.support > $1.support }
+            var kept: [(value: GearDropEntry, support: Int)] = []
+            for candidate in ranked where !kept.contains(where: {
+                $0.value.contradicts(candidate.value) && Self.outweighs($0.support, candidate.support)
+            }) {
+                kept.append(candidate)
+            }
+            return kept
+        }
+
+        /// The value that refines every other one, or nil when two of them
+        /// contradict each other.
+        static func mostSpecific(_ values: [GearDropEntry]) -> GearDropEntry? {
+            values.first { best in values.allSatisfy { $0 == best || best.refines($0) } }
+        }
+
+        /// The most specific standing value, or nil when two standing values
+        /// contradict each other: their support is too close to call.
+        var resolved: GearDropEntry? { Self.mostSpecific(standing.map(\.value)) }
 
         /// The panel was away for `duration`: that time does not count
         /// towards the reading gap of the reads taken before it left.
@@ -98,13 +139,20 @@ public struct GearDropTracker: Sendable {
                 next.append(Run(value: value, first: time, last: time))
             }
             runs = next
+            if let index = tallies.firstIndex(where: { $0.value == entry }) { tallies[index].count += 1 }
+            else { tallies.append((entry, 1)) }
             for run in runs where run.count >= 2 && run.last - run.first + 1e-9 >= policy.minimumSpan
                 && !confirmed.contains(run.value) {
                 confirmed.append(run.value)
             }
-            if let resolved {
-                if entry == resolved || entry.refines(resolved) || resolved.refines(entry) { conflictPending = false }
-                else { conflictPending = true }
+            let standing = standing
+            if let resolved = Self.mostSpecific(standing.map(\.value)) {
+                let agrees = entry == resolved || entry.refines(resolved) || resolved.refines(entry)
+                let read = support(for: entry)
+                let outweighed = standing.contains {
+                    $0.value.contradicts(entry) && Self.outweighs($0.support, read)
+                }
+                conflictPending = !agrees && !outweighed
             }
         }
     }
@@ -339,6 +387,19 @@ extension GearDropEntry {
         let level = other.levelState == .unreadable || (other.levelState == levelState && other.level == level)
         let rarity = other.rarity == nil || other.rarity == .unreadable || other.rarity == rarity
         return item && level && rarity
+    }
+
+    /// True when no entry could refine both: they differ in place or
+    /// quantity, or both read a name, level or rarity and read it
+    /// differently. Values that only lack different details do not.
+    func contradicts(_ other: GearDropEntry) -> Bool {
+        if column != other.column || row != other.row || quantity != other.quantity { return true }
+        if let item, let otherItem = other.item, item != otherItem { return true }
+        if levelState != .unreadable, other.levelState != .unreadable,
+           levelState != other.levelState || level != other.level { return true }
+        if let rarity, rarity != .unreadable, let otherRarity = other.rarity, otherRarity != .unreadable,
+           rarity != otherRarity { return true }
+        return false
     }
 
     /// This entry and each version with its name, level or rarity unread.

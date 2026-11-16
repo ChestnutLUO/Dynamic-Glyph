@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Replay a correct-drawing recording; fail on any false 'differs' verdict.
 
-Default annotation: IMG_2003.MP4, shield/mind/clear_all/chaos/xm.
+Default annotation: an all-correct five-Glyph hack, shield/mind/clear_all/chaos/xm.
 Requires ffmpeg, local reference tables, and the release glyph-replay binary.
 Annotations are assertions, never input to the validator.
 """

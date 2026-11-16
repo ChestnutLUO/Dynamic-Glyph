@@ -6,8 +6,18 @@ import GlyphRecognition
 /// One OCR request for both bonus fields and the short-lived stage name. The
 /// lower hexagon contours are sampled separately, including under the PiP.
 public struct ResultScreenReader: Sendable {
+    /// Makes the page's text parser for a language: the Swift
+    /// `ResultTextParser`, or a logic arm's
+    /// (`RecognitionLogicSet.resultTextParser`). Called once per read.
+    public typealias ParserFactory = @Sendable (GameLanguage) -> any ResultTextParsing
+    public static let swiftParsers: ParserFactory = { ResultTextParser(language: $0) }
+
     public let language: GameLanguage
-    public init(language: GameLanguage = .english) { self.language = language }
+    private let parsers: ParserFactory
+    public init(language: GameLanguage = .english, parsers: @escaping ParserFactory = swiftParsers) {
+        self.language = language
+        self.parsers = parsers
+    }
 
     public func read(_ image: CGImage, context: ResultReadContext, sourceTime: Double) throws -> ResultFrameEvidence {
         let aspect = Double(image.height) / Double(image.width)
@@ -19,12 +29,12 @@ public struct ResultScreenReader: Sendable {
         guard var lines = try recognize(image, in: rect, scale: 1) else {
             return ResultFrameEvidence(context: context, sourceTime: sourceTime, panelPresent: false)
         }
-        let parser = ResultTextParser(language: language)
+        let parser = parsers(language)
         let appearances = try appearances(in: image, count: context.glyphs.count)
         let evidence = parser.read(lines: lines, context: context, at: sourceTime, appearances: appearances)
         // A value with a look-alike in it gets a second look, enlarged:
         // Vision read a one-Glyph result's 38% as "З8%", a Cyrillic Ze, on
-        // every frame of the 2026-10-05 field test, and 38% at 1.5 times the
+        // every frame of a field test, and 38% at 1.5 times the
         // size. Only the panel's lines are taken from it. The name above is
         // kept from capture size, where it reads best: enlarged, short names
         // such as XM were lost. The same crop is enlarged, since Vision read
@@ -139,9 +149,11 @@ extension ResultScreenReader {
     /// labels match becomes the language. Called only once the page's shape
     /// was seen, so an unread frame means the wrong script, not no page.
     public static func read(_ image: CGImage, context: ResultReadContext, sourceTime: Double,
-                            languages memory: GameLanguageMemory) throws -> ResultFrameEvidence {
+                            languages memory: any GameLanguageRemembering,
+                            parsers: @escaping ParserFactory = swiftParsers) throws -> ResultFrameEvidence {
         let current = memory.current
-        let evidence = try ResultScreenReader(language: current).read(image, context: context, sourceTime: sourceTime)
+        let evidence = try ResultScreenReader(language: current, parsers: parsers)
+            .read(image, context: context, sourceTime: sourceTime)
         guard !evidence.panelPresent else {
             // Japanese games print these labels in English too, so they
             // confirm only a language of their own.
@@ -149,7 +161,8 @@ extension ResultScreenReader {
             return evidence
         }
         for language in memory.alternatives(at: sourceTime, on: .result) {
-            let other = try ResultScreenReader(language: language).read(image, context: context, sourceTime: sourceTime)
+            let other = try ResultScreenReader(language: language, parsers: parsers)
+                .read(image, context: context, sourceTime: sourceTime)
             // Only its own label names it: SPEED BONUS stays English in Japanese.
             if other.panelPresent, other.labelLanguage == language { memory.found(language); return other }
         }

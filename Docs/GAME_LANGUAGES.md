@@ -12,15 +12,16 @@ shapes) is the same in every language.
 | Language | Source of its text | Checked against a recording |
 |---|---|---|
 | English | the game | yes |
-| 简体中文 | the player's sheet | yes, 2026-09-25 and 2026-09-29 |
-| 日本語 | the player's sheet | yes, 2026-09-29 (three recordings) |
-| 繁體中文 | the player's sheet | no |
-| 한국어 | the player's sheet | no |
+| 简体中文 | the translation sheet | yes, two sessions |
+| 日本語 | the translation sheet | yes, three recordings |
+| 繁體中文 | the translation sheet | no |
+| 한국어 | the translation sheet | no |
 
-The text lives in `GameText.swift`, one pack per language, taken from
-`GAME_TEXT_TRANSLATIONS_ALL.csv`. Chinese and Japanese games leave some text in
-English (Power Cube, Portal Key, Heat Sink, Link Amp in Chinese; NO KEY, HACK
-BONUS and SPEED BONUS in Japanese), so English is read in every pack as well.
+The text lives in `GameText.swift`, one pack per language, taken from a
+community translation sheet, which published copies of the source leave out.
+Chinese and Japanese games leave some text in English (Power Cube, Portal Key,
+Heat Sink, Link Amp in Chinese; NO KEY, HACK BONUS and SPEED BONUS in
+Japanese), so English is read in every pack as well.
 Matching ignores case, spaces and punctuation and is otherwise exact.
 
 Recordings confirmed, for Chinese: the notices except ONLY KEY and INVALID
@@ -100,4 +101,4 @@ name: without the sign they can't be told apart.
 Add its column to the sheet, then a pack in `GameText.swift` and its Vision
 language in `GameLanguage.recognitionLanguages`. Before calling it checked,
 replay a recording with `Tools/check-command-replay.py --game-language <code>`
-and add masked fixtures under `Fixtures/Assets/Screenshots/Languages` (the test-assets submodule).
+and add masked fixtures under `Fixtures/Languages`.

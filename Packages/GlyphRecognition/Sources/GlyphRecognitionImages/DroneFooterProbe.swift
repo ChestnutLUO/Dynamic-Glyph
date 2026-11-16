@@ -17,6 +17,22 @@ public enum DroneFooterProbe {
                width: Double(width) * 0.6, height: Double(height) * 0.045).integral
     }
 
+    /// `textRect`'s pixels in a whole frame, as `candidate` takes them.
+    public static func textPixels(in image: CGImage) throws -> ColorImage {
+        try ImageDecoder.decodeColor(image, in: textRect(width: image.width, height: image.height))
+    }
+
+    /// The same pixels from `region`, `textRect`'s region of a `frameWidth`
+    /// by `frameHeight` frame rendered on its own. A region of another size
+    /// is not that rectangle, and throws.
+    public static func textPixels(region: CGImage, frameWidth: Int, frameHeight: Int) throws -> ColorImage {
+        let rect = textRect(width: frameWidth, height: frameHeight)
+        guard region.width == Int(rect.width), region.height == Int(rect.height) else {
+            throw ImageDecoder.DecodeError.unreadableImage
+        }
+        return try ImageDecoder.decodeColor(region, in: CGRect(x: 0, y: 0, width: region.width, height: region.height))
+    }
+
     /// Rows handed to the text read at most. A full-resolution frame's crop
     /// is scaled down to this; a broadcast's ~1310-row frame gives ~59 rows
     /// and is read as it is.
@@ -79,6 +95,12 @@ public enum DroneFooterProbe {
     public static func readCrop(_ image: CGImage) -> CGImage? {
         let rect = textRect(width: image.width, height: image.height)
         guard let cropped = image.cropping(to: rect) else { return nil }
+        return readCrop(region: cropped)
+    }
+
+    /// `readCrop` of a region already cut to `textRect`, such as one
+    /// rendered on its own: scaled the same way, with no crop.
+    public static func readCrop(region cropped: CGImage) -> CGImage? {
         let scale = min(1, Double(maximumReadHeight) / Double(cropped.height))
         let width = max(1, Int((Double(cropped.width) * scale).rounded()))
         let height = max(1, Int((Double(cropped.height) * scale).rounded()))

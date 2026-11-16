@@ -55,7 +55,7 @@ final class GlyphPiPRenderLoop {
         self.layer = layer
         self.readingMode = readingMode
         self.table = table
-        self.factory = GlyphFrameFactory(table: table, canvas: canvas)
+        self.factory = GlyphFrameFactory(table: table, canvas: canvas, accent: Self.themeAccent)
         self.pendingCanvas = canvas
         self.pending = initial
     }
@@ -129,7 +129,7 @@ final class GlyphPiPRenderLoop {
         // Pool, format description and cached pixels change together on the
         // render queue. Never wrap an old-size buffer in the new format.
         if factory.canvas != canvas {
-            factory = GlyphFrameFactory(table: table, canvas: canvas)
+            factory = GlyphFrameFactory(table: table, canvas: canvas, accent: Self.themeAccent)
             layer.sampleBufferRenderer.flush()
             buffer = nil
             previousKey = nil
@@ -193,5 +193,13 @@ final class GlyphPiPRenderLoop {
     private func report(_ message: String) {
         guard let onEvent else { return }
         DispatchQueue.main.async { onEvent(message) }
+    }
+
+    /// The chosen theme's Glyph accent, read when the window starts
+    /// or its canvas changes; nil, for every theme that keeps the default
+    /// lavender, leaves the palette as is.
+    private static var themeAccent: CGColor? {
+        let theme = AppearancePreferences().theme
+        return theme.changesGlyphAccent ? theme.glyphAccentCGColor : nil
     }
 }

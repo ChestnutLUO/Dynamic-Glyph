@@ -355,10 +355,10 @@ the one above it.
 
 | Claim | Established by |
 | --- | --- |
-| Shape recognition on real presentation pixels | 2026-09-17 recording validation, 28/28 annotated frames |
+| Shape recognition on real presentation pixels | Recording validation, 28/28 annotated frames |
 | Slot count and highlight read from pixels | Unit tests over two independent captures |
 | Header phase read from pixels | Unit tests over six captured screens plus a map negative |
-| Whole pipeline recovers a five-slot sequence | [Phase replay](../Tools/PhaseReplayResults/2026-09-18/README.md), 200 frames, no annotation in the loop |
+| Whole pipeline recovers a five-slot sequence | Phase replay (`Tools/check-phase-replay.py`), 200 frames, no annotation in the loop |
 | Tracker rules, including the ones hard to stage | 19 state-machine tests |
 | Diagram orientation in the sample-buffer bitmap | Pixel test over a rendered bitmap |
 | Compiles for iPhone, app plus widget extension | Unsigned Release build |
@@ -366,7 +366,7 @@ the one above it.
 | **The app's own window is not read as game evidence** | **Nothing — there is no exclusion; keep the window off the array and header** |
 | **Latency, thermals, battery, Island visibility** | **Nothing yet** |
 | Debug recording: admission, append, anchor, receipt | `DynamicGlyphTests`, against the real writer on an iOS simulator |
-| Debug recording on a phone | 2622 frames, no drops under pressure, clean finish — [second field report](../Tools/FieldResults/2026-09-18-evening/README.md) |
+| Debug recording on a phone | 2622 frames, no drops under pressure, clean finish — second field report |
 | Sequence collected on a phone | Five slots from one hack, every one on a verified boundary — same report |
 | **Strip legibility and Island presentation on a phone** | **Nothing yet** |
 
@@ -424,6 +424,6 @@ rediscover it:
 - `SCStreamFrameInfoDirtyRects` is `API_UNAVAILABLE(ios)` — no cheap
   change-region hint, so ROI tracking cannot lean on it.
 
-See the [first live field report](../Tools/FieldResults/2026-09-18/README.md)
-for the run that produced the recognition evidence and the telemetry and
-screenshot bugs fixed after it.
+The first live field run produced the recognition evidence and showed the
+telemetry and screenshot bugs that were fixed after it; its report is not
+published.

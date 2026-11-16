@@ -15,13 +15,45 @@ public struct CommandNoticeDetector {
     public init() {}
     public func detect(_ image: CGImage) throws -> Box? { detect(try ImageDecoder.decode(image)) }
 
+    /// Whether a run of lit columns is an object at the band's left or right
+    /// edge, such as a tucked window's tab, and no part of a notice box.
+    ///
+    /// A box is centred within w/16 and wider than w/5 but narrower than
+    /// 4w/5. So it spans the centre column and stays about 0.06875 of the
+    /// width from either edge (42 of 603 columns). A run that reaches within
+    /// w/20 of an edge, which leaves about 0.01875 of the width spare, holds
+    /// something that is no part of a box. Staying on that side of the
+    /// centre column, it holds no whole box either.
+    static func isEdgeObject(_ run: ClosedRange<Int>, width w: Int) -> Bool {
+        let margin = w / 20
+        return (run.lowerBound < margin && 2 * run.upperBound < w - 1)
+            || (run.upperBound >= w - margin && 2 * run.lowerBound > w - 1)
+    }
+
     public func detect(_ pixels: LuminanceImage) -> Box? {
         let w = pixels.width, h = pixels.height
-        var left = w, right = 0, top = h, bottom = 0
+        // Each column's first and last lit row, -1 when it has none.
+        var firstRows = [Int](repeating: -1, count: w), lastRows = [Int](repeating: -1, count: w)
         for y in 0..<h {
             for x in 0..<w where pixels[x, y] > 45 {
-                left = min(left, x); right = max(right, x); top = min(top, y); bottom = max(bottom, y)
+                if firstRows[x] < 0 { firstRows[x] = y }
+                lastRows[x] = y
             }
+        }
+        // The bounding box of every lit pixel, less objects at the edges.
+        var left = w, right = 0, top = h, bottom = 0
+        var x = 0
+        while x < w {
+            guard lastRows[x] >= 0 else { x += 1; continue }
+            var end = x
+            while end + 1 < w, lastRows[end + 1] >= 0 { end += 1 }
+            if !Self.isEdgeObject(x...end, width: w) {
+                left = min(left, x); right = max(right, end)
+                for column in x...end {
+                    top = min(top, firstRows[column]); bottom = max(bottom, lastRows[column])
+                }
+            }
+            x = end + 1
         }
         let width = right - left, height = bottom - top
         guard width > w / 5, width < w * 4 / 5, height > h / 4, height < h * 3 / 4,
@@ -57,10 +89,30 @@ public struct CommandNoticeFrame: @unchecked Sendable {
 }
 
 public struct CommandNoticeReader: Sendable {
+    /// The text logic a read uses: the Swift `CommandNoticeParser` and
+    /// `GameText`, or a logic arm's (`RecognitionLogicSet`), made per read.
+    public struct Logic: Sendable {
+        public var parser: @Sendable (GameLanguage) -> any CommandNoticeParsing
+        public var text: @Sendable (GameLanguage) -> any GameTextMatching
+
+        public init(parser: @escaping @Sendable (GameLanguage) -> any CommandNoticeParsing,
+                    text: @escaping @Sendable (GameLanguage) -> any GameTextMatching) {
+            self.parser = parser
+            self.text = text
+        }
+
+        public static let swift = Logic(parser: { CommandNoticeParser(language: $0) }, text: { GameText($0) })
+    }
+
     public let language: GameLanguage
-    public init(language: GameLanguage = .english) { self.language = language }
+    private let logic: Logic
+    public init(language: GameLanguage = .english, logic: Logic = .swift) {
+        self.language = language
+        self.logic = logic
+    }
+
     public func read(_ frame: CommandNoticeFrame) throws -> CommandNoticeReading {
-        guard frame.isMode else { return CommandNoticeParser(language: language).read(try lines(frame, fast: false)) }
+        guard frame.isMode else { return logic.parser(language).read(try lines(frame, fast: false)) }
         // The drone footer is one short fixed phrase in a small crop. Fast
         // recognition reads Latin script only, so it is tried for English
         // alone; a miss is read again accurately, so fast can only save.
@@ -90,7 +142,7 @@ public struct CommandNoticeReader: Sendable {
     }
 
     private func droneReading(_ lines: [(String, Double)], fast: Bool) -> CommandNoticeReading {
-        let text = GameText(language)
+        let text = logic.text(language)
         // Fast recognition scores coarsely: the real footer, read letter for
         // letter, comes back at 0.5 where accurate gives 1.0. The phrase must
         // match exactly either way, in a crop already gated on a centred
@@ -140,24 +192,13 @@ public final class CommandNoticeCapture {
     public private(set) var noticeReadAt: Double?
 
     public func observe(band: CGImage, at time: Double) throws {
-        guard time.isFinite, time != lastFrameTime else { return }
-        if time < lastFrameTime { cancel() }
-        lastFrameTime = time
-        if !windowOpened {
-            if let droneAt, time >= droneAt, time - droneAt <= 5 { observer.setMode(.drone) }
-            droneAt = nil; windowOpened = true; windowStartedAt = time
-            observer.markObserved()
-        }
+        guard beginFrame(at: time) else { return }
         let pixels = try ImageDecoder.decode(band)
         guard let current = CommandNoticeDetector().detect(pixels) else {
-            box = nil; noticeID = nil; samples = 0
             // An overlay or unreadable box is not an empty command window.
-            let obscured = (pixels.height / 5..<pixels.height).contains { y in
+            noBox(at: time, obscured: (pixels.height / 5..<pixels.height).contains { y in
                 (0..<pixels.width).filter { pixels[$0, y] > 45 }.count > pixels.width / 8
-            }
-            if obscured {
-                if !missing { observer.loseCoverage(at: time); missing = true }
-            } else { missing = false }
+            })
             return
         }
         missing = false
@@ -177,6 +218,42 @@ public final class CommandNoticeCapture {
         queue.append(CommandNoticeFrame(id: id, sourceTime: time, image: crop, isMode: false, generation: generation))
     }
 
+    /// `observe(band:)` for a band with no grey level above 45, known from
+    /// the capture's planes without a render (`RegionGate.bandIsEmpty`): no
+    /// box, and nothing covering the band.
+    public func observeEmptyBand(at time: Double) {
+        guard beginFrame(at: time) else { return }
+        noBox(at: time, obscured: false)
+    }
+
+    /// A band frame's start: a repeated or non-finite time is ignored, an
+    /// earlier one cancels, and the first frame opens the window.
+    private func beginFrame(at time: Double) -> Bool {
+        guard time.isFinite, time != lastFrameTime else { return false }
+        if time < lastFrameTime { cancel() }
+        lastFrameTime = time
+        if !windowOpened {
+            if let droneAt, time >= droneAt, time - droneAt <= 5 { observer.setMode(.drone) }
+            droneAt = nil; windowOpened = true; windowStartedAt = time
+            observer.markObserved()
+        }
+        return true
+    }
+
+    private func noBox(at time: Double, obscured: Bool) {
+        box = nil; noticeID = nil; samples = 0
+        if obscured {
+            if !missing { observer.loseCoverage(at: time); missing = true }
+        } else { missing = false }
+    }
+
+    /// `observeMode`'s first guard, which changes nothing: no command window
+    /// open, no item panel, and a second since the last footer candidate
+    /// that was read or reused.
+    public func modeProbeDue(at time: Double, panelShowing: Bool = false) -> Bool {
+        !windowOpened && !panelShowing && time - lastModeProbe >= 1
+    }
+
     /// Pixel-gated footer probe: yellow lettering is a candidate, never a
     /// drone verdict. One bounded OCR request on the label's small crop
     /// checks the fixed footer phrase; once one has, the same pixels are
@@ -186,11 +263,22 @@ public final class CommandNoticeCapture {
     /// gone. Returns whether the frame was a candidate.
     @discardableResult
     public func observeMode(in image: CGImage, at time: Double, panelShowing: Bool = false) throws -> Bool {
-        guard !windowOpened, !panelShowing, time - lastModeProbe >= 1 else { return false }
-        let rect = DroneFooterProbe.textRect(width: image.width, height: image.height)
-        guard let candidate = DroneFooterProbe.candidate(try ImageDecoder.decodeColor(image, in: rect)) else {
-            return false
-        }
+        guard modeProbeDue(at: time, panelShowing: panelShowing) else { return false }
+        return probeMode(try DroneFooterProbe.textPixels(in: image), at: time) { DroneFooterProbe.readCrop(image) }
+    }
+
+    /// `observeMode(in:)` with the footer's region alone, rendered on its
+    /// own: the same pixels, so the same decisions and the same read crop.
+    @discardableResult
+    public func observeMode(footer: CGImage, frameWidth: Int, frameHeight: Int, at time: Double,
+                            panelShowing: Bool = false) throws -> Bool {
+        guard modeProbeDue(at: time, panelShowing: panelShowing) else { return false }
+        let pixels = try DroneFooterProbe.textPixels(region: footer, frameWidth: frameWidth, frameHeight: frameHeight)
+        return probeMode(pixels, at: time) { DroneFooterProbe.readCrop(region: footer) }
+    }
+
+    private func probeMode(_ pixels: ColorImage, at time: Double, readCrop: () -> CGImage?) -> Bool {
+        guard let candidate = DroneFooterProbe.candidate(pixels) else { return false }
         modeCandidates += 1
         if let droneSignature, DroneFooterProbe.matches(candidate.signature, droneSignature) {
             lastModeProbe = time
@@ -198,7 +286,7 @@ public final class CommandNoticeCapture {
             droneAt = time
             return true
         }
-        guard queue.count < 16, let crop = DroneFooterProbe.readCrop(image) else { return true }
+        guard queue.count < 16, let crop = readCrop() else { return true }
         lastModeProbe = time
         modeReads += 1
         queue.append(CommandNoticeFrame(id: 0, sourceTime: time, image: crop, isMode: true, generation: generation,
@@ -271,9 +359,10 @@ public final class CommandNoticeCapture {
 extension CommandNoticeReader {
     /// Reads a notice box in the capture's language, trying the others when
     /// the box holds no known phrase. The drone footer is tried the same way.
-    public static func read(_ frame: CommandNoticeFrame, languages memory: GameLanguageMemory) throws -> CommandNoticeReading {
+    public static func read(_ frame: CommandNoticeFrame, languages memory: any GameLanguageRemembering,
+                            logic: Logic = .swift) throws -> CommandNoticeReading {
         let current = memory.current
-        let reading = try CommandNoticeReader(language: current).read(frame)
+        let reading = try CommandNoticeReader(language: current, logic: logic).read(frame)
         guard reading.notice == nil else {
             // NO KEY is English in Japanese games too, so an English notice
             // confirms nothing.
@@ -281,7 +370,7 @@ extension CommandNoticeReader {
             return reading
         }
         for language in memory.alternatives(at: frame.sourceTime, on: .notice) {
-            let other = try CommandNoticeReader(language: language).read(frame)
+            let other = try CommandNoticeReader(language: language, logic: logic).read(frame)
             // English phrases stay readable in every pack, so only a phrase of
             // this language's own names it.
             if other.notice != nil, other.language == language.rawValue {

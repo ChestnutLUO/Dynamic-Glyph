@@ -186,7 +186,7 @@ struct CommandRecognitionTests {
 
     func fixture(_ name: String) throws -> CGImage {
         try ReferenceData.requireScreenshots()
-        let url = try #require(Bundle.module.url(forResource: name, withExtension: "png", subdirectory: "Fixtures/Assets/Screenshots/Commands"))
+        let url = try #require(Bundle.module.url(forResource: name, withExtension: "png", subdirectory: "Fixtures/Commands"))
         return try #require(ImageDecoder.cgImage(from: Data(contentsOf: url)))
     }
 

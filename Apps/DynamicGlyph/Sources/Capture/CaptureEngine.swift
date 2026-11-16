@@ -4,6 +4,7 @@ import Foundation
 import CoreMedia
 import UIKit
 import GlyphRecognition
+import GlyphRecognitionImages
 
 /// Owns the capture session, the tables and the evidence. Frames come from a
 /// `CaptureBackend`, which knows nothing of recognition, recording or the
@@ -105,13 +106,16 @@ final class CaptureEngine: NSObject, ObservableObject {
         }
     }
 
-    /// The capture's game language: the chosen one, or automatic, starting
-    /// from the last one found or the iPhone's language. What automatic
-    /// reading finds is kept for Settings and the next capture.
-    private func makeLanguageMemory() -> GameLanguageMemory {
+    /// The capture's logic set, on the arm chosen in Diagnostics. Its game
+    /// language is the chosen one, or automatic, starting from the last one
+    /// found or the iPhone's language. What automatic reading finds is kept
+    /// for Settings and the next capture.
+    private func makeLogic(choice: RecognitionLogicChoice, table: GlyphTable?) -> RecognitionLogicSet {
         let start = gameLanguage ?? GameLanguageMemory.startingGuess(remembered: detectedGameLanguage,
                                                                      preferredLanguages: Locale.preferredLanguages)
-        return GameLanguageMemory(language: start, isAutomatic: gameLanguage == nil) { [weak self] found in
+        return makeRecognitionLogic(choice: choice, table: table, sequenceTable: sequenceTable,
+                                    sessionID: captureSessionID, language: start,
+                                    automaticLanguage: gameLanguage == nil) { [weak self] found in
             Task { @MainActor in
                 AppPreferences().detectedGameLanguage = found
                 self?.detectedGameLanguage = found
@@ -852,8 +856,19 @@ extension CaptureEngine: CaptureBackendDelegate {
         }
         recorder = sessionRecorder
 
-        let languages = makeLanguageMemory()
-        PowerMeter.shared.reset(languages: languages)
+        // Read once per session, like power saving: the engine A/B's arm and
+        // its cuts, and the logic arm. Both name
+        // themselves, so the Power section says which arms actually ran. The
+        // cuts are the ones the engine that runs honours: the Swift engine's
+        // when the C++ one can't take the shape list. The logic takes any
+        // list, so it stays as chosen.
+        let engineChoice = preferences.recognitionEngine
+        let logicChoice = preferences.recognitionLogic
+        let engineSetup = makeRecognitionEngine(choice: engineChoice, table: table, cuts: preferences.recognitionCuts)
+        let recognitionEngine = engineSetup.engine, cuts = engineSetup.cuts
+        let logic = makeLogic(choice: logicChoice, table: table)
+        let languages = logic.languageMemory
+        PowerMeter.shared.reset(languages: languages, engine: engineSetup.label, logic: logic.name, cuts: cuts)
         // Stamped on each record as it is delivered, with the language read
         // by then and the iPhone's UTC offset at that moment.
         let mode: CaptureOrigin.Mode = table == nil ? .gearOnly : .glyphAssistance
@@ -867,11 +882,11 @@ extension CaptureEngine: CaptureBackendDelegate {
                 // Pictures of the panels go into the session folder, so they
                 // are kept only while logs are.
                 readsGear: results.readsGear, savesGearPictures: results.savesGearPictures,
-                languages: languages,
                 // Read once per session: switching it mid-capture changes nothing.
                 // Always on where the switch isn't shown (App Store builds).
                 powerSaving: AppPreferences.effectivePowerSaving(stored: preferences.powerSaving,
                                                                  toolsAvailable: BenchmarkAvailability.isAvailable),
+                engine: recognitionEngine, cuts: cuts, logic: logic,
                 // The floating window's debug fill, when Diagnostics asks for it.
                 readingMode: .shared,
                 telemetry: { [weak self] frame in
@@ -905,6 +920,7 @@ extension CaptureEngine: CaptureBackendDelegate {
                 }
             recognitionOutput = output
             log("power saving \(output.powerSaving ? "on" : "off")")
+            log(engineSetup.logLine(logic: output.logicName, logicChoice: logicChoice))
             loggedSlowdown = nil
             logSlowdown()
             logAudioState("before startCapture")

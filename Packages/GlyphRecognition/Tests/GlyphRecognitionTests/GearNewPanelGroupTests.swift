@@ -2,15 +2,15 @@ import Foundation
 import Testing
 @testable import GlyphRecognition
 
-/// Build 103: stopping a read for a new panel never costs a drop its group.
-/// In the 2026-10-27 report replay, hack 1's portal panel showed for about
-/// 0.3 s and its only read was stopped when the Bonus panel slid in: build
-/// 102 recorded that portal panel with no rows (one read can't confirm a
-/// row), build 103 doesn't record it, and the hack keeps its one group with
+/// Stopping a read for a new panel never costs a drop its group. In a
+/// replayed field report, hack 1's portal panel showed for about 0.3 s and
+/// its only read was stopped when the Bonus panel slid in: the old lane
+/// recorded that portal panel with no rows (one read can't confirm a row),
+/// the new-panel lane doesn't record it, and the hack keeps its one group with
 /// its Bonus rows. A read is stopped only while no group is open or its panel
 /// is settled (`previousPanelUnconfirmed`), so it is never a read a confirmed
 /// row needed. Timelines as `GearNewPanelLaneTests` (injected reads, no Vision).
-@Suite("Build 103: a stopped read never costs a drop its group")
+@Suite("New-panel lane: a stopped read never costs a drop its group")
 struct GearNewPanelGroupTests {
     typealias Sim = GearLaneSimulation
 
@@ -18,11 +18,11 @@ struct GearNewPanelGroupTests {
         [nil, 0.3, 0.25, 0.2, 0.15].map { (phase, $0) }
     }
 
-    /// As 2026-10-27 hack 1: a 0.3-s portal panel, then its Bonus panel in place.
+    /// As that report's hack 1: a 0.3-s portal panel, then its Bonus panel in place.
     static let shortPortal = Sim.nothing(from: 0, seconds: 0.3) + Sim.panel(.portal, from: 0.3, seconds: 0.3, height: 0.1309)
         + Sim.panel(.bonus, from: 0.6, seconds: 0.7, height: 0.1667) + Sim.nothing(from: 1.3, seconds: 0.5)
 
-    @Test("A short portal panel whose only read is stopped: still one group, every panel 102 keeps kept",
+    @Test("A short portal panel whose only read is stopped: still one group, every panel the old lane keeps kept",
           arguments: [false, true], [0.25, 0.35])
     func shortPortalKeepsGroup(constrained: Bool, cost: Double) {
         var stopped = 0
@@ -38,7 +38,7 @@ struct GearNewPanelGroupTests {
             #expect(Sim.wrongItems(new) == 0)
             if !new.cancels.isEmpty {
                 stopped += 1
-                // The read stopped was the portal panel's only one: 102 confirmed no row of it.
+                // The read stopped was the portal panel's only one: the old lane confirmed no row of it.
                 let portal = old.groups.flatMap(\.panels).filter { $0.stage == .portal }
                 #expect(portal.allSatisfy { $0.entries.isEmpty && $0.partial }, "start \(index)")
                 #expect(Sim.kept(new, .bonus), "start \(index)")

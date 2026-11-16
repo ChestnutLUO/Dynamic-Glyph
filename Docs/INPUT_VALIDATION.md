@@ -10,8 +10,8 @@ actionable "Redo" wording are deferred until recordings support them.
 ## What the recordings show
 
 The first draft of this design assumed player strokes look like presentation
-strokes. They do not. `IMG_2003.MP4` (repository root, 880 x 1914, one 5-slot
-hack) was replayed at 20 Hz, 562 px wide, through `GlyphFrameSession` and
+strokes. They do not. A field recording of one 5-slot hack (880 x 1914),
+called the correct-drawing baseline below, was replayed at 20 Hz, 562 px wide, through `GlyphFrameSession` and
 `SlotStripReader`. The game presented `shield, mind, clear_all, chaos, xm` and
 the player drew all five correctly. Times below are seconds into that video.
 
@@ -47,7 +47,7 @@ the player drew all five correctly. Times below are seconds into that video.
   hacking bonus. That screen also produced a false exact `link` match
   (22.5–25.3 s).
 - **The input screen has Redo, ⊗ and Done controls.** They are visible in
-  `spikeB-2026-09-23T00-14-36Z`. In `IMG_2003.MP4` the floating window sat
+  another field session. In the baseline recording the floating window sat
   directly over that row for the whole input phase. Neither recording presses
   Redo, so those recordings do not establish what it resets. Later captures
   document backward slot transitions below; the number of button presses and
@@ -295,7 +295,7 @@ Pure tests must cover:
 Extend `glyph-replay` to run the validator and print one verdict per slot, then
 check it against annotated recordings:
 
-1. `IMG_2003.MP4` as the correct-drawing baseline: every checked slot must be
+1. The correct-drawing baseline recording: every checked slot must be
    “matches” or “Unable to check”, never “differs”.
 2. New recordings with deliberate mistakes: an extra edge, a missing edge, a
    wrong complete Glyph, a fast start on the next stroke, a covered strip.
@@ -376,16 +376,15 @@ in [Tools/README.md](../Tools/README.md).
 Deliberate-error detection, broader Redo behavior, and the actual on-device visibility
 and delivery latency of the new marks are not established by this baseline.
 
-Verification of the stable-run rule on 2026-09-23: 220 package tests passed on
+Verification of the stable-run rule: 220 package tests passed on
 macOS with `GLYPH_REQUIRE_REFERENCE_DATA=1`; all 53 app tests and the same 220
 package tests passed on the iOS 27 simulator. `Tools/check-input-validation.py`
 reproduced the table above with no assertion failures.
 
 ## Follow-up: fifth Glyph disappears after Redo
 
-The user identified `DynamicGlyph-spikeB-2026-09-23T07-51-46Z.zip` as a bug
-report: after Redo, the fifth Glyph disappears while it is being drawn. This
-captured build still exhibits the older countdown behavior; it contains no
+A field bug report says that after Redo, the fifth Glyph disappears while it
+is being drawn. The version it captured still exhibits the older countdown behavior; it contains no
 input-validation log.
 The source sequence is `shapers, see, complex, path, destiny`.
 
@@ -396,7 +395,7 @@ The fifth slot becomes highlighted at 43.54 seconds. Guidance requires input
 phase, so it has already been withdrawn. The visible countdown is magenta by
 this point; the older detector only counted gold progress pixels.
 
-Commit `4fe5ca4` already fixes late countdown recognition, requiring the complete
+A later change to the countdown detector already fixes late countdown recognition, requiring the complete
 violet track and accepting magenta progress. No phase-retention relaxation or
 extra Island update frequency is needed to fix this observed loss of guidance.
 
@@ -430,16 +429,16 @@ A new tracker/guidance regression covers the backwards move, redrawing, and a
 long fifth-slot input phase. The full 213-test package suite passed with local
 reference data required. Replay confirms the model now retains fifth-slot
 guidance until completion; actual Island delivery and visibility still need a
-phone retest with the current build installed. Raw frames, full logs and the
-archive remain local device evidence and are not committed.
+phone retest with the current version installed. Raw frames, full logs and the
+report remain local device evidence and are not committed.
 
 ## Follow-up: a correct `truth` reported as different
 
-`DynamicGlyph-spikeB-2026-09-23T23-00-56Z.zip` records a four-slot hack
+A field report records a four-slot hack
 (`truth, idea, discover, xm`). The player drew `truth`, pressed Redo and drew it
 again. The result screen lit `truth` first and awarded its bonus, supporting
 the human annotation that the final attempt was accepted. It does not judge
-the superseded first attempt; the user annotated both drawings as correct.
+the superseded first attempt; the hand annotation marks both drawings as correct.
 The validator logged `differs` for both, at 24.06 and 27.41 seconds.
 
 The logged attempts are 1/TRUTH, 2/IDEA, 3/TRUTH, 4/IDEA, and 5/DISCOVER.
@@ -451,7 +450,7 @@ between them and dimming after about 26.10. Annotate two apparent presses,
 each stepping back one slot, assuming those pulses are press feedback. The
 button and highlight evidence support this annotation together; the highlight
 alone does not prove a press count or a whole-sequence reset. The button is
-covered in IMG_2003.MP4, so this is not a required live detection signal.
+covered in the baseline recording, so this is not a required live detection signal.
 The conclusion's TRUTH and IDEA refer to attempts 3 and 4, not 1 and 2.
 Its annotated final bonuses are 120% Hacking
 Bonus and 55% Speed Bonus. See RESULT_RECOGNITION.md for the result timeline,
@@ -475,13 +474,13 @@ orders remain `partialEdge` rather than warning as the stroke fades.
 
 Replaying that capture at 20 fps gives no `differs`: the first `truth` is
 `partialEdge`, the second `shortWindow` at that resampling, and `idea` twice and
-`discover` match. `IMG_2003.MP4` still matches all four checked slots and the
+`discover` match. The baseline recording still matches all four checked slots and the
 Redo capture all five. The 30% floor is a starting point: deliberate-mistake
 recordings are still needed to measure how often a real missing edge is also
 left partly lit, and so goes unreported.
 
 A focused replay of the original timestamped edge observations and recognition
-context through the validator at `02f75f9` yields `partialEdge` for attempts 1 and
+context through the validator with this rule yields `partialEdge` for attempts 1 and
 3, with attempts 2, 4, and 5 matching. This checks the validator on the logged
 evidence, not conclusion recognition, and is distinct from the resampled-video
 replay above.
@@ -489,9 +488,8 @@ replay above.
 
 ## Deliberate-error comparison capture
 
-`5Glyphwitherrorglyphandredo.zip` contains session
-`spikeB-2026-09-24T00-01-28Z`: OLD, NATURE, LESS, STRONG, NOW. The user reports
-one wrong drawing and one Redo. `recognition.jsonl` shows highlight 2 → 1 at
+A field session with a deliberate error records OLD, NATURE, LESS, STRONG,
+NOW. Its report notes one wrong drawing and one Redo. `recognition.jsonl` shows highlight 2 → 1 at
 16.981 s relative to the recording start. NATURE attempt 2 is superseded by
 attempt 3. Final validator associations are 1/OLD, 3/NATURE, 4/LESS, 5/STRONG;
 NOW remains outside the validator's final-slot scope.

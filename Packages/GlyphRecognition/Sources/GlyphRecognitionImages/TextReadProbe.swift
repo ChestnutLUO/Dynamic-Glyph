@@ -20,7 +20,7 @@ public enum TextReadProbe {
     /// Boxed: a closure kept directly in the lock's generic state is written
     /// back through `withLock`'s `inout` on every read, wrapped in one more
     /// pair of reabstraction thunks each time, until a call overflows the
-    /// stack (build 97). A class reference is stored and read as it is.
+    /// stack. A class reference is stored and read as it is.
     private final class ObserverBox: Sendable {
         let call: Observer
         init(_ call: @escaping Observer) { self.call = call }

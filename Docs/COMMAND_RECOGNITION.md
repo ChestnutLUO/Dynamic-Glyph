@@ -9,7 +9,7 @@ multiplied drop and showing them as measured of all. Drone hacks and
 uncertain or unseen commands have rows of their own; older history without
 commands is left out. Portal mode is not yet detected
 positively, so a hack that isn't a drone stays unknown. Based on the current
-code, the two 2026-09-28 recordings, and the player's rules. This feature
+code, two field recordings, and the game's rules as players describe them. This feature
 records the game's acknowledgement of a command, not a guess about the drawn
 shape.
 
@@ -41,7 +41,7 @@ category wins. A gear command does not erase a presentation-speed command,
 and vice versa. SPEED belongs to the gear category; it is not COMPLEX and
 does not mean the result screen's Speed Bonus.
 
-The player's rule is that gear commands do not apply to drone hacks. Store
+Players report that gear commands do not apply to drone hacks. Store
 hack mode separately as portal, drone, or unknown. For a confirmed drone
 hack, effective gear mode is notApplicable, even if an attempted command
 was visible. INVALID COMMAND alone cannot identify the attempted glyph or
@@ -50,18 +50,18 @@ prove that a hack used a drone.
 Official sources confirm that
 [SPEED restricts output to Portal Keys](https://ingress.com/news/2024-itoensoftbankyear10)
 and that [drones cannot obtain Portal Keys](https://support.ingress.com/hc/en-us/articles/41140343208603-Dronenet).
-The last-command-per-category rule comes from the player and the replacement
+The last-command-per-category rule comes from players' experience and the replacement
 sequences below; these official pages do not specify replacement semantics.
 
 ## Recording evidence
 
-Private originals remain local. No portal names, player names, map images or
+The original recordings are not published. No portal names, player names, map images or
 addresses belong in committed fixtures. Times below are seconds into each
 archive's screen-recording.mp4. A 10 Hz OCR inspection of a notice-only crop
 was combined with visual frame inspection and the existing JSONL logs.
 Approximate notice intervals are not production-reader benchmark results.
 
-### Portal recording: 2026-09-28T20-50-18Z
+### Portal recording
 
 About 345.8 seconds, seven tracked Glyph hacks. All five accepted notice
 types are present. The final notice of each category before presentation is:
@@ -95,7 +95,7 @@ The final replacement exists in **one captured frame at 20 Hz**. Requiring
 two frames for every command would retain the wrong earlier setting. The
 notice can change directly to another notice, with no blank in between.
 
-### Drone recording: 2026-09-28T23-03-49Z
+### Drone recording
 
 About 63.4 seconds, one tracked five-Glyph hack. DRONE FOOTAGE is visible
 before command entry. During command entry there are repeated INVALID COMMAND
@@ -217,7 +217,7 @@ without claiming which command was rejected. The existing gear log records
 
 1. Add sanitized notice crops, screen-context negatives and timestamped
    annotations from both recordings under Fixtures/Commands. Include the
-   original one-frame REQUEST KEY. No full private frame is committed.
+   original one-frame REQUEST KEY. No full frame is committed.
 2. Add framework-free CommandFrameEvidence, CommandNoticeParser,
    HackCommandSummary and CommandObservationSession in GlyphRecognition.
    Tests cover category replacement, rejection and source-time ownership.
@@ -256,7 +256,7 @@ and new records, single-frame acknowledgements, partial/unattached groups,
 unknown mode and drone exclusions. Run full package and app suites and the iOS
 device build before shipping the complete feature.
 
-## Peer review (2026-09-28)
+## Peer review
 
 The decision to read the notice box, not the command shapes, stands. The code
 facts above were checked: the 6.0–10.4% header band, the COMMAND CHANNEL OPEN
@@ -318,5 +318,4 @@ separation above.
   same semantics as Redo during the scored Glyph input.
 
 These recordings are enough to start M1. They do not establish universal
-notice timing or layout support. No implementation, staging or commit is part
-of this planning change.
+notice timing or layout support.

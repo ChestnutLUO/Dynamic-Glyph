@@ -116,7 +116,7 @@ public struct PlayerInputValidator: Sendable {
             self.indicatorsObstructed = indicatorsObstructed
         }
 
-        public init(_ tracker: PresentationTracker) {
+        public init(_ tracker: some PresentationTracking) {
             self.init(state: tracker.state, hackID: tracker.hackID, slots: tracker.slots,
                       expectedSlotCount: tracker.expectedSlotCount,
                       observedPresentation: tracker.observedPresentationForCurrentHack,
@@ -171,7 +171,7 @@ public struct PlayerInputValidator: Sendable {
     }
 
     @discardableResult
-    public mutating func accept(_ evidence: FrameEvidence, tracker: PresentationTracker,
+    public mutating func accept(_ evidence: FrameEvidence, tracker: some PresentationTracking,
                                 edgeEvidence: [GlyphEdgeEvidence]) -> [InputCheckEvent] {
         guard tracker.sessionID == sessionID else { return [] }
         return accept(evidence, context: Context(tracker), edgeEvidence: edgeEvidence)

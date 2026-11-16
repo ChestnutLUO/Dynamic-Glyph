@@ -84,7 +84,7 @@ struct GearPanelPaceTests {
         #expect(take(&schedule, at: 0.6, panel: true)?.mode == .gear)
     }
 
-    // MARK: - The 2026-10-27 reports' timing, with derived entries
+    // MARK: - A field report's timing, with derived entries
 
     struct Shown {
         let stage: GearDropStage
@@ -145,7 +145,7 @@ struct GearPanelPaceTests {
             == shown.map { [$0.item ?? "?", "\($0.level ?? 0)", "\($0.quantity)", "\($0.position)"] }
     }
 
-    @Test("Hack 10 of 2026-10-27: a portal panel up about 0.3 s after its first read keeps its three items")
+    @Test("Hack 10 of a field report: a portal panel up about 0.3 s after its first read keeps its three items")
     func reportHack10() {
         // First read 599.860; Bonus first read mid-slide at 600.260, so it
         // came in about 0.1 s before: the portal panel shows until ~600.16.
@@ -171,7 +171,7 @@ struct GearPanelPaceTests {
         #expect(bonusPanel.map { same($0.entries, bonus) } == true)
     }
 
-    @Test("Hack 6 of 2026-10-27: an unreadable second read no longer leaves the portal panel empty")
+    @Test("Hack 6 of a field report: an unreadable second read no longer leaves the portal panel empty")
     func reportHack6() {
         // First read 351.090, an unreadable one at 351.490 (2 rows, none
         // parsed), Bonus mid-slide at 351.890: the portal shows until ~351.69.

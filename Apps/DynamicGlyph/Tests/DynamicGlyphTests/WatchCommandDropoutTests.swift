@@ -49,7 +49,7 @@ struct WatchCommandDropoutTests {
     /// The contrast to `drawnCommand`: support (command header reads) again
     /// stops at 4 and every later read recognises nothing, but this window's
     /// notice (the recorded SIMPLE crop, 3.5..<4.0) has been read, so those
-    /// reads are no evidence (S8b). The watch keeps support on the cached fit
+    /// reads are no evidence. The watch keeps support on the cached fit
     /// within `leave` of the last command evidence, past drawnCommand's 4.75
     /// release, until the presented hack binds the confirmed notice.
     @Test("After a read notice, header reads that recognise nothing keep a drawn command watched into the hack",

@@ -1315,20 +1315,20 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "ドロップを監視中 · ここまで %lld 個"
+            "state" : "translated",
+            "value" : "アイテムを監視中 · ここまで %lld 個"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "正在关注掉落 · 目前 %lld 件"
+            "state" : "translated",
+            "value" : "正在监看装备 · 目前 %lld 件"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "正在關注掉落 · 目前 %lld 件"
+            "state" : "translated",
+            "value" : "正在監看裝備 · 目前 %lld 件"
           }
         }
       }

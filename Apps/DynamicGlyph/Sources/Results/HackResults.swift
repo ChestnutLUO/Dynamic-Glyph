@@ -54,6 +54,9 @@ final class HackResults: ObservableObject {
     private(set) var revision = 0
 
     var latest: HackResultRecord? { records.first }
+    /// What the store holds, without this run's unsaved hacks: the facts the
+    /// tips and the review prompt count.
+    var savedRecords: [HackResultRecord] { saved }
     var retention: HackResultStore.Retention { store?.retention ?? HackResultStore.Retention() }
 
     private let preferences: AppPreferences
@@ -128,7 +131,7 @@ final class HackResults: ObservableObject {
         // Results synced from the player's other iPhones arrive here.
         remoteChanges = NotificationCenter.default.publisher(for: .NSPersistentStoreRemoteChange)
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in MainActor.assumeIsolated { self?.reload() } }
+            .sink { [weak self] note in MainActor.assumeIsolated { self?.storeChanged(note) } }
         // A new time zone, or the clock set, moves every day's midnight: the
         // widget's days are cut again and every Summary widget reloaded.
         timeChanges = NotificationCenter.default.publisher(for: .NSSystemTimeZoneDidChange)
@@ -312,6 +315,14 @@ final class HackResults: ObservableObject {
     private func readSaved(from store: HackResultStore) throws {
         saved = try store.records()
         savedDrops = try store.drops()
+    }
+
+    /// Every Core Data store in the app posts remote changes, TipKit's
+    /// datastore too; only this store's bring new results. Checked against
+    /// the store open now, so it follows `reopenStore()`.
+    private func storeChanged(_ notification: Notification) {
+        guard let store, store.isOwnRemoteChange(notification) else { return }
+        reload()
     }
 
     private func reload() {

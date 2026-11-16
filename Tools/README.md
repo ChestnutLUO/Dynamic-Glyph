@@ -34,8 +34,8 @@ fill and aspect are resolution independent.
 
 ## `check-recording.py`
 
-Replays the manually annotated presentation in the user-provided
-`ScreenRecording_09-17-2026 23-56-50_1.MP4`. Requires Python 3.11+, ffmpeg and a
+Replays the manually annotated presentation in a field screen recording
+of one five-Glyph hack. Requires Python 3.11+, ffmpeg and a
 release build of `glyph-recognize`. It extracts 200 samples from seconds 20-30,
 uses a fixed empty-array calibration, and checks the 28 visible and 12 blank
 presentation samples against explicit annotations. It does not detect phases
@@ -43,13 +43,13 @@ or boundaries automatically.
 
 ```sh
 swift build --package-path Packages/GlyphRecognition --build-system native -c release --product glyph-recognize
-python3 Tools/check-recording.py 'ScreenRecording_09-17-2026 23-56-50_1.MP4' \
-  --output Tools/RecordingResults/2026-09-17
+python3 Tools/check-recording.py <recording>.MP4 \
+  --output <results dir>
 ```
 
 The output contains the source hash, a summary, every frame's recognition
 result, and two contact sheets. Add `--save-fixtures` to regenerate the compact
-PNG regression fixtures. See [the results](RecordingResults/2026-09-17/README.md).
+PNG regression fixtures. The recording and its results are not published.
 
 ## `check-phase-replay.py`
 
@@ -62,25 +62,25 @@ comes from the header text and the boundaries from the indicator strip.
 ```sh
 swift build --package-path Packages/GlyphRecognition --build-system native \
   -c release --product glyph-replay
-python3 Tools/check-phase-replay.py 'ScreenRecording_09-17-2026 23-56-50_1.MP4' \
-  --output Tools/PhaseReplayResults/2026-09-18
+python3 Tools/check-phase-replay.py <recording>.MP4 \
+  --output <results dir>
 ```
 
 Exits nonzero if the recovered sequence or the slot count disagrees with the
-annotation. See [the results](PhaseReplayResults/2026-09-18/README.md).
+annotation. Its results for the annotated recording are not published.
 
 ## `check-input-validation.py`
 
 Runs the player-input validator alongside the presentation tracker at 20 fps,
 scaled to 562 pixels wide. The default annotation is the all-correct five-Glyph
-hack in `IMG_2003.MP4`. The replay fails on a `differs` verdict, a wrong recovered
+hack of a second field recording. The replay fails on a `differs` verdict, a wrong recovered
 sequence/count, or no input checks at all. It writes boundary events, per-frame
 edge support, per-attempt verdicts and unavailable-reason counts as JSON.
 
 ```sh
 swift build --package-path Packages/GlyphRecognition --build-system native \
   -c release --product glyph-replay
-python3 Tools/check-input-validation.py IMG_2003.MP4 \
+python3 Tools/check-input-validation.py <recording>.MP4 \
   --output /tmp/dynamicglyph-input-validation.json
 ```
 
@@ -103,11 +103,11 @@ two tracker rules that could not be switched off from outside are
 ```sh
 swift build --package-path Packages/GlyphRecognition --build-system native \
   -c release --product glyph-replay
-python3 Tools/check-ablations.py --output Tools/AblationResults/2026-09-22/recheck
+python3 Tools/check-ablations.py --output <results dir>
 ```
 
 Needs the raw recordings named in the annotation, which are gitignored device
-evidence. See [the results](AblationResults/2026-09-22/README.md).
+evidence. The recordings and their results are not published.
 
 ## Debug screen recorder
 

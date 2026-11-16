@@ -9,9 +9,45 @@ public struct GearPanelReading: Sendable {
     public let untitledPanel: Bool
     /// Each OCR pass of the read, in order.
     public let passes: [GearReadPass]
+    /// The passes the read's cuts left out.
+    public let withheld: GearReadWithheld
 
-    public init(evidence: GearDropFrameEvidence, untitledPanel: Bool = false, passes: [GearReadPass] = []) {
+    public init(evidence: GearDropFrameEvidence, untitledPanel: Bool = false, passes: [GearReadPass] = [],
+                withheld: GearReadWithheld = GearReadWithheld()) {
         self.evidence = evidence; self.untitledPanel = untitledPanel; self.passes = passes
+        self.withheld = withheld
+    }
+}
+
+/// What a gear read's cuts left out, as counts: each is a Vision pass the
+/// read would otherwise have made.
+public struct GearReadWithheld: Sendable, Equatable {
+    public enum Kind: Sendable { case redRow, emptyCell, quantity, languageSweep }
+    /// Rereads of a row the panel pass read whole (name, level and
+    /// quantity) whose quantity is clearly red (`gearLeanRead`).
+    public private(set) var redRows = 0
+    /// Rereads of a cell the panel pass found nothing in while it counted no
+    /// row unreadable: the empty half of an odd row (`gearLeanRead`).
+    public private(set) var emptyCells = 0
+    /// Numeric quantity passes after a row reread in a non-English game
+    /// (`gearLeanRead`). A row reread left out takes its numeric pass with
+    /// it, which is not counted here: only rereads that ran can tell.
+    public private(set) var quantities = 0
+    /// Reads whose unresolved rows would have been offered to the other game
+    /// languages, left in the confirmed language (`gearLanguageSettle`).
+    /// Not passes: a sweep reads the panel once per language, and at most
+    /// one a second, so this is an upper bound on the sweeps not made.
+    public private(set) var languageSweeps = 0
+
+    public init() {}
+
+    public mutating func add(_ kind: Kind) {
+        switch kind {
+        case .redRow: redRows += 1
+        case .emptyCell: emptyCells += 1
+        case .quantity: quantities += 1
+        case .languageSweep: languageSweeps += 1
+        }
     }
 }
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Replay the manually inspected 2026-09-17 hack; no automatic phase inference.
+"""Replay the manually inspected five-Glyph hack; no automatic phase inference.
 
 Requires ffmpeg and the release glyph-recognize executable. Expected labels and
 edges are geometric annotations of the visible presentation, not predictions
@@ -86,8 +86,8 @@ def main():
         (args.output / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
         (args.output / "frames.jsonl").write_text("".join(json.dumps(record, sort_keys=True) + "\n" for record in records))
         if args.save_fixtures:
-            target = FIXTURES / "Assets" / "Screenshots" / "Recording"
-            target.mkdir(parents=True, exist_ok=True)
+            target = FIXTURES / "Recording"
+            target.mkdir(exist_ok=True)
             times = [25150, 23600, 28550] + [slot[4] for slot in SLOTS]
             for time in times:
                 number = (time - 20000) // 50 + 1

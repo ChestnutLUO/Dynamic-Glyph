@@ -174,7 +174,9 @@ struct GearDropScreenReaderTests {
 
     /// Replace only the title of an already sanitized fixture with owned text.
     /// Pixel coordinates follow that fixture, independently of the OCR crop.
-    private func replacingTitle(in image: CGImage, with title: String) throws -> CGImage {
+    private func replacingTitle(in image: CGImage, with title: String,
+                                band: CGRect = CGRect(x: 20, y: 399, width: 522, height: 44),
+                                baseline: CGFloat = 433) throws -> CGImage {
         let context = try #require(CGContext(data: nil, width: image.width, height: image.height,
             bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(),
             bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue))
@@ -182,7 +184,7 @@ struct GearDropScreenReaderTests {
         context.translateBy(x: 0, y: CGFloat(image.height))
         context.scaleBy(x: 1, y: -1)
         context.setFillColor(CGColor(red: 0.06, green: 0.06, blue: 0.12, alpha: 1))
-        context.fill(CGRect(x: 20, y: 399, width: 522, height: 44))
+        context.fill(band)
         context.textMatrix = CGAffineTransform(scaleX: 1, y: -1)
         let line = CTLineCreateWithAttributedString(NSAttributedString(string: title, attributes: [
             NSAttributedString.Key(kCTFontAttributeName as String):
@@ -190,7 +192,8 @@ struct GearDropScreenReaderTests {
             NSAttributedString.Key(kCTForegroundColorAttributeName as String):
                 CGColor(red: 0.75, green: 0.70, blue: 0.95, alpha: 1)
         ]))
-        context.textPosition = CGPoint(x: (562 - CTLineGetTypographicBounds(line, nil, nil, nil)) / 2, y: 433)
+        context.textPosition = CGPoint(x: (CGFloat(image.width) - CTLineGetTypographicBounds(line, nil, nil, nil)) / 2,
+                                       y: baseline)
         CTLineDraw(line, context)
         return try #require(context.makeImage())
     }
@@ -233,6 +236,192 @@ struct GearDropScreenReaderTests {
         let result = try GearDropScreenReader(language: .simplifiedChinese).readItemRow(
             frame, bounds: .init(top: 0.28626, bottom: 0.38321), position: 1, original: nil)
         #expect(result?.quantity == 1 && result?.item == "Resonator" && result?.level == 6)
+    }
+
+    /// On these frames the iPhone simulator's numeric pass found no single
+    /// marker, which dropped the reread; Vision on a Mac finds one. Either
+    /// way the row comes back as the screen shows it.
+    @Test("A reread row keeps its own name, level and quantity when the numeric pass sees no single marker",
+          arguments: [
+            ("rejected-quantity-missing-row", 596.0, 1, nil as GearDropEntry?,
+             GearDropEntry(column: 1, row: 0, item: "Ultra Strike", levelState: .known, level: 5, quantity: 1)),
+            ("rejected-quantity-unnamed-row", 592.0, 4,
+             GearDropEntry(column: 0, row: 2, item: nil, levelState: .known, level: 5, quantity: 65),
+             GearDropEntry(column: 0, row: 2, item: "Resonator", levelState: .known, level: 5, quantity: 6))])
+    func rejectedQuantityKeepsRow(_ sample: (String, Double, Int, GearDropEntry?, GearDropEntry)) throws {
+        let (name, bottom, position, original, expected) = sample
+        let log = GearReadPassLog()
+        let reader = GearDropScreenReader(language: .simplifiedChinese, passLog: log)
+        let result = try reader.readItemRow(try image(name), bounds: .init(top: 375 / 1310, bottom: bottom / 1310),
+                                            position: position, original: original)
+        #expect(log.all.map(\.purpose) == [.row, .quantity])
+        #expect(result?.item == expected.item && result?.levelState == expected.levelState
+                    && result?.level == expected.level && result?.quantity == expected.quantity,
+                "Read: \(String(describing: result))")
+    }
+
+    /// The simulator's numeric pass, without the simulator: it sees no
+    /// marker.
+    @Test("A numeric pass with no marker drops a quantity-only reread but keeps a row the reread read itself")
+    func numericPassWithoutMarker() throws {
+        let reader = GearDropScreenReader(language: .simplifiedChinese)
+        let bounds = GearDropPanelBounds(top: 375 / 1310, bottom: 592 / 1310)
+        let frame = try image("rejected-quantity-unnamed-row")
+        var crops = 0
+        let unnamed = GearDropEntry(column: 0, row: 2, item: nil, levelState: .known, level: 5, quantity: 65)
+        let kept = try reader.readItemRow(frame, bounds: bounds, position: 4, original: unnamed) { _ in
+            crops += 1
+            return []
+        }
+        #expect(crops == 1)
+        #expect(kept?.item == "Resonator" && kept?.level == 5 && kept?.quantity == 6, "Read: \(String(describing: kept))")
+        let named = GearDropEntry(column: 0, row: 2, item: "Resonator", levelState: .known, level: 5, quantity: 6)
+        #expect(try reader.readItemRow(frame, bounds: bounds, position: 4, original: named) { _ in [] } == nil)
+    }
+
+    @Test("A lean read gives the same entries without rereading red rows read whole or the empty cell",
+          arguments: [("four-bonus", 0, 1), ("multiplied-bonus", 5, 1), ("multiplied-base", 1, 1)])
+    func leanRead(_ sample: (String, Int, Int)) throws {
+        let (name, redRows, emptyCells) = sample
+        let frame = try image(name)
+        let bounds = try #require(try GearDropScreenReader().bounds(in: frame))
+        func read(lean: Bool) throws -> GearPanelReading {
+            try GearDropScreenReader.reading(frame, bounds: bounds, sourceTime: 1,
+                                             languages: GameLanguageMemory(language: .english, isAutomatic: false),
+                                             rereadsUnreadableRows: true, lean: lean)
+        }
+        let full = try read(lean: false), lean = try read(lean: true)
+        #expect(lean.evidence == full.evidence)
+        #expect(full.withheld == GearReadWithheld())
+        #expect(lean.withheld.redRows == redRows && lean.withheld.emptyCells == emptyCells
+                    && lean.withheld.quantities == 0, "\(lean.withheld)")
+        #expect(lean.passes.count + redRows + emptyCells == full.passes.count)
+    }
+
+    @Test("A lean read keeps a Chinese row reread's own quantity, without the numeric pass")
+    func leanReadSkipsQuantityPass() throws {
+        let log = GearReadPassLog()
+        let reader = GearDropScreenReader(language: .simplifiedChinese, passLog: log, lean: true)
+        let result = try reader.readItemRow(try image("red-resonator-row"),
+                                            bounds: .init(top: 0.28626, bottom: 0.38321), position: 1, original: nil)
+        #expect(log.all.map(\.purpose) == [.row])
+        #expect(log.withheld.quantities == 1 && log.withheld.redRows == 0 && log.withheld.emptyCells == 0)
+        #expect(result?.item == "Resonator" && result?.level == 6)
+    }
+
+    @Test("Only a portal or Bonus panel with a name read is kept in a settled language",
+          arguments: [
+            (GearDropFrameEvidence(sourceTime: 1, stage: .unsupported), true),
+            (GearDropFrameEvidence(sourceTime: 1, stage: .unknown), true),
+            (GearDropFrameEvidence(sourceTime: 1, stage: .unknown, entries: [
+                GearDropEntry(column: 0, row: 0, item: "Resonator", levelState: .known, level: 5, quantity: 1)]), true),
+            (GearDropFrameEvidence(sourceTime: 1, stage: .portal), true),
+            (GearDropFrameEvidence(sourceTime: 1, stage: .portal, unreadableRows: 2), true),
+            (GearDropFrameEvidence(sourceTime: 1, stage: .bonus, entries: [
+                GearDropEntry(column: 0, row: 0, item: nil, levelState: .known, level: 5, quantity: 6)]), true),
+            (GearDropFrameEvidence(sourceTime: 1, stage: .bonus, entries: [
+                GearDropEntry(column: 0, row: 0, item: nil, levelState: .known, level: 5, quantity: 6),
+                GearDropEntry(column: 1, row: 0, item: "Resonator", levelState: .known, level: 5, quantity: 1)],
+                unreadableRows: 1), false),
+            (GearDropFrameEvidence(sourceTime: 1, stage: .portal, entries: [
+                GearDropEntry(column: 0, row: 0, item: "Portal Key", levelState: .notApplicable, level: nil,
+                              quantity: 1)],
+                unreadableRows: 1), false)])
+    func mayShowAnotherLanguage(_ sample: (GearDropFrameEvidence, Bool)) {
+        #expect(GearDropScreenReader.mayShowAnotherLanguage(sample.0) == sample.1)
+    }
+
+    /// An automatic English memory, confirmed as a screen in English would.
+    private func confirmedEnglish() -> GameLanguageMemory {
+        let memory = GameLanguageMemory(language: .english, isAutomatic: true)
+        memory.found(.english)
+        return memory
+    }
+
+    @Test("A settled language keeps an unresolved read of a named panel in it, once a screen has confirmed it")
+    func languageSettleWithholdsSweep() throws {
+        // four-bonus with a band of Japanese across its first item row: the
+        // English reader reads the English Bonus title and the names, with
+        // one row unread, which the other languages don't improve.
+        let original = try image("four-bonus")
+        let bounds = try #require(try GearDropScreenReader().bounds(in: original))
+        let frame = try replacingTitle(in: original, with: "ボーナスアイテム:")
+        func read(_ memory: GameLanguageMemory, settles: Bool) throws -> GearPanelReading {
+            try GearDropScreenReader.reading(frame, bounds: bounds, sourceTime: 1, languages: memory,
+                                             rereadsUnreadableRows: true, settlesLanguage: settles)
+        }
+        let swept = try read(confirmedEnglish(), settles: false)
+        let settled = try read(confirmedEnglish(), settles: true)
+        try #require(GearDropScreenReader.needsOtherLanguages(swept.evidence)
+                        && !GearDropScreenReader.mayShowAnotherLanguage(swept.evidence), "Read: \(swept.evidence)")
+        #expect(settled.evidence == swept.evidence)
+        #expect(swept.withheld == GearReadWithheld())
+        #expect(settled.withheld.languageSweeps == 1)
+        #expect(settled.passes.count < swept.passes.count, "\(settled.passes.count) against \(swept.passes.count)")
+        // An unconfirmed guess is confirmed by this panel's own English
+        // title before the sweep, so the cut holds that sweep too.
+        let guess = GameLanguageMemory(language: .english, isAutomatic: true)
+        let guessed = try read(guess, settles: true)
+        #expect(guess.state == (language: .english, isConfirmed: true))
+        #expect(guessed.evidence == swept.evidence && guessed.withheld.languageSweeps == 1)
+        // A language the player chose is never confirmed: the read is as without the cut.
+        let plain = try read(GameLanguageMemory(language: .english, isAutomatic: false), settles: false)
+        let chosen = try read(GameLanguageMemory(language: .english, isAutomatic: false), settles: true)
+        #expect(chosen.withheld == GearReadWithheld() && chosen.evidence == plain.evidence
+                    && chosen.passes.count == plain.passes.count)
+    }
+
+    @Test("A settled English game that switched to Chinese finds it on a Chinese Bonus panel")
+    func languageSettleFindsChineseBonus() throws {
+        // latin-title-chinese's two Chinese rows under the Chinese Bonus title.
+        let frame = try replacingTitle(in: image("latin-title-chinese"), with: "奖励物品:",
+                                       band: CGRect(x: 30, y: 392, width: 542, height: 42), baseline: 420)
+        let bounds = try #require(try GearDropScreenReader().bounds(in: frame))
+        func read(settles: Bool) throws -> (reading: GearPanelReading, language: GameLanguage) {
+            let memory = confirmedEnglish()
+            let reading = try GearDropScreenReader.reading(frame, bounds: bounds, sourceTime: 1, languages: memory,
+                                                           rereadsUnreadableRows: true, settlesLanguage: settles)
+            return (reading, memory.current)
+        }
+        let swept = try read(settles: false), settled = try read(settles: true)
+        #expect(settled.language == .simplifiedChinese && swept.language == .simplifiedChinese)
+        #expect(settled.reading.evidence == swept.reading.evidence)
+        #expect(settled.reading.evidence.stage == .bonus
+                    && settled.reading.evidence.entries.map(\.item) == ["XMP Burster", "Resonator"],
+                "Read: \(settled.reading.evidence)")
+        #expect(settled.reading.withheld == GearReadWithheld())
+    }
+
+    @Test("A CJK portal name over English item names reads the same with the language settled",
+          arguments: ["測試用傳送門", "测试传送门", "試験用ポータル", "테스트 포털"])
+    func languageSettleKeepsEnglishItems(_ title: String) throws {
+        let original = try image("four-base")
+        let bounds = try #require(try GearDropScreenReader().bounds(in: original))
+        let frame = try replacingTitle(in: original, with: title)
+        func read(settles: Bool) throws -> (reading: GearPanelReading, language: GameLanguage) {
+            let memory = confirmedEnglish()
+            let reading = try GearDropScreenReader.reading(frame, bounds: bounds, sourceTime: 1, languages: memory,
+                                                           rereadsUnreadableRows: true, settlesLanguage: settles)
+            return (reading, memory.current)
+        }
+        let swept = try read(settles: false), settled = try read(settles: true)
+        #expect(settled.reading.evidence == swept.reading.evidence)
+        #expect(settled.language == swept.language)
+        #expect(settled.reading.passes.count <= swept.reading.passes.count)
+    }
+
+    @Test("A settled English game reads a Chinese portal panel's rows in Chinese")
+    func languageSettleReadsChinesePortal() throws {
+        let frame = try image("latin-title-chinese")
+        let bounds = try #require(try GearDropScreenReader().bounds(in: frame))
+        func read(settles: Bool) throws -> GearPanelReading {
+            try GearDropScreenReader.reading(frame, bounds: bounds, sourceTime: 1, languages: confirmedEnglish(),
+                                             rereadsUnreadableRows: true, settlesLanguage: settles)
+        }
+        let swept = try read(settles: false), settled = try read(settles: true)
+        #expect(settled.evidence == swept.evidence)
+        #expect(settled.evidence.entries.map(\.item) == ["XMP Burster", "Resonator"])
+        #expect(settled.withheld == GearReadWithheld() && settled.passes.count == swept.passes.count)
     }
 
     @Test("A completely omitted column is retried when its physical row is observed")

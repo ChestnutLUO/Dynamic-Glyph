@@ -2,13 +2,13 @@ import Foundation
 import Testing
 @testable import GlyphRecognition
 
-/// Build 103, decision (a): a new gear panel is told by its geometry
+/// A new gear panel is told by its geometry
 /// (`GameTextSchedule.observeGearPanel`). It stops the gear read in flight,
 /// which keeps the lane until it returns; the new panel's first read then has
 /// no spacing. Sparks and flicker can't keep stopping one panel's reads, and
-/// header reads keep their limits. Geometry is the 2026-10-28 session's
+/// header reads keep their limits. Geometry is a field session's
 /// (times and bounds only): panels slide in from 0.03 below their settled top.
-@Suite("Build 103: the new-panel signal on the shared lane")
+@Suite("The new-panel signal on the shared lane")
 struct GearNewPanelScheduleTests {
     static let panelPace = GameTextSchedule.Pace(minimumInterval: 0.1, gearInterval: 0.2)
 
@@ -191,7 +191,7 @@ struct GearNewPanelScheduleTests {
         #expect(frame(&schedule, at: 2.0, Self.slide[1]).request == nil, "still a second apart")
     }
 
-    @Test("Callers that never call the check get build 102's schedule; with it, only a new panel's first read moves")
+    @Test("Callers that never call the check get the old schedule; with it, only a new panel's first read moves")
     func withoutTheCheck() {
         func reads(observing: Bool) -> [Int] {
             var schedule = GameTextSchedule(), out: [Int] = []

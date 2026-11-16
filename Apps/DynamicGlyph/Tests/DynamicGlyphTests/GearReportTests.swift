@@ -4,8 +4,8 @@ import GlyphRecognition
 
 @Suite("Gear reports")
 struct GearReportTests {
-    private let session = "spikeB-2026-10-01T22-04-20Z"
-    private let now = Date(timeIntervalSince1970: 1_800_000_000)
+    private let session = "spikeB-2001-01-01T22-04-20Z"
+    private let now = Date(timeIntervalSince1970: 979_545_600)
 
     private func group(id: Int = 3, hackID: Int? = nil) -> GearDropSummary {
         let entry = GearDropEntry(column: 0, row: 0, item: "Resonator", levelState: .known, level: 4, quantity: 1)
@@ -109,7 +109,7 @@ struct GearReportTests {
         let zip = try GearReportBuilder(documents: documents.url)
             .archive(.drop(drop, recordID: "a", date: now), problems: [.other], note: "", app: "1", system: "iOS",
                      now: now, into: outbox.url)
-        #expect(zip.lastPathComponent == "DynamicGlyph-gear-report-2027-01-15T08-00-00Z.zip")
+        #expect(zip.lastPathComponent == "DynamicGlyph-gear-report-2001-01-15T08-00-00Z.zip")
         #expect(try Data(contentsOf: zip).starts(with: [0x50, 0x4B]))  // "PK", a zip header
         #expect(try FileManager.default.contentsOfDirectory(atPath: outbox.url.path) == [zip.lastPathComponent])
     }
@@ -124,7 +124,7 @@ struct GearReportTests {
                 == [queue, level])
 
         let gear = HackGearAttachment(captureSessionID: 1, hackID: 2, reading: .notRead(reason: "waitTimeout"),
-                                      sessionFolder: "spikeB-2026-09-01T00-00-00Z")
+                                      sessionFolder: "spikeB-2001-01-09T00-00-00Z")
         let folder = documents.url.appendingPathComponent("report")
         try GearReportBuilder(documents: documents.url)
             .write(.hackGear(gear, recordID: "launch/1/2", date: now, hack: nil), problems: [.wrongHack], note: "",

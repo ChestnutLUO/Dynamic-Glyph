@@ -6,14 +6,13 @@ import Testing
 import GlyphRecognition
 import GlyphRecognitionImages
 
-/// Build 103, decision (a): a new gear panel, told by its geometry, stops the
-/// gear read in flight; the stopped read keeps the lane until it returns, so
-/// two reads never run at once, and the new panel's first read follows with no
+/// A new gear panel, told by its geometry, stops the gear read in flight; the
+/// stopped read keeps the lane until it returns, so two reads never run at once, and the new panel's first read follows with no
 /// spacing. Constrained, analysis runs at 20 Hz while a panel shows. The lane
 /// tests inject reads (no Vision); the capture-output tests read the committed
 /// `five-base`/`five-bonus` fixtures through the app's own lane, with the
 /// frames driven from a thread of their own, never Swift's shared pool.
-@Suite("Build 103: new gear panels on the shared lane", .serialized)
+@Suite("New gear panels on the shared lane", .serialized)
 struct GearNewPanelReaderTests {
     private let session = CaptureSessionID(rawValue: 1)
     static let settled = GearDropPanelBounds(top: 0.2847, bottom: 0.4156)
@@ -164,6 +163,30 @@ struct GearNewPanelReaderTests {
         }
         #expect(reader.snapshotMetrics().gearCancelRequested == 0)
         #expect(reader.snapshotMetrics().gearSubmitted >= 7)
+    }
+
+    @Test("What a gear read's cuts left out is counted in the Power section, by kind")
+    func withheldCounted() async throws {
+        var withheld = GearReadWithheld()
+        for kind in [GearReadWithheld.Kind.redRow, .redRow, .emptyCell, .quantity, .languageSweep, .redRow] {
+            withheld.add(kind)
+        }
+        let meter = PowerMeter(clock: { 0 }, cpuTime: { 0 }, thermalState: { 0 })
+        meter.reset()
+        let reader = GameHeaderReader(
+            headerOperation: { _, time in HeaderReading(phase: .unknown, matchedText: "", confidence: 0, sourceTime: time) },
+            cancellableGearReadingOperation: { _, bounds, time, _ in
+                GearPanelReading(evidence: GearDropFrameEvidence(sourceTime: time, stage: .portal, bounds: bounds),
+                                 withheld: withheld)
+            }, meter: meter)
+        let frame = try image()
+        for time in [0.0, 1.0] {
+            submit(reader, frame, at: time, Self.settled)
+            #expect(try await waitWhileReading(reader, seconds: 2))
+            #expect(reader.takeGear()?.evidence.sourceTime == time)
+        }
+        let counts = PowerMetric.gearSkipped.map { meter.snapshot().total($0).count }
+        #expect(counts == [6, 2, 2, 2], "\(counts)")
     }
 
     // MARK: - Through the capture output, recorded panels

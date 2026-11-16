@@ -113,7 +113,7 @@ in more detail.
 | `Apps/DynamicGlyph` | The app: capture, recognition, phase and slot tracking, prediction, a Picture in Picture sequence viewer and a Live Activity. See [field testing](Docs/FIELD_TESTING.md); the original capture verdict is in [capture results](Docs/CAPTURE_SPIKE_RESULT.md). |
 | `Tools/detect-nodes.swift` | Finds the eleven array nodes in a captured frame. How `NodeArray.canonical` was derived. |
 | `Tools/check-phase-replay.py` | Replays a recording through the whole live pipeline and checks the recovered sequence against the manual annotation. |
-| `Tools/check-ablations.py` | Replays every annotated recording with one pipeline component switched off at a time. See the [ablation study](Tools/AblationResults/2026-09-22/README.md). |
+| `Tools/check-ablations.py` | Replays every annotated recording with one pipeline component switched off at a time, to measure what each component contributes. |
 
 Xcode projects are generated from `project.yml` and are not committed (see
 [Building it yourself](#building-it-yourself)). Open the committed workspace, which includes the package as a top-level item.
@@ -144,19 +144,17 @@ or set `GLYPH_REQUIRE_REFERENCE_DATA=1` when running Swift/Xcode tests. See
 A green run with skips is not evidence that the full corpus passed.
 
 The game screenshots and crops the recognition tests read are not distributed
-either. They are in a private git submodule at
-`Packages/GlyphRecognition/Tests/GlyphRecognitionTests/Fixtures/Assets`;
-with access, `git clone --recurse-submodules` fetches them and those tests run.
-Without them, the tests that read them are reported as skipped with the reason.
+either: published copies of the source leave them out. Without them, the tests
+that read them are reported as skipped with the reason.
 
 Repository maintenance scripts have an offline regression harness:
 
 ```sh
-python3 scripts/tests/test_repository_scripts.py
+python3 -m unittest discover -s scripts/tests -v
 ```
 
 It uses disposable repositories and never touches this checkout. The download
-success test needs the optional CSVs; the rejection test always runs.
+success test needs the optional CSVs; the other tests always run.
 
 ## State
 
@@ -168,15 +166,14 @@ success test needs the optional CSVs; the rejection test always runs.
 - Pixel recognition is **implemented**: node-ring fitting, line evidence,
   direction-independent shape matching, and spatial accumulation within one
   Glyph. Positive recognition is validated on synthetic images of all 142
-  shapes and one manually annotated five-Glyph recording. See the
-  [recording validation](Tools/RecordingResults/2026-09-17/README.md).
+  shapes and one manually annotated five-Glyph recording, checked with
+  `Tools/check-recording.py`.
 - Game phase and presentation slots are **implemented and validated offline**.
   The phase comes from the header text, the slot count and the current slot
   from the indicator strip, and a Glyph is only confirmed in the sequence when the
   indicator advances or the presentation ends. Replaying the recording through
   the whole pipeline recovers `see, truth, see, future, begin` with no
-  annotation in the loop — see the
-  [phase replay](Tools/PhaseReplayResults/2026-09-18/README.md).
+  annotation in the loop (`Tools/check-phase-replay.py`).
 - Sequence prediction is **connected**, and now takes the independently counted
   slot count into account. Without it the recording's four-Glyph prefix stays
   ambiguous, because it is itself a complete sequence in the table.

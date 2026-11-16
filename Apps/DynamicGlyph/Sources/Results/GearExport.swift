@@ -445,7 +445,7 @@ extension GearExport {
         return lines.joined(separator: "\n") + "\n"
     }
 
-    /// The record's interval as the file gives it: `2026-10-03 07:00–08:00
+    /// The record's interval as the file gives it: `2001-01-03 07:00–08:00
     /// UTC+08:00`, or the date alone; in UTC when its offset isn't known.
     static func timeLabel(_ date: Date, offsetMinutes: Int?, precision: TimePrecision) -> String {
         let zone = offsetMinutes.flatMap { TimeZone(secondsFromGMT: $0 * 60) }

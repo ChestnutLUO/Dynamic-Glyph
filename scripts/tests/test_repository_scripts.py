@@ -14,7 +14,10 @@ FIXTURES = Path('Packages/GlyphRecognition/Tests/GlyphRecognitionTests/Fixtures'
 TABLES = [FIXTURES / 'glyph_line.csv', FIXTURES / 'glyph.csv']
 
 
-class RepositoryScriptsTests(unittest.TestCase):
+class DisposableRepositoryCase(unittest.TestCase):
+    """A fresh repository holding copies of SCRIPTS; defines no tests itself."""
+    SCRIPTS = ('fetch-reference-data.sh',)
+
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory(prefix='dg-script-test-')
         self.addCleanup(self.temporary.cleanup)
@@ -28,7 +31,8 @@ class RepositoryScriptsTests(unittest.TestCase):
         self.git('config', 'user.email', 'test@example.invalid')
         self.git('config', 'commit.gpgsign', 'false')
         (self.repo / 'scripts').mkdir()
-        shutil.copy2(ROOT / 'scripts' / 'fetch-reference-data.sh', self.repo / 'scripts' / 'fetch-reference-data.sh')
+        for name in self.SCRIPTS:
+            shutil.copy2(ROOT / 'scripts' / name, self.repo / 'scripts' / name)
 
     def run_command(self, *args, check=True):
         result = subprocess.run(args, cwd=self.repo, env=self.env, text=True,
@@ -45,6 +49,12 @@ class RepositoryScriptsTests(unittest.TestCase):
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(content)
 
+    def commit(self, message):
+        self.git('add', '.')
+        self.git('commit', '--quiet', '-m', message)
+
+
+class RepositoryScriptsTests(DisposableRepositoryCase):
     def mock_fetch(self, source):
         # A fake git supplies bytes from disk. The actual downloader must still
         # select its pinned revision and validate the raw file hashes itself.

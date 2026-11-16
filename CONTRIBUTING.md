@@ -128,10 +128,9 @@ Tests needing them report as **skipped**, and everything else still runs — so 
 green run with skips is not evidence that the full corpus passed. With your own
 copy in place, `make test-full` requires them and fails if they are missing.
 
-The game screenshots and crops are not distributed either: they are in a
-private submodule at `Fixtures/Assets`. Tests that read them are reported
-as skipped with the reason when none are present; with the submodule checked
-out (`git submodule update --init`) they run.
+The game screenshots and crops are not distributed either: published copies
+of the source leave them out. Tests that read them are reported as skipped
+with the reason when none are present.
 
 The app ships for iOS 27, but it must also build for iOS 18, where capture
 will come from ReplayKit instead. Put any API newer than iOS 18 behind
@@ -148,7 +147,7 @@ The repository maintenance scripts have their own offline harness, which works
 in disposable repositories and never rewrites your checkout:
 
 ```sh
-python3 scripts/tests/test_repository_scripts.py
+python3 -m unittest discover -s scripts/tests -v
 ```
 
 ## What a change is expected to carry

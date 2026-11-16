@@ -4,19 +4,19 @@ import Testing
 
 /// The single OCR lane over a whole drop, as the app runs it when
 /// constrained, with injected reads (no Vision): analysis on a 20-fps
-/// recording's frames, every 0.099 s outside a hack (build 103: every 0.049 s
-/// while the last analysed frame showed a panel); each analysed frame first
+/// recording's frames, every 0.099 s outside a hack (with the new-panel check:
+/// every 0.049 s while the last analysed frame showed a panel); each analysed frame first
 /// takes a finished read, then asks the schedule for the next (the new-panel
-/// check first, in build 103), then lets the tracker see the geometry, as
+/// check first, when it is on), then lets the tracker see the geometry, as
 /// `LiveGlyphOutput` does. A read holds the lane for its cost and is taken on
 /// the first analysed frame after it finishes; a stopped read frees the lane
 /// `cancelLatency` after the frame that stopped it (or when it would have
-/// finished) and delivers nothing. Headers every second, 0.1 s each, as the
-/// 2026-10-28 harness. Panels slide in as that session's did: top 0.3155,
+/// finished) and delivers nothing. Headers every second, 0.1 s each, as in
+/// the replay harness. Panels slide in as a field session's did: top 0.3155,
 /// 0.3097, 0.3026, 0.2883 on their first four frames, then 0.2847.
 ///
-/// Build 102 is the same lane without the new-panel check and with 0.099-s
-/// analysis throughout.
+/// The old lane is the same lane without the new-panel check and with
+/// 0.099-s analysis throughout.
 struct GearLaneSimulation {
     enum Shows: String, Sendable { case portal, untitled, bonus }
     struct Frame: Sendable {
@@ -185,29 +185,29 @@ struct GearLaneSimulation {
     }
 }
 
-/// Decision (a) of 2026-10-29 (Ato 1939), build 103: a short Bonus panel that
+/// With the new-panel check, a short Bonus panel that
 /// replaces its portal panel in place keeps its rows whatever a read of the
 /// portal panel costs. Read costs: 0.35 s, plus X for each title pass beyond
-/// the first (the portal panel of 2026-10-28 hack 1 and hack 3's untitled
+/// the first (the portal panel of the field session's hack 1 and hack 3's untitled
 /// panel: one title-zone fallback per read; Bonus reads none), X from 0.05
 /// to 0.35 s; flat 0.025 s (the replay's default), 0.35 s and 0.55 s; and
 /// the conservative model, X for every title pass (two a read). Each case runs
 /// at both 10-Hz phases and with a header read in flight at four offsets.
-@Suite("Build 103: a new panel's first read, over a whole drop")
+@Suite("New-panel lane: a new panel's first read, over a whole drop")
 struct GearNewPanelLaneTests {
     typealias Sim = GearLaneSimulation
 
-    /// 2026-10-28 hack 1 without the recording's gap: its portal panel 1.8 s,
+    /// The field session's hack 1 without the recording's gap: its portal panel 1.8 s,
     /// one frame without a panel, then its Bonus panel 1.9 s, taller, in the
     /// same place.
     static let hack1 = Sim.nothing(from: 0, seconds: 0.3) + Sim.panel(.portal, from: 0.3, seconds: 1.8, height: 0.1309)
         + Sim.nothing(from: 2.1, seconds: 0.05) + Sim.panel(.bonus, from: 2.15, seconds: 1.9, height: 0.1667)
         + Sim.nothing(from: 4.05, seconds: 0.5)
-    /// 2026-10-28 hack 3: a portal panel whose title is never read, 0.65 s,
+    /// The field session's hack 3: a portal panel whose title is never read, 0.65 s,
     /// then at once its 0.45-s Bonus panel, shorter, in the same place.
     static let hack3 = Sim.nothing(from: 0, seconds: 0.3) + Sim.panel(.untitled, from: 0.3, seconds: 0.65, height: 0.1667)
         + Sim.panel(.bonus, from: 0.95, seconds: 0.45, height: 0.1309) + Sim.nothing(from: 1.4, seconds: 0.3)
-    /// 2026-10-28 hack 2: a titled portal panel 1.45 s (its Latin title needs
+    /// The field session's hack 2: a titled portal panel 1.45 s (its Latin title needs
     /// no title pass), one frame without a panel, then a 0.55-s Bonus panel of
     /// the very same size in the same place: only its slide tells it apart.
     static let hack2 = Sim.nothing(from: 0, seconds: 0.3) + Sim.panel(.portal, from: 0.3, seconds: 1.45, height: 0.1309)
@@ -288,7 +288,7 @@ struct GearNewPanelLaneTests {
         }
     }
 
-    @Test("At 0.55 s a read, and at every other cost, nothing is lost against build 102", arguments: [0.0, 0.05])
+    @Test("At 0.55 s a read, and at every other cost, nothing is lost against the old lane", arguments: [0.0, 0.05])
     func noLossAgainst102(cancelLatency: Double) {
         let cases: [([Sim.Frame], Bool)] = [(Self.hack1, false), (Self.hack3, false), (Self.hack2, true)]
         let models = [Model.flat(0.55)] + Self.required + Self.sweep.map(Model.perTitlePass)
@@ -298,7 +298,7 @@ struct GearNewPanelLaneTests {
                 let old = outcomes(frames, model, titled: titled, lane103: false, cancelLatency: 0)
                 for (index, (after, before)) in zip(new, old).enumerated() {
                     for stage in [GearDropStage.portal, .bonus] where Sim.kept(before, stage) {
-                        #expect(Sim.kept(after, stage), "\(model), start \(index), \(stage): 102 kept it")
+                        #expect(Sim.kept(after, stage), "\(model), start \(index), \(stage): the old lane kept it")
                     }
                     #expect(Sim.wrongItems(after) == 0)
                     #expect(after.groups.count <= max(1, before.groups.count))
@@ -307,7 +307,7 @@ struct GearNewPanelLaneTests {
         }
     }
 
-    @Test("Prints the keep table, build 102 against 103 (no assertion beyond the runs)")
+    @Test("Prints the keep table, the old lane against the new-panel lane (no assertion beyond the runs)")
     func table() {
         var lines: [String] = []
         let models = Self.sweep.map(Model.extra) + [.flat(0.025), .flat(0.35), .flat(0.55)]

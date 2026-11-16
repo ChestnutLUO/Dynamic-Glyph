@@ -15,13 +15,13 @@ struct GearTotalsView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(alignment: .firstTextBaseline) {
                         Label {
-                            // Game terms, printed as the English game prints them.
-                            Text(verbatim: group.item)
+                            // Game terms, as the game prints them in its language.
+                            GameItemName(item: group.item)
                         } icon: {
                             Image(systemName: GearSummary.symbol(for: group.item)).foregroundStyle(.tint)
                         }
                         Spacer()
-                        Text(verbatim: "\(group.total)").font(.body.bold()).monospacedDigit()
+                        Text(group.total, format: .number).font(.body.bold()).monospacedDigit()
                     }
                     if !group.chips.isEmpty || group.multiplied > 0 {
                         FlowLayout(spacing: 6) {

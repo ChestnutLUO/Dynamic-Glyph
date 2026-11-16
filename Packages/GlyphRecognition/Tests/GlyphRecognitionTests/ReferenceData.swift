@@ -14,35 +14,28 @@ import Testing
 /// The optional tables are copied only when present locally, so on a runner
 /// without them the gated tests skip exactly as they do on a fresh clone.
 ///
-/// The game screenshots are local inputs too: they are frames of the game's
-/// own screen, so they live in a private test-assets repository, mounted as a
-/// git submodule at `Fixtures/Assets` and bundled with the rest of `Fixtures`.
-/// Its `Screenshots` folder holds them, one folder per fixture set, and is
-/// `fixturesDirectory`.
-/// Every test that reads `fixturesDirectory` decodes one of them, so when none
-/// is present (the submodule is not checked out) the getter cancels the
-/// running test with the reason, and it is reported as skipped, as a missing
-/// table skips the tests above. With the screenshots in place nothing
-/// changes: a single missing file still fails its test.
+/// The game screenshots under `Fixtures/` are local inputs too: they are
+/// frames of the game's own screen, so a published copy of the source leaves
+/// them out. Every test that reads `fixturesDirectory` decodes one of them, so
+/// when none is present the getter cancels the running test with the reason,
+/// and it is reported as skipped, as a missing table skips the tests above.
+/// With the screenshots in place nothing changes: a single missing file still
+/// fails its test.
 enum ReferenceData {
     static var fixturesDirectory: URL {
         get throws {
             try requireScreenshots()
-            return bundledScreenshots
+            return bundledFixtures
         }
-    }
-
-    private static var bundledScreenshots: URL {
-        bundledFixtures.appendingPathComponent("Assets/Screenshots")
     }
 
     private static var bundledFixtures: URL {
         (Bundle.module.resourceURL ?? Bundle.module.bundleURL).appendingPathComponent("Fixtures")
     }
 
-    /// True when any screenshot (`.png` or `.jpg`) is in the bundled screenshots.
+    /// True when any screenshot (`.png` or `.jpg`) is in the bundled fixtures.
     static let screenshotsAvailable: Bool = {
-        guard let files = FileManager.default.enumerator(at: bundledScreenshots, includingPropertiesForKeys: nil)
+        guard let files = FileManager.default.enumerator(at: bundledFixtures, includingPropertiesForKeys: nil)
         else { return false }
         return files.contains { item in
             guard let url = item as? URL else { return false }
@@ -55,7 +48,7 @@ enum ReferenceData {
     /// through `fixturesDirectory`.
     static func requireScreenshots() throws {
         guard screenshotsAvailable else {
-            try Test.cancel("Game screenshot fixtures are not in this checkout: they are not distributed with the source (private submodule Fixtures/Assets). See Fixtures/PROVENANCE.md.")
+            try Test.cancel("Game screenshot fixtures are not in this checkout: they are not distributed with the source. See Fixtures/PROVENANCE.md.")
         }
     }
 

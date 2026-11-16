@@ -170,8 +170,8 @@ struct HackGearSection: View {
         HStack(spacing: 6) {
             if let item = entry.item {
                 VStack(alignment: .leading, spacing: 2) {
-                    // Game terms, printed as the English game prints them.
-                    Text(verbatim: entry.level.map { "L\($0) \(item)" } ?? item)
+                    // Game terms, as the game prints them in its language.
+                    GameItemName(item: item, level: entry.level)
                     // A fixed rarity also corrects readings saved before it was known.
                     if let rarity = entry.intrinsicRarity ?? entry.rarity {
                         Text(verbatim: rarity.label).font(.caption)

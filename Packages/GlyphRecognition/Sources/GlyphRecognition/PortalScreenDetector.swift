@@ -3,7 +3,7 @@
 public enum PortalFaction: String, Sendable, Codable, CaseIterable {
     case resistance, enlightened, machina
 
-    /// One bar pixel's colour. Measured on 2026-09 and 2026-10 recordings at
+    /// One bar pixel's colour. Measured on field recordings at
     /// half resolution: Resistance bars about (40, 105, 145), Enlightened
     /// about (30, 80–186, 20–47), Machina about (146, 0, 0). Map beams,
     /// magenta result panels and pink notices miss them: their red ones carry
@@ -97,8 +97,8 @@ public struct PortalScreenParser: Sendable {
 
     /// Whether a label's L, given the hues of its strongly coloured pixels,
     /// is L1's yellow. Each label's L is drawn in its level's colour. Vision
-    /// reads L1 labels as "L7" or "17" (two of eight on a 2026-09-26
-    /// Resistance portal, most on the 2026-10-05 Machina ones), and the
+    /// reads L1 labels as "L7" or "17" (two of eight on one Resistance
+    /// portal, most on the Machina ones recorded), and the
     /// yellow catches it. Measured on 114 portal screens: L1's L at 60–68°,
     /// every other level's far from it (L4 3–12°, L5 339–345°, L6 323–327°,
     /// L7 275–281°, L8 252–259°). Other levels aren't told apart by colour:

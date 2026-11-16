@@ -6,10 +6,7 @@ import Testing
 /// baked in at compile time.
 ///
 /// The game screenshots among them (`.png`, `.jpg`) are frames of the game's
-/// own screen. They come from the `Screenshots` folder of the private
-/// test-assets submodule at
-/// `Packages/GlyphRecognition/Tests/GlyphRecognitionTests/Fixtures/Assets`
-/// (see project.yml), so a checkout without it has none. When none
+/// own screen, and a published copy of the source leaves them out. When none
 /// is in the bundle, asking for one cancels the running test with the reason,
 /// and it is reported as skipped. With the screenshots in place nothing
 /// changes: a single missing file still fails its test.

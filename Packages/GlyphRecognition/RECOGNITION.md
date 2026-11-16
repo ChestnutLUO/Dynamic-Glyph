@@ -12,8 +12,8 @@ From `Packages/GlyphRecognition`:
 ```sh
 swift run --build-system native glyph-recognize \
   --glyphs Tests/GlyphRecognitionTests/Fixtures/glyph_line.csv \
-  Tests/GlyphRecognitionTests/Fixtures/Assets/Screenshots/Frames/frame-02389.jpg \
-  Tests/GlyphRecognitionTests/Fixtures/Assets/Screenshots/Frames/frame-02690.jpg
+  Tests/GlyphRecognitionTests/Fixtures/Frames/frame-02389.jpg \
+  Tests/GlyphRecognitionTests/Fixtures/Frames/frame-02690.jpg
 ```
 
 The command emits one JSON record per frame. A fresh fit finds eleven rings
@@ -37,8 +37,8 @@ at the same layout, orientation, and resolution:
 ```sh
 swift run --build-system native glyph-recognize \
   --glyphs Tests/GlyphRecognitionTests/Fixtures/glyph_line.csv \
-  --calibration Tests/GlyphRecognitionTests/Fixtures/Assets/Screenshots/Frames/frame-02389.jpg \
-  Tests/GlyphRecognitionTests/Fixtures/Assets/Screenshots/Frames/frame-02690.jpg
+  --calibration Tests/GlyphRecognitionTests/Fixtures/Frames/frame-02389.jpg \
+  Tests/GlyphRecognitionTests/Fixtures/Frames/frame-02690.jpg
 ```
 
 Reference CSVs remain runtime inputs. Their provenance and distribution limits
@@ -131,7 +131,7 @@ boundaries. A subsequent recording provides the first real positive examples.
 
 ## Recorded presentation
 
-The user-provided 2026-09-17 screen recording contains the sequence
+A field screen recording of one hack contains the sequence
 `see → truth → see → future → begin`. With calibration acquired before the
 presentation, all 28 visible samples and 12 blank samples in the manually
 annotated presentation interval pass at 20 Hz, resized to 603 x 1311. Each
@@ -139,8 +139,8 @@ visible sample contains the complete expected edge set; accumulation is not
 needed for these five presentations. This is evidence for this clip, not a
 universal claim about trail behavior.
 
-See [the replay report](../../Tools/RecordingResults/2026-09-17/README.md) for
-the time windows, contact sheets, limitations, and reproduction command.
+`Tools/check-recording.py` reproduces the check; the recording and its replay
+report, with the time windows and contact sheets, are not published.
 `RecordingRecognitionTests` also runs the five representative positive frames
 through the core and the sequence predictor, preserving the repeated `see`.
 

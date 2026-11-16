@@ -9,8 +9,8 @@ import GlyphRecognitionImages
 /// Constrained capture (Low Power Mode, a hot phone) halves the shared lane's
 /// pace. A gear panel that a read has found keeps the normal 0.2-s pace until
 /// its rows are confirmed or it leaves: at 0.4 s a portal panel tapped on in
-/// under a second got one read, and its rows need two (2026-10-27 reports,
-/// hacks 6 and 10). A confirmed panel goes back to the slow pace, so Low Power
+/// under a second got one read, and its rows need two (two hacks of a field
+/// report). A confirmed panel goes back to the slow pace, so Low Power
 /// Mode still about halves the reads of a panel left on screen.
 @Suite("Gear panel pace on the shared lane", .serialized)
 struct GearPanelLaneTests {

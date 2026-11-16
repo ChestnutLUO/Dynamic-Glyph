@@ -6,13 +6,13 @@ import GlyphRecognitionImages
 import ImageIO
 import Testing
 
-/// Build 93 kept the command watch only on a fit from the last second, or on a
-/// header vote or notice box on the frame itself. Header text is read only on
-/// some frames, so a drawn command (strokes over the rings: no fresh fit) lost
+/// The command watch used to be kept only on a fit from the last second, or on
+/// a header vote or notice box on the frame itself. Header text is read only
+/// on some frames, so a drawn command (strokes over the rings: no fresh fit) lost
 /// the watch between readings, marking its commands unresolved. These pin the
 /// fix: while the command phase is current the cached fit keeps the watch, a
 /// frame without a reading is no evidence against it, and the phase still
-/// ends on a contrary reading or after the watch's leave time. S8b: once a
+/// ends on a contrary reading or after the watch's leave time. And once a
 /// notice of the window has been read, a reading that recognised nothing is
 /// no evidence either; readable header text of another phase still ends it.
 @Suite("Command watch on a cached fit while the command phase is current", .serialized)
@@ -115,8 +115,9 @@ struct WatchCommandContextTests {
 
     @Test("Drone mode read before the command window survives a long drawn command into the hack")
     func droneModeSurvivesDrawnCommand() throws {
-        // Build 93 lost the watch between header readings; two seconds later
-        // the cancel dropped the window and with it the drone footer's mode.
+        // Without the cached fit the watch was lost between header readings;
+        // two seconds later the cancel dropped the window and with it the
+        // drone footer's mode.
         let gate = FirstReadEachSecond()
         let harness = try WatchReproductionHarness { _, time in
             if time < 0.5 { return WatchReproductionHarness.header(.unknown, at: time) }
@@ -150,18 +151,18 @@ struct WatchCommandContextTests {
         #expect((bound["gear"] as? [String: Any])?["status"] as? String == "notApplicable")
     }
 
-    // MARK: S8b: once a notice is read, header reads that recognise nothing are no evidence
+    // MARK: Once a notice is read, header reads that recognise nothing are no evidence
 
-    /// Clip-03 in the owner's replay: the COMPLEX HACK notice shows at about
+    /// A replayed field recording: the COMPLEX HACK notice shows at about
     /// 9.5-10.0 s and is read twice, presentation starts at 12.035 s, and all
     /// 25 header reads inside that command window were unknown with no matched
-    /// text. S8 took each as contrary, so the cached fit stopped supporting the
+    /// text. Taking each as contrary, the cached fit stopped supporting the
     /// watch at the first one after the last notice frame; 0.5 s later the
-    /// watch lost coverage and the twice-read notice ended unresolved. S8b:
+    /// watch lost coverage and the twice-read notice ended unresolved. Now
     /// the window's notice has been read, so those reads are no evidence. The
     /// same pattern here, 9.5 s earlier, with a recorded notice crop.
-    @Test("Clip-03: a drawn command whose notice was read stays watched through header reads that recognise nothing")
-    func clip03NothingReadDuringCommand() throws {
+    @Test("A drawn command whose notice was read stays watched through header reads that recognise nothing")
+    func noticeReadThenNothingReadDuringCommand() throws {
         let nothingRead = WatchReproductionValues<Double>()
         let harness = try WatchReproductionHarness { _, time in
             if time < 0.3 { return WatchReproductionHarness.header(.command, at: time) }
@@ -181,7 +182,7 @@ struct WatchCommandContextTests {
                 : index < 165 ? drawn : index < 185 ? empty : glyph
             try harness.play(frame, at: Double(index) / 60)
         }
-        harness.report("clip-03 pattern: command header to 0.3, notice 0.5..<1.0, nothing read to 2.75, presented after")
+        harness.report("read notice pattern: command header to 0.3, notice 0.5..<1.0, nothing read to 2.75, presented after")
         _ = try harness.finish()
         let rows = try Self.commandRows(harness)
         let window = nothingRead.values.filter { $0 < 2.75 }

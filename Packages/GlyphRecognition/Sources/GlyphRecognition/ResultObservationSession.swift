@@ -13,7 +13,7 @@ public struct ResultObservationSession: Sendable {
     /// Returns the retired summary when the next hack takes ownership.
     /// `imageAnalyzed` is false for idle or missing frames, which carry no
     /// pixels and so cannot show the panel leaving or the input ending.
-    public mutating func observe(_ evidence: FrameEvidence, presentation: PresentationTracker,
+    public mutating func observe(_ evidence: FrameEvidence, presentation: some PresentationTracking,
                                  panelCandidate: Bool, imageAnalyzed: Bool = true, commands: HackCommandSummary? = nil) -> HackResult? {
         var retired: HackResult?
         if let current = tracker, current.result.context.hackID != presentation.hackID {

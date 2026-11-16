@@ -35,10 +35,6 @@ final class GlyphPiPController: NSObject, ObservableObject {
     @Published private(set) var wasDismissedByUser = false
     @Published private(set) var renderSize: String?
     @Published private(set) var ownsAudioSession = false
-    /// Field-test preference: uses an undocumented API, not for App Store builds.
-    @Published private(set) var hidesPlaybackControls =
-        (UserDefaults.standard.object(forKey: "pip.hidePlaybackControls") as? NSNumber)?.boolValue ?? true
-    @Published private(set) var playbackControlsNote: String?
     @Published private(set) var preventsCapture = AppPreferences().protectsFloatingWindowFromCapture
     @Published private(set) var canvas = PiPCanvasConfiguration(
         width: (UserDefaults.standard.object(forKey: "pip.canvas.width") as? NSNumber)?.intValue
@@ -52,7 +48,6 @@ final class GlyphPiPController: NSObject, ObservableObject {
     var onEvent: ((String) -> Void)?
 
     private var controller: AVPictureInPictureController?
-    private var originalControlsStyle: NSNumber?
     private var renderLoop: GlyphPiPRenderLoop?
     private var possibleObservation: NSKeyValueObservation?
     private var statsTimer: Timer?
@@ -102,8 +97,6 @@ final class GlyphPiPController: NSObject, ObservableObject {
         controller.requiresLinearPlayback = true
         controller.canStartPictureInPictureAutomaticallyFromInline = false
         self.controller = controller
-        originalControlsStyle = nil
-        applyPlaybackControlsPreference()
         possibleObservation = controller.observe(\.isPictureInPicturePossible, options: [.initial, .new]) {
             [weak self] observed, _ in
             let possible = observed.isPictureInPicturePossible
@@ -172,50 +165,6 @@ final class GlyphPiPController: NSObject, ObservableObject {
         AppPreferences().protectsFloatingWindowFromCapture = enabled
         layer.preventsCapture = enabled
         log("capture protection \(enabled ? "on" : "off")")
-    }
-
-    func setHidesPlaybackControls(_ hidden: Bool) {
-        hidesPlaybackControls = hidden
-        UserDefaults.standard.set(hidden, forKey: "pip.hidePlaybackControls")
-        applyPlaybackControlsPreference()
-    }
-
-    private func applyPlaybackControlsPreference() {
-        guard let controller else {
-            playbackControlsNote = nil
-            return
-        }
-        // Undocumented KVC workaround for this locally installed field app.
-        // Check both accessors before using KVC, avoiding an undefined-key
-        // exception if a future OS removes the property. Do not ship this in
-        // an App Store target. Style 1 requests transport controls hidden;
-        // style 2 (all controls, including dismissal) is deliberately unused.
-        guard controller.responds(to: NSSelectorFromString("controlsStyle")),
-              controller.responds(to: NSSelectorFromString("setControlsStyle:")) else {
-            playbackControlsNote = Self.controlsUnavailableNote
-            log("playback controls: undocumented accessors unavailable; using system controls")
-            return
-        }
-        if originalControlsStyle == nil {
-            originalControlsStyle = controller.value(forKey: "controlsStyle") as? NSNumber
-        }
-        guard let originalControlsStyle else {
-            playbackControlsNote = Self.controlsUnavailableNote
-            log("playback controls: unexpected style value; using system controls")
-            return
-        }
-        let requested = hidesPlaybackControls ? NSNumber(value: 1) : originalControlsStyle
-        controller.setValue(requested, forKey: "controlsStyle")
-        playbackControlsNote = hidesPlaybackControls
-            ? String(localized: "If the playback controls still show, close and reopen the floating window.",
-                     comment: "Settings footer under 'Hide playback controls'.")
-            : nil
-        log("playback controls: requested style=\(requested), hide=\(hidesPlaybackControls)")
-    }
-
-    private static var controlsUnavailableNote: String {
-        String(localized: "Hiding playback controls isn't available on this version of iOS.",
-               comment: "Settings footer under 'Hide playback controls'.")
     }
 
     /// Opens the window now, if the system currently allows it.
@@ -288,8 +237,6 @@ final class GlyphPiPController: NSObject, ObservableObject {
         controller?.stopPictureInPicture()
         controller?.delegate = nil
         controller = nil
-        originalControlsStyle = nil
-        playbackControlsNote = nil
         isRunning = false
         isActive = false
         isPossible = false

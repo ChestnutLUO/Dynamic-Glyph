@@ -888,8 +888,8 @@
       "localizations" : {
         "ja" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "ハック"
+            "state" : "translated",
+            "value" : "ハック数"
           }
         },
         "zh-Hans" : {
@@ -910,20 +910,20 @@
       "localizations" : {
         "ja" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Hacking 平均"
+            "state" : "translated",
+            "value" : "平均ハッキング"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Hacking 平均"
+            "state" : "translated",
+            "value" : "平均 Hack 奖励"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Hacking 平均"
+            "state" : "translated",
+            "value" : "平均 Hack 獎勵"
           }
         }
       }
@@ -932,20 +932,20 @@
       "localizations" : {
         "ja" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Speed 平均"
+            "state" : "translated",
+            "value" : "平均スピード"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Speed 平均"
+            "state" : "translated",
+            "value" : "平均速度奖励"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Speed 平均"
+            "state" : "translated",
+            "value" : "平均速度獎勵"
           }
         }
       }
@@ -976,20 +976,20 @@
       "localizations" : {
         "ja" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "秒/グリフ"
+            "state" : "translated",
+            "value" : "グリフあたり"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "秒/Glyph"
+            "state" : "translated",
+            "value" : "每个 Glyph"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "秒/Glyph"
+            "state" : "translated",
+            "value" : "每個 Glyph"
           }
         }
       }
@@ -1005,8 +1005,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "ドロップ"
+            "state" : "translated",
+            "value" : "ドロップ数"
           }
         },
         "zh-Hans" : {
@@ -1135,14 +1135,14 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Hack 长度不一，因此不显示加成变化。图表按长度分别比较。"
+            "state" : "translated",
+            "value" : "Hack 长度不一，因此不显示奖励变化。图表按长度分别比较。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Hack 長度不一，因此不顯示加成變化。圖表按長度分別比較。"
+            "state" : "translated",
+            "value" : "Hack 長度不一，因此不顯示獎勵變化。圖表按長度分別比較。"
           }
         }
       }
@@ -1157,14 +1157,14 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Hack 长度不一，因此不显示加成变化。详细信息中可按长度比较。"
+            "state" : "translated",
+            "value" : "Hack 长度不一，因此不显示奖励变化。详细信息中可按长度比较。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Hack 長度不一，因此不顯示加成變化。詳細資訊中可按長度比較。"
+            "state" : "translated",
+            "value" : "Hack 長度不一，因此不顯示獎勵變化。詳細資訊中可按長度比較。"
           }
         }
       }
@@ -1333,14 +1333,14 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "按 Hack 长度的平均加成"
+            "state" : "translated",
+            "value" : "按 Hack 长度的平均奖励"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "按 Hack 長度的平均加成"
+            "state" : "translated",
+            "value" : "按 Hack 長度的平均獎勵"
           }
         }
       }
@@ -1377,14 +1377,14 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "加成"
+            "state" : "translated",
+            "value" : "奖励"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "加成"
+            "state" : "translated",
+            "value" : "獎勵"
           }
         }
       }
@@ -1487,14 +1487,14 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Hack 加成"
+            "state" : "translated",
+            "value" : "Hack 奖励"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Hack 加成"
+            "state" : "translated",
+            "value" : "Hack 獎勵"
           }
         }
       }
@@ -1509,14 +1509,14 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "速度加成"
+            "state" : "translated",
+            "value" : "速度奖励"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "速度加成"
+            "state" : "translated",
+            "value" : "速度獎勵"
           }
         }
       }
@@ -1601,14 +1601,14 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%1$lld 个 Glyph：Hack 加成 %2$@，速度加成 %3$@"
+            "state" : "translated",
+            "value" : "%1$lld 个 Glyph：Hack 奖励 %2$@，速度奖励 %3$@"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%1$lld 個 Glyph：Hack 加成 %2$@，速度加成 %3$@"
+            "state" : "translated",
+            "value" : "%1$lld 個 Glyph：Hack 獎勵 %2$@，速度獎勵 %3$@"
           }
         }
       }
@@ -1647,14 +1647,14 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Hack 加成 %@"
+            "state" : "translated",
+            "value" : "Hack 奖励 %@"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Hack 加成 %@"
+            "state" : "translated",
+            "value" : "Hack 獎勵 %@"
           }
         }
       }
@@ -1670,14 +1670,14 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "速度加成 %@"
+            "state" : "translated",
+            "value" : "速度奖励 %@"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "速度加成 %@"
+            "state" : "translated",
+            "value" : "速度獎勵 %@"
           }
         }
       }

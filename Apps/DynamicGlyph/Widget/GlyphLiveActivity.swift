@@ -142,7 +142,9 @@ struct GlyphLiveActivity: Widget {
         case .tentative: return Color(red: 1.00, green: 0.78, blue: 0.30)
         case .idle: return Color(red: 0.42, green: 0.44, blue: 0.52)
         case .collecting: return Color(red: 0.45, green: 0.85, blue: 0.95)
-        case .drawing: return Color(red: 0.80, green: 0.78, blue: 1.00)
+        // The chosen theme's Glyph accent; the default's is this
+        // lavender. Every other status keeps its colour.
+        case .drawing: return AppTheme.mirrored.glyphAccent
         case .done: return Color(red: 0.95, green: 0.95, blue: 1.00)
         }
     }
@@ -394,7 +396,9 @@ struct GlyphLiveActivity: Widget {
 
     private func tint(_ provenance: GlyphActivityAttributes.ContentState.Slot.Provenance) -> Color {
         switch provenance {
-        case .observed: return Color(red: 0.80, green: 0.78, blue: 1.00)
+        // Collected Glyphs take the theme's accent (the default lavender
+        // unless a theme is chosen); amber, cyan and red carry meaning.
+        case .observed: return AppTheme.mirrored.glyphAccent
         case .observing: return Color(red: 1.00, green: 0.78, blue: 0.30)
         case .predicted: return Color(red: 0.35, green: 0.75, blue: 0.90)
         case .uncertain, .missing: return Color(red: 0.90, green: 0.35, blue: 0.35)

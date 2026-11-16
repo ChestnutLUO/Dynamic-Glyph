@@ -4,7 +4,7 @@ import GlyphRecognition
 extension CaptureOrigin {
     /// This build, the capture's mode and language, and this iPhone's UTC
     /// offset now: the origin of a record made at this moment.
-    static func current(mode: Mode, languages: GameLanguageMemory,
+    static func current(mode: Mode, languages: any GameLanguageRemembering,
                         playerFaction: PortalFaction? = AppPreferences().playerFaction, bundle: Bundle = .main,
                         timeZone: TimeZone = .current, now: Date = Date()) -> CaptureOrigin {
         let info = bundle.infoDictionary

@@ -56,9 +56,9 @@ struct CommandPhaseContextTests {
     }
 }
 
-/// S8b: a header reading that recognised nothing (unknown, no matched text)
-/// is no evidence once a notice of the open command window has been read;
-/// before that it ends the phase as in S8. The command screen's header is
+/// A header reading that recognised nothing (unknown, no matched text) is no
+/// evidence once a notice of the open command window has been read; before
+/// that it ends the phase, as it always did. The command screen's header is
 /// mostly unreadable while a command is drawn.
 @Suite("Command phase context: header reads that recognise nothing, after a notice read")
 struct CommandPhaseContextNoticeReadTests {
@@ -81,12 +81,12 @@ struct CommandPhaseContextNoticeReadTests {
         }
     }
 
-    /// Clip-03 in the owner's replay: the notice shows at about 9.5-10.0 s and
+    /// A replayed field clip: the notice shows at about 9.5-10.0 s and
     /// is read twice, presentation starts at 12.035 s, and all 25 header reads
     /// in between recognised nothing. Frames every 0.05 s, as the watch
     /// analyses them, fed in LiveGlyphOutput's order.
-    @Test("Clip-03: after the notice is read, reads that recognise nothing keep the phase for leave after the last notice")
-    func clip03() {
+    @Test("After the notice is read, reads that recognise nothing keep the phase for leave after the last notice")
+    func noticeThenBlankReads() {
         func play(readsNotice: Bool) -> (lost: [Double], at12: Bool, after: Bool) {
             var context = CommandPhaseContext()
             var lost: [Double] = []
@@ -107,18 +107,18 @@ struct CommandPhaseContextNoticeReadTests {
         let read = play(readsNotice: true)
         #expect(read.lost.isEmpty, "Lost at \(read.lost)")
         #expect(read.at12 && !read.after, "Leave (2 s) after the last notice at 10.0, no longer")
-        // S8's behaviour while no notice of the window has been read.
+        // The earlier behaviour while no notice of the window has been read.
         let unread = play(readsNotice: false)
         #expect(unread.lost.first == 10.1, "Without a read, the first empty read after the last notice ends it")
     }
 
-    @Test("Before a notice is read, a reading that recognised nothing ends the phase as in S8")
+    @Test("Before a notice is read, a reading that recognised nothing ends the phase as before")
     func beforeNoticeRead() {
         var context = CommandPhaseContext()
         context.header(.command, at: 1)
         context.notice(at: 1.05)
         context.header(Self.nothing(at: 1.1))
-        #expect(!context.isCurrent(at: 1.1), "Header-only and box-only windows end on it, as S8 did")
+        #expect(!context.isCurrent(at: 1.1), "Header-only and box-only windows end on it, as before")
         context.noticeRead(at: nil)
         #expect(!context.isCurrent(at: 1.15))
         // Once the window's notice is read, its earlier empty reads are explained too.
@@ -186,7 +186,7 @@ struct CommandPhaseContextNoticeReadTests {
 struct CommandNoticeReadTimeTests {
     private func fixture(_ name: String) throws -> CGImage {
         try ReferenceData.requireScreenshots()
-        let url = try #require(Bundle.module.url(forResource: name, withExtension: "png", subdirectory: "Fixtures/Assets/Screenshots/Commands"))
+        let url = try #require(Bundle.module.url(forResource: name, withExtension: "png", subdirectory: "Fixtures/Commands"))
         return try #require(ImageDecoder.cgImage(from: Data(contentsOf: url)))
     }
 

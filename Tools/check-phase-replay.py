@@ -17,7 +17,7 @@ import tempfile
 ROOT = Path(__file__).resolve().parent.parent
 PACKAGE = ROOT / "Packages/GlyphRecognition"
 FIXTURES = PACKAGE / "Tests/GlyphRecognitionTests/Fixtures"
-# Read by eye from the recording; see Tools/RecordingResults/2026-09-17/README.md.
+# Read by eye from the annotated five-Glyph recording.
 EXPECTED = ["see", "truth", "see", "future", "begin"]
 EXPECTED_SLOTS = 5
 

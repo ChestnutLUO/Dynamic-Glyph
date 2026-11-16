@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Compare gear recognition with assertions that never enter the recognizer.
 
-Videos remain private. Original timestamps are retained; decoded JPEG frames
+Videos stay local. Original timestamps are retained; decoded JPEG frames
 live in a temporary directory and the recognizer loads only one at a time.
 An optional time range is for diagnostic crops, not a full lifecycle replay.
 """

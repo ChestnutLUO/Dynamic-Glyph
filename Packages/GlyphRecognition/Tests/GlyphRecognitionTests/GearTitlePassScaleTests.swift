@@ -5,18 +5,18 @@ import Testing
 import GlyphRecognition
 @testable import GlyphRecognitionImages
 
-/// Build 102b: without retries (constrained), the one title-recovery family
-/// first reads the panel crop at 2x, as 101/102; only when that pass finds no
+/// Without retries (constrained), the one title-recovery family first reads
+/// the panel crop at 2x, as it always did; only when that pass finds no
 /// single title line at 0.7 or more does one more pass in the same family read
 /// the title zone with a 0.03 margin (still 2x). With retries every family
 /// reads the panel crop only, as before. On a Mac, the panel crop read the CJK-only
-/// portal name of 2026-10-28 hack 1 on 9 of 40 frames, the title-zone crop on
-/// 40 of 40 (2026-10-29 title probe, `zone0.03`).
+/// portal name of a field session's hack 1 on 9 of 40 frames, the title-zone
+/// crop on 40 of 40 (`zone0.03`).
 ///
 /// Serialized, and every Vision read runs on a thread of its own (`offPool`):
 /// a synchronous Vision call blocks its thread for the whole request, and
 /// enough of those on Swift's shared pool deadlock the Mac test run. Drawn
-/// CJK names are scripted (`cjkTitle`, build 102c): Vision's score for them
+/// CJK names are scripted (`cjkTitle`): Vision's score for them
 /// differs by machine.
 @Suite("Constrained gear title pass with a title-zone fallback", .serialized, .timeLimit(.minutes(5)))
 struct GearTitlePassScaleTests {
@@ -115,7 +115,7 @@ struct GearTitlePassScaleTests {
     @Test("A CJK-only portal name is read, constrained (one family, at most two passes) and unconstrained (one pass per family)",
           arguments: cjkTitles, [false, true])
     func cjkTitle(_ title: String, retries: Bool) throws {
-        // Scripted (build 102c, `GearScriptedTitleRead`): which crop and family
+        // Scripted (`GearScriptedTitleRead`): which crop and family
         // read a drawn name at 0.7 or more is up to the machine's Vision.
         // Each case reads the name both ways a family can.
         typealias Scripted = GearScriptedTitleRead
@@ -140,7 +140,7 @@ struct GearTitlePassScaleTests {
                 ("the panel crop reads it",
                  { _, languages in [Scripted.title(title, languages == families[0] ? 1 : 0.5)] },
                  [.init(crop: .panel, languages: families[0])]),
-                ("the panel crop at 0.5, the title zone reads it (2026-10-28 hack 1 on a Mac)",
+                ("the panel crop at 0.5, the title zone reads it (a field session's hack 1 on a Mac)",
                  { crop, _ in [Scripted.title(title, crop == .zone ? 1 : 0.5)] },
                  [.init(crop: .panel, languages: families[0]), .init(crop: .zone, languages: families[0])]),
             ]

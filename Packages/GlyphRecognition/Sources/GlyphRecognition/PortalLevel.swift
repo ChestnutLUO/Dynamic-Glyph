@@ -79,11 +79,7 @@ public enum PortalLevelRules {
     /// The levels a badge hue allows, or nil when it tells nothing.
     public static func levels(forBadgeHue hue: Double) -> ClosedRange<Int>? {
         guard hue.isFinite else { return nil }
-        func distance(_ a: Double, _ b: Double) -> Double {
-            let d = abs(a - b).truncatingRemainder(dividingBy: 360)
-            return min(d, 360 - d)
-        }
-        if let match = calibratedHues.first(where: { distance($0.hue, hue) <= calibrationTolerance }) {
+        if let match = calibratedHues.first(where: { hueDistance($0.hue, hue) <= calibrationTolerance }) {
             return match.level...match.level
         }
         // Between the calibrated L6 and L8 hues lies L7.
@@ -93,6 +89,12 @@ public enum PortalLevelRules {
         // Warmer than L5: the reds, oranges and yellows of L1–L4.
         if hue > calibratedHues[0].hue + calibrationTolerance || hue < 60 { return warmBadgeLevels }
         return nil
+    }
+
+    /// Degrees between two hues around the colour wheel.
+    static func hueDistance(_ a: Double, _ b: Double) -> Double {
+        let d = abs(a - b).truncatingRemainder(dividingBy: 360)
+        return min(d, 360 - d)
     }
 
     /// Portal level is the sum of all eight resonator levels over eight,

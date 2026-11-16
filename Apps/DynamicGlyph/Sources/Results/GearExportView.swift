@@ -53,9 +53,9 @@ struct GearExportView: View {
         let counts = file.counts
         Section {
             LabeledContent("Exporting") { Text(verbatim: scope) }
-            LabeledContent("Hack results") { Text(verbatim: "\(counts.hacks)") }
-            LabeledContent("Drops") { Text(verbatim: "\(counts.drops)") }
-            LabeledContent("Rows") { Text(verbatim: "\(counts.rows)") }
+            LabeledContent("Hack results") { Text(counts.hacks, format: .number) }
+            LabeledContent("Drops") { Text(counts.drops, format: .number) }
+            LabeledContent("Rows") { Text(counts.rows, format: .number) }
         } footer: {
             Text("Only what the app read is here: hacks and drops it didn't see, or read no items from, aren't counted.")
         }
@@ -110,7 +110,7 @@ struct GearExportView: View {
     @ViewBuilder
     private func line(_ title: LocalizedStringResource, _ count: Int) -> some View {
         if count > 0 {
-            LabeledContent { Text(verbatim: "\(count)") } label: { Text(title) }
+            LabeledContent { Text(count, format: .number) } label: { Text(title) }
         }
     }
 

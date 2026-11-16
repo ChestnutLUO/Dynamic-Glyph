@@ -16,33 +16,52 @@ struct StartControl: ControlWidget {
 
     var body: some ControlWidgetConfiguration {
         StaticControlConfiguration(kind: Self.kind, provider: CaptureValueProvider()) { isOn in
-            ControlWidgetToggle(isOn: isOn, action: ToggleGlyphIntent()) {
-                Text("Dynamic Glyph", comment: "The Control Center switch's name, the same in every language.")
-            } valueLabel: { isOn in
-                if isOn {
-                    Label {
-                        Text("On", comment: "The Control Center switch's state while the screen is being read.")
-                    } icon: {
-                        Image("dynamicglyph.control")
-                    }
-                    .controlWidgetActionHint(Text("Stop Dynamic Glyph",
-                                                  comment: "The Control Center switch's action while it is on: stops reading the screen without opening the app."))
-                } else {
-                    Label {
-                        Text("Off", comment: "The Control Center switch's state while the screen is not being read.")
-                    } icon: {
-                        Image("dynamicglyph.control")
-                    }
-                    .controlWidgetActionHint(Text("Start Dynamic Glyph",
-                                                  comment: "The Control Center switch's action while it is off: opens the app to start reading the screen."))
-                }
-            }
-            .tint(.blue)
+            Self.toggle(isOn: isOn)
         }
         .displayName(LocalizedStringResource("Dynamic Glyph",
                                               comment: "The Control Center switch's name, the same in every language."))
         .description(LocalizedStringResource("Start or stop Dynamic Glyph. Starting requires screen-sharing confirmation.",
                                              comment: "Description of the Control Center switch in the controls gallery."))
+    }
+
+    /// One control, so a placed switch stays, with the action chosen by
+    /// version: from iOS 18.2 the one that stops without opening the app;
+    /// on 18.0 and 18.1 the one that can open it at all. The template builder
+    /// takes no `if`, so the choice is made here, where an opaque result may
+    /// differ by availability.
+    private static func toggle(isOn: Bool) -> some ControlWidgetTemplate {
+        if #available(iOS 18.2, *) {
+            return toggle(isOn: isOn, action: ToggleGlyphIntent())
+        } else {
+            return toggle(isOn: isOn, action: LegacyToggleGlyphIntent())
+        }
+    }
+
+    private static func toggle<Action: SetValueIntent>(isOn: Bool, action: Action) -> some ControlWidgetTemplate
+    where Action.ValueType == Bool {
+        ControlWidgetToggle(isOn: isOn, action: action) {
+            Text("Dynamic Glyph", comment: "The Control Center switch's name, the same in every language.")
+        } valueLabel: { isOn in
+            if isOn {
+                Label {
+                    Text("On", comment: "The Control Center switch's state while the screen is being read.")
+                } icon: {
+                    Image("dynamicglyph.control")
+                }
+                .controlWidgetActionHint(Text("Stop Dynamic Glyph",
+                                              comment: "The Control Center switch's action while it is on: stops reading the screen without opening the app."))
+            } else {
+                Label {
+                    Text("Off", comment: "The Control Center switch's state while the screen is not being read.")
+                } icon: {
+                    Image("dynamicglyph.control")
+                }
+                .controlWidgetActionHint(Text("Start Dynamic Glyph",
+                                              comment: "The Control Center switch's action while it is off: opens the app to start reading the screen."))
+            }
+        }
+        // The chosen theme's tint; the app's blue by default.
+        .tint(AppTheme.mirrored.controlTint)
     }
 }
 

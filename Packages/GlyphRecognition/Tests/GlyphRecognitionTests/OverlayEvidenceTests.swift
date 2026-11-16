@@ -108,7 +108,24 @@ struct OverlayEvidenceTests {
         #expect(!reading.hasInputTimerBar)
     }
 
-    @Test("PiP covering most or all indicators cannot produce a readable row", arguments: [80, 130, 150])
+    @Test("Our window over the top of the indicators leaves the row readable below its lower edge",
+          arguments: StatusTone.allCases)
+    func pipOverIndicatorTops(tone: StatusTone) throws {
+        let original = try band()
+        let expected = try SlotStripReader().read(original).get()
+        // The indicators span rows 136 to 228 and are 79 px wide; a window
+        // 80 px tall ends on row 173 and leaves their lower 55 rows showing.
+        let covered = try cover(original, x: 18, y: 94, width: 568, height: 80,
+                                pixels: pip(width: 568, height: 80, tone: tone))
+        let reading = try SlotStripReader().read(covered).get()
+        #expect(reading.slotCount == expected.slotCount)
+        #expect(reading.highlightedIndex == expected.highlightedIndex)
+        #expect(reading.markerCentersX == expected.markerCentersX)
+        #expect(reading.isPartlyCovered)
+        #expect(!reading.hasInputTimerBar)
+    }
+
+    @Test("PiP covering most or all indicators cannot produce a readable row", arguments: [130, 150])
     func deepPiPCover(height: Int) throws {
         let covered = try cover(band(), x: 18, y: 94, width: 568, height: height,
                                 pixels: pip(width: 568, height: height, tone: .warning))
@@ -129,7 +146,7 @@ struct OverlayEvidenceTests {
     func windowEdgeAcrossIndicatorTips(tone: StatusTone) throws {
         let original = try band()
         let expected = try SlotStripReader().read(original).get()
-        // As in the 2026-09-25 report: the window's lower edge lies on the
+        // As in a field report: the window's lower edge lies on the
         // first four rows of the strip (136-139 at this scale), across the
         // tips of the indicators (from row 139).
         let window = try pip(width: 568, height: 56, tone: tone)

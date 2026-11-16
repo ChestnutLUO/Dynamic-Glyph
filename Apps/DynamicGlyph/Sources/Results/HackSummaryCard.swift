@@ -222,7 +222,7 @@ private struct LengthTable: View {
                         }
                     }
                     .gridColumnAlignment(.leading)
-                    Text(verbatim: "\(row.hacks)")
+                    Text(row.hacks, format: .number)
                     Text(verbatim: row.secondsPerGlyph.map(StatisticsFormat.seconds) ?? "—")
                     Text(verbatim: row.hacking.map { "\($0)%" } ?? "—")
                     Text(verbatim: row.speed.map { "\($0)%" } ?? "—")
@@ -270,7 +270,7 @@ private struct SpeedCommandTable: View {
             ForEach(rows) { row in
                 GridRow {
                     Text(verbatim: row.group.label).lineLimit(1).fixedSize().gridColumnAlignment(.leading)
-                    Text(verbatim: "\(row.hacks)")
+                    Text(row.hacks, format: .number)
                     Text(verbatim: row.hacking.map { "\($0)%" } ?? "—")
                     Text(verbatim: row.speed.map { "\($0)%" } ?? "—")
                     Text(verbatim: row.accepted.map { "\($0)%" } ?? "—")

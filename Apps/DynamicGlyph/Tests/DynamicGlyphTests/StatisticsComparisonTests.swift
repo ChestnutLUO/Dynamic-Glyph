@@ -31,7 +31,7 @@ struct StatisticsComparisonTests {
         // The entire date argument remains secondary, including its 2s.
         let plain = String(styled.characters)
         switch language {
-        case "zh-Hans", "zh-Hant": #expect(plain.hasPrefix(difference == 0 && language == "zh-Hans" ? "与" : difference == 0 ? "與" : "比"))
+        case "zh-Hans", "zh-Hant": #expect(plain.hasPrefix(difference == 0 && language == "zh-Hans" ? "与" : difference == 0 ? "與" : difference > 0 ? "物品增加" : language == "zh-Hans" ? "物品减少" : "物品減少"))
         case "ja": #expect(plain.contains(difference == 0 ? "同じ" : difference > 0 ? "増加" : "減少"))
         default:
             if abs(difference) == 1 { #expect(plain.contains("1 item from")) }

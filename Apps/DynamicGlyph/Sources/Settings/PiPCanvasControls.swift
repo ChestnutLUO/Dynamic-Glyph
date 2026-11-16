@@ -1,7 +1,8 @@
 import SwiftUI
 import GlyphRecognition
 
-/// Width, height and sharpness of the floating window's canvas.
+/// Width, height and sharpness of the floating window's canvas: the
+/// Floating window page's "Shape and sharpness" section, shown open.
 struct PiPCanvasControls: View {
     @ObservedObject var pip: GlyphPiPController
     @State private var width = Double(PiPCanvasConfiguration.standard.width)
@@ -13,7 +14,7 @@ struct PiPCanvasControls: View {
     }
 
     var body: some View {
-        DisclosureGroup("Shape and sharpness") {
+        Section {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Width: \(Int(width))").font(.caption)
                 Slider(value: $width, in: 256...640, step: 16)
@@ -40,9 +41,11 @@ struct PiPCanvasControls: View {
                     }
                 }
                 .buttonStyle(.borderless)
-                Text("Width and height set the window's proportions; iOS decides its actual size.")
-                    .font(.caption2).foregroundStyle(.secondary)
             }
+        } header: {
+            Text("Shape and sharpness")
+        } footer: {
+            Text("Width and height set the window's proportions; iOS decides its actual size.")
         }
         .onAppear {
             width = Double(pip.canvas.width)

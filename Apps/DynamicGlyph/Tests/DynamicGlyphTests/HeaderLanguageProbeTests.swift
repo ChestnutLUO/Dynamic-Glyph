@@ -6,7 +6,7 @@ import Vision
 struct HeaderLanguageProbeTests {
     @Test("Print fast and accurate language support at Vision's current revision")
     func currentRevisionLanguages() throws {
-        // Fixtures/Assets/Screenshots/Languages/README.md and the pixels were inspected:
+        // The fixtures' notes and pixels were inspected:
         // zh-bonus and ja-portal-cut mask the entire header; zh-complex is
         // only a command notice crop (602x170), NOT the game's header.
         // No zh/ja header OCR/crop comparison is justified by these fixtures.

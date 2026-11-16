@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compare command acknowledgements from a private movie with sanitized annotations.
+"""Compare command acknowledgements from a local movie with sanitized annotations.
 
 Annotations are assertions only. Original timestamps, not frame numbers, drive
 recognition. A 20-Hz movie cannot establish coverage of the 60-Hz capture path.

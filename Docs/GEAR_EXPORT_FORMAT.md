@@ -50,7 +50,7 @@ Count records with distinct `record_id`, never rows.
 | `order` | integer | The record's place among this file's records of that session, from 1. Gaps in capture don't show. |
 | `read_status` | enum | `read`: the gear reading is in the row. `notRead`: the hack stopped waiting with no panels (`read_reason` says why). `unavailable`: no gear reading for this hack, as when gear reading was off. `unsupported`: gear was saved in a format this build can't read. Drops are always `read`. |
 | `read_reason` | id | For `notRead`: `waitTimeout` (no panels within the wait), `frameGap` (capture lost frames), `queueLimit` (too many hacks waiting) or `captureStopped`. Otherwise blank. |
-| `association` | enum | `ordered`, `orderedWithoutBonus`, `bonusExpected`, `noWaitingHack`, `uncertainContinuity` or `unassociated`. See `GearDropSummary.Association` and [gear-drop recognition](https://github.com/szres/dynamic-glyph-assets/blob/main/Docs/GEAR_DROP_RECOGNITION.md) (in the private test-assets repository). |
+| `association` | enum | `ordered`, `orderedWithoutBonus`, `bonusExpected`, `noWaitingHack`, `uncertainContinuity` or `unassociated`. See `GearDropSummary.Association` in the gear-drop recognition code. |
 | `observed_panels_read_in_full` | boolean | Every panel seen was read with no unidentified row. Panels never seen can't count against it. |
 | `both_panels_read` | boolean | The portal panel then a Bonus panel, both read in full. Drops often have no Bonus panel. |
 | `panel` | enum | `portal` or `bonus`. |
@@ -150,7 +150,7 @@ waited in the queue, and can fall in the next hour or day.
 - The export sheet's **Include the hour** switch is on by default. Off, the
   interval is the day and `local_hour` is blank.
 - The text summary shared from the same sheet gives each record the same
-  interval, such as `2026-10-03 07:00–08:00 UTC+08:00` or `2026-10-03
+  interval, such as `2001-01-13 07:00–08:00 UTC+08:00` or `2001-01-13
   UTC+08:00`, never its minute.
 
 ## Spreadsheet safety
@@ -171,7 +171,7 @@ elements are kept, so `a;;` splits into three.
 ```python
 import pandas as pd
 
-df = pd.read_csv("DynamicGlyph-gear-v1-2026-10-02.csv",
+df = pd.read_csv("DynamicGlyph-gear-v1-2001-01-12.csv",
                  dtype=str, keep_default_na=False)  # keep ids and blanks as written
 for column in ["quantity", "level", "slot", "local_hour", "utc_offset_minutes"]:
     df[column] = pd.to_numeric(df[column].mask(df[column] == ""))  # blank → NaN, not 0

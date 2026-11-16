@@ -4,7 +4,7 @@ import Testing
 
 /// A gear read that finds no panel title but whose body is plainly a drop
 /// panel (the effect line, or rows naming known items) is a panel with an
-/// unread title, not a miss. In the 2026-10-28 session a portal panel with a
+/// unread title, not a miss. In a field session a portal panel with a
 /// CJK-only name was read as no panel, and those reads backed off the Bonus
 /// panel that replaced it in the same place. Entries here are derived from
 /// that session's logged rows; no text from it is used.
@@ -156,7 +156,7 @@ struct GearUntitledPanelTests {
 
     @Test("Constrained, the Bonus panel after an untitled portal panel is read on time and kept")
     func bonusAfterUntitledPortal() throws {
-        // As 2026-10-28 hack 3, with a slower read: a portal panel whose title
+        // As that session's hack 3, with a slower read: a portal panel whose title
         // is never read, then its Bonus panel for 0.7 s in the same place.
         let bonus = [Self.entry(0, 0, "Power Cube", level: 8, 1), Self.entry(1, 0, "XMP Burster", level: 8, 6)]
         let unread = { (time: Double) in GearDropFrameEvidence(sourceTime: time, stage: .unknown) }

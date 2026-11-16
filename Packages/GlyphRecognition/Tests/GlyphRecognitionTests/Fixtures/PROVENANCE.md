@@ -54,16 +54,10 @@ Format:
 
 ## Game screenshots
 
-The `.png` and `.jpg` files the tests read are frames and crops of the game's
-own screen, masked for privacy before they were committed. The game's imagery
-belongs to its owners, so they are not distributed with the source. They live
-in a private repository, szres/dynamic-glyph-assets, mounted here as a git
-submodule at `Assets/`. Its `Screenshots/` folder has one folder per fixture
-set (`Assets/Screenshots/Gear/`, `Assets/Screenshots/Phases/`, …), each with a
-README describing its frames and masking. The annotation JSONs stay in the
-matching folders here. With access, `git clone --recurse-submodules` (or
-`git submodule update --init`) fetches them; without it `Assets/` stays
-empty.
+The `.png` and `.jpg` files in the folders here are frames and crops of the
+game's own screen, masked for privacy. They are kept outside the published
+source and are not distributed with it: the game's imagery belongs to its
+owners.
 
 Without them, every test that reads a screenshot is reported as **skipped**
 with the reason, through `ReferenceData.fixturesDirectory` in the package and

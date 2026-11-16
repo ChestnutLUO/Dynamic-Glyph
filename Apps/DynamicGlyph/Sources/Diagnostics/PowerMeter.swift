@@ -10,7 +10,9 @@ enum PowerMetric: Int, CaseIterable {
     // Shared by the broadcast extension through the frame ring's header, and
     // the app's own losses reading it.
     case extensionPublished, extensionDropped, extensionOverwritten, ringLost
-    // Vision text requests, timed where they are performed.
+    // Vision text requests, timed where they are performed: one per request,
+    // so `gearPanel` counts every pass of a gear read (panel, title, row
+    // and quantity passes), not reads.
     case headerFast, headerAccurate, resultPanel, commandNotice, droneFooter, gearPanel, portalScreen
     // Steps of frame analysis.
     case frameWork, conversion, decode, gearCheck, portalCheck, resultCheck, gridHunt, glyphRead
@@ -30,6 +32,52 @@ enum PowerMetric: Int, CaseIterable {
     /// Header OCR submissions (including a command's header), and eligible
     /// header-only looks suppressed for unchanged pixels. Counts, not timers.
     case headerInHack, headerOutside, headerUnchanged
+    /// Core Image renders of one region instead of the whole frame: the
+    /// drone footer's label, the command band, and the header rows a lazy
+    /// header or command read takes. `conversion` stays the whole-frame
+    /// renders.
+    case footerRender, bandRender, headerRender
+    /// Region renders the `planeGate` cut skipped: a drone footer probe whose
+    /// label the planes show without enough yellow, and a watched command
+    /// band they show dark. Counts, not timers.
+    case footerGated, bandGated
+    /// Analysed frames showing a portal screen whose read the `portalSettle`
+    /// cut withheld from the text lane, its levels having settled. A count,
+    /// not a timer: frames the lane would have been too busy to take count
+    /// too, so it bounds the reads saved from above.
+    case portalHeld
+    /// Header-only reads the `headerStillSkip` cut skipped on a still header,
+    /// in a hack and outside one, each issuing the last read's reading again.
+    /// Counts, not timers: one per look the lane would have read, since a
+    /// skip holds the header's cadence as the read would have.
+    case headerStillInHack, headerStillOutside
+    /// Gear reads the `gearSettle` cut answered with a settled panel's
+    /// reading, issued again for a still panel. Counts, not timers: one per
+    /// read the lane took and did not perform.
+    case gearHeld
+    /// Result reads the `resultSettle` cut answered with a complete result's
+    /// last reading, issued again for a still panel. Counts, as `gearHeld`.
+    case resultHeld
+    /// Gear passes the `gearLeanRead` cut left out (`GearReadWithheld`):
+    /// rereads of clearly red rows the panel pass read whole, rereads of
+    /// empty cells, and numeric quantity passes. Counts, not timers: one per
+    /// Vision pass not made, which `gearPanel` would otherwise have counted.
+    case gearRedRowSkipped, gearEmptyCellSkipped, gearQuantitySkipped
+    /// Gear reads the `gearLanguageSettle` cut kept in the confirmed game
+    /// language, whose unresolved rows would otherwise have gone to the
+    /// other languages. Counts reads, not passes: a sweep reads the panel
+    /// once per language and at most once a second, so this bounds the
+    /// sweeps not made from above.
+    case gearLanguageSkipped
+    /// Header-only reads the `headerWindowMask` cut skipped, in a hack and
+    /// outside one: the header was not still, but was once the cells under
+    /// the app's own window were left out. Counts, as the still skips.
+    case headerMaskedInHack, headerMaskedOutside
+    /// Header OCR the `headerCoverSkip` cut left out while the app's own
+    /// window covered the header, in a hack and outside one: header-only
+    /// looks skipped with no reading, and command reads' header requests.
+    /// Counts, not timers.
+    case headerCoveredInHack, headerCoveredOutside
 
     init(_ kind: TextReadKind) {
         switch kind {
@@ -45,10 +93,21 @@ enum PowerMetric: Int, CaseIterable {
     }
 
     static let headerWork: [PowerMetric] = [.headerInHack, .headerOutside, .headerUnchanged]
+    static let headerStill: [PowerMetric] = [.headerStillInHack, .headerStillOutside]
+    static let headerMasked: [PowerMetric] = [.headerMaskedInHack, .headerMaskedOutside]
+    static let headerCovered: [PowerMetric] = [.headerCoveredInHack, .headerCoveredOutside]
+    static let regionGate: [PowerMetric] = [.footerGated, .bandGated]
+    /// What the settle cuts held back from the text lane.
+    static let settled: [PowerMetric] = [.portalHeld, .gearHeld, .resultHeld]
+    /// What the gear read cuts left out: passes, then reads kept in the
+    /// confirmed language.
+    static let gearSkipped: [PowerMetric] = [.gearRedRowSkipped, .gearEmptyCellSkipped, .gearQuantitySkipped,
+                                             .gearLanguageSkipped]
     static let textReads: [PowerMetric] = [.headerFast, .headerAccurate, .resultPanel, .commandNotice,
                                            .droneFooterFast, .droneFooter, .gearPanel, .portalScreen]
-    static let steps: [PowerMetric] = [.frameWork, .conversion, .decode, .gearCheck, .portalCheck, .resultCheck,
-                                       .gridHunt, .glyphRead, .slotStrip, .commandBand, .footerProbe, .recordingOffer,
+    static let steps: [PowerMetric] = [.frameWork, .conversion, .footerRender, .bandRender, .headerRender, .decode,
+                                       .gearCheck, .portalCheck, .resultCheck, .gridHunt, .glyphRead, .slotStrip,
+                                       .commandBand, .footerProbe, .recordingOffer,
                                        .frameIntake, .skippedFrame, .displayUpdate, .liveActivity, .telemetryRow,
                                        .pipTick, .pipDraw]
     /// Timed work that never runs inside another timed run, so their times
@@ -98,6 +157,24 @@ enum PowerMetric: Int, CaseIterable {
         case .displayUpdate: return "UI update"
         case .liveActivity: return "Live Act."
         case .telemetryRow: return "log row"
+        case .footerRender: return "CI footer"
+        case .bandRender: return "CI band"
+        case .headerRender: return "CI header"
+        case .footerGated: return "footer gated"
+        case .bandGated: return "band gated"
+        case .portalHeld: return "portal held"
+        case .headerStillInHack: return "still hack"
+        case .headerStillOutside: return "still out"
+        case .gearHeld: return "gear held"
+        case .resultHeld: return "result held"
+        case .gearRedRowSkipped: return "red rows"
+        case .gearEmptyCellSkipped: return "empty cells"
+        case .gearQuantitySkipped: return "quantities"
+        case .gearLanguageSkipped: return "languages"
+        case .headerMaskedInHack: return "masked hack"
+        case .headerMaskedOutside: return "masked out"
+        case .headerCoveredInHack: return "cover hack"
+        case .headerCoveredOutside: return "cover out"
         }
     }
 }
@@ -382,6 +459,11 @@ struct PowerSnapshot {
     var language: GameLanguage?
     var languageAutomatic = false
     var languageConfirmed = false
+    /// The engine that ran the session's pixel steps, by its own name, the
+    /// logic arm, and the cuts it ran with; nil before a session says which.
+    var engine: String?
+    var logic: String?
+    var cuts: Set<RecognitionCut> = []
 
     func total(_ metric: PowerMetric) -> PowerTally { totalTallies[metric.rawValue] }
     func recent(_ metric: PowerMetric) -> PowerTally { recentTallies[metric.rawValue] }
@@ -435,7 +517,10 @@ final class PowerMeter: @unchecked Sendable {
         /// came after it.
         var extensionBaseline: ExtensionCounts?
         var worstThermal = 0
-        var languages: GameLanguageMemory?
+        var languages: (any GameLanguageRemembering)?
+        var engine: String?
+        var logic: String?
+        var cuts: Set<RecognitionCut> = []
     }
 
     // Guarded by `lock`. The clock, CPU and thermal readers are immutable.
@@ -482,9 +567,12 @@ final class PowerMeter: @unchecked Sendable {
     }
 
     /// A capture session begins: everything counts from now. `languages` is
-    /// the session's game language, which the text readers follow. Work that
-    /// began before now, such as a text read still running, is not counted.
-    func reset(languages: GameLanguageMemory? = nil) {
+    /// the session's game language, which the text readers follow; `engine`
+    /// the name of the engine running its pixel steps, with its `cuts`, and
+    /// `logic` the logic set's. Work that began before now, such as a text
+    /// read still running, is not counted.
+    func reset(languages: (any GameLanguageRemembering)? = nil, engine: String? = nil, logic: String? = nil,
+               cuts: Set<RecognitionCut> = []) {
         let time = clock(), cpu = cpuTime(), thermal = thermalState()
         os_unfair_lock_lock(lock)
         state = State()
@@ -493,6 +581,9 @@ final class PowerMeter: @unchecked Sendable {
         state.cpuAtStart = cpu
         state.worstThermal = thermal
         state.languages = languages
+        state.engine = engine
+        state.logic = logic
+        state.cuts = cuts
         state.lastSecond = Int64(time / 1_000_000_000)
         state.cpu.note(cpu, at: time)
         os_unfair_lock_unlock(lock)
@@ -666,6 +757,9 @@ final class PowerMeter: @unchecked Sendable {
         snapshot.readingMode = state.readingMode
         snapshot.analysedLastSecond = state.window.count(PowerMetric.framesAnalysed.rawValue, second: second - 1)
         snapshot.extensionSeen = state.extensionSeen
+        snapshot.engine = state.engine
+        snapshot.logic = state.logic
+        snapshot.cuts = state.cuts
         let languages = state.languages
         os_unfair_lock_unlock(lock)
         snapshot.lowPower = ProcessInfo.processInfo.isLowPowerModeEnabled
@@ -699,6 +793,7 @@ enum PowerReport {
             lines.append(String(format: "header OCR %@ %@", language.needsAccurateRecognition ? "accurate" : "fast",
                                 language.recognitionLanguages.joined(separator: "+")))
         }
+        if let engine = s.engine { lines += engineLines(engine, logic: s.logic, cuts: s.cuts) }
 
         // Frames
         lines.append(row("frames", "session", "/min"))
@@ -726,13 +821,7 @@ enum PowerReport {
             lines.append("extension CPU and scaling time not shared")
         }
 
-        // Submission counts are separate from Vision timings. An unchanged
-        // look neither performs OCR nor refreshes the old reading's timestamp.
-        lines.append(row("header work", "n", "/min"))
-        for metric in PowerMetric.headerWork {
-            lines.append(row(metric.label, "\(s.total(metric).count)", rate(s.perMinute(metric))))
-        }
-        lines.append("header skip: unchanged, age <1s")
+        lines += workLines(s, perMinute: s.perMinute)
         // Text reads
         lines.append(row("text read", "n", "/min", "avg ms", "max ms"))
         for metric in PowerMetric.textReads {
@@ -764,6 +853,57 @@ enum PowerReport {
         let timed = s.timedSeconds
         lines.append(String(format: "timed %@ s · untimed %@ s", secondsText(timed), secondsText(s.cpuSeconds - timed)))
         return lines
+    }
+
+    /// The header work, with the `headerStillSkip`, `headerWindowMask` and
+    /// `headerCoverSkip` cuts' skips when they ran or skipped anything, and the plane gate and the settle cuts when they
+    /// held anything back. `perMinute` nil leaves out the rate column, for a run
+    /// with no clock. Shared with the benchmark's per-run report.
+    static func workLines(_ s: PowerSnapshot, perMinute: ((PowerMetric) -> Double?)?) -> [String] {
+        func rows(_ metrics: [PowerMetric]) -> [String] {
+            guard let perMinute else { return metrics.map { row($0.label, "\(s.total($0).count)") } }
+            return metrics.map { row($0.label, "\(s.total($0).count)", rate(perMinute($0))) }
+        }
+        func section(_ title: String, _ metrics: [PowerMetric]) -> [String] {
+            [perMinute == nil ? row(title, "n") : row(title, "n", "/min")] + rows(metrics)
+        }
+        // Submission counts are separate from Vision timings. An unchanged
+        // look neither performs OCR nor refreshes the old reading's timestamp.
+        var lines = section("header work", PowerMetric.headerWork)
+        lines.append("header skip: unchanged, age <1s")
+        // A still look issues the last read's reading again at its own time.
+        if s.cuts.contains(.headerStillSkip) || PowerMetric.headerStill.contains(where: { s.total($0).count > 0 }) {
+            lines += rows(PowerMetric.headerStill)
+            lines.append("still skip: grid ±1.0, age <1s, reused")
+        }
+        // A masked look is still only without the cells under the window.
+        if s.cuts.contains(.headerWindowMask) || PowerMetric.headerMasked.contains(where: { s.total($0).count > 0 }) {
+            lines += rows(PowerMetric.headerMasked)
+            lines.append("mask: window cells out, >=15% left")
+        }
+        // A covered look reads nothing and issues nothing.
+        if s.cuts.contains(.headerCoverSkip) || PowerMetric.headerCovered.contains(where: { s.total($0).count > 0 }) {
+            lines += rows(PowerMetric.headerCovered)
+            lines.append("cover: window over >=1/2 of rows")
+        }
+        if PowerMetric.regionGate.contains(where: { s.total($0).count > 0 }) {
+            lines += section("plane gate", PowerMetric.regionGate)
+        }
+        // A title fits the row's 12-character label column.
+        let settled = PowerMetric.settled.filter { s.total($0).count > 0 }
+        if !settled.isEmpty { lines += section("settle", settled) }
+        // Passes and kept languages, where every row above is a read.
+        if PowerMetric.gearSkipped.contains(where: { s.total($0).count > 0 }) {
+            lines += section("gear skipped", PowerMetric.gearSkipped)
+        }
+        return lines
+    }
+
+    /// The engine the pixel steps ran on, the logic arm when known, and the
+    /// cuts, wrapped to the width when every cut is on. Shared with the
+    /// benchmark's per-run report.
+    static func engineLines(_ engine: String, logic: String? = nil, cuts: Set<RecognitionCut>) -> [String] {
+        BenchmarkReport.wrap("engine \(engine)" + (logic.map { " · logic \($0)" } ?? "") + " · cuts \(cuts.summary)")
     }
 
     /// Session time as m:ss, or whole minutes once that no longer fits.

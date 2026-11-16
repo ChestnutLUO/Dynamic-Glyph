@@ -24,10 +24,10 @@ enum ReadingModeTint: UInt8, CaseIterable, Sendable {
     /// hack the rate stays full, so this never shows there.
     case backingOff
 
-    /// The interior fill, or nil for the renderer's own background: the
-    /// design note's reference fills (Colo, msgs 749 and 758). Every stroke keeps at least 3:1
-    /// and every message 4.5:1 on each (see `ReadingModeTintTests`). The
-    /// Diagnostics legend reads them from here too.
+    /// The interior fill, or nil for the renderer's own background. Every
+    /// stroke keeps at least 3:1 and every message 4.5:1 on each (see
+    /// `ReadingModeTintTests`). The Diagnostics legend reads them from here
+    /// too.
     var fill: CGColor? {
         switch self {
         case .none: return nil

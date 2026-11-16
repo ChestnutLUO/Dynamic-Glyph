@@ -21,6 +21,9 @@ struct ReplayOptions {
     var expectCorrectInput = false
     var timestamps: URL?
     var ablations: Set<Ablation> = []
+    var engine = ReplayEngine.swift
+    var logic = ReplayLogic.swift
+    var cuts: Set<ReplayCut> = []
     var probes: URL?
     var commandMode = "off"
     var gearMode = "off"
@@ -39,7 +42,7 @@ struct ReplayOptions {
     /// outside a hack and 0.2 s in one, and gear reads without retries.
     var constrained = false
     /// How long a live gear read holds the lane (tool only): `flat` is
-    /// `ocrLatency` for every read (build 102's replay, the default);
+    /// `ocrLatency` for every read (the original replay model, the default);
     /// `perPass` is `ocrLatency` x (1 + the read's title passes): its panel
     /// pass plus each title pass, panel-crop or title-zone fallback, so a
     /// constrained read with both title passes costs 3 x `ocrLatency`; row and
@@ -56,12 +59,12 @@ struct ReplayOptions {
     /// at most one of the two.
     var extraTitleSeconds: Double?
     var titleSeconds: Double?
-    /// The gear lane's new-panel rules (build 103, the default): a new panel
+    /// The gear lane's new-panel rules ("103", the default): a new panel
     /// (`GameTextSchedule.observeGearPanel`) stops the gear read in flight,
     /// which frees the lane `cancelLatency` later (or at its own completion,
     /// if sooner) and delivers nothing; the new panel's first read has no
     /// spacing; constrained analysis is every 0.049 s while a panel shows.
-    /// "102" replays build 102's lane, for comparison.
+    /// "102" replays the earlier lane without them, for comparison.
     var gearLane = "103"
     var cancelLatency = 0.05
 }
@@ -149,6 +152,15 @@ func parseArguments() throws -> ReplayOptions {
         case "--ablate":
             guard !arguments.isEmpty else { throw ReplayError.usage("--ablate requires a list of components") }
             options.ablations = try Ablation.parse(arguments.removeFirst())
+        case "--engine":
+            guard !arguments.isEmpty else { throw ReplayError.usage("--engine needs swift or cpp") }
+            options.engine = try ReplayEngine.parse(arguments.removeFirst())
+        case "--logic":
+            guard !arguments.isEmpty else { throw ReplayError.usage("--logic needs swift or cpp") }
+            options.logic = try ReplayLogic.parse(arguments.removeFirst())
+        case "--cut":
+            guard !arguments.isEmpty else { throw ReplayError.usage("--cut requires a list of cuts") }
+            options.cuts.formUnion(try ReplayCut.parse(arguments.removeFirst()))
         case "--probes":
             guard !arguments.isEmpty else { throw ReplayError.usage("--probes requires a JSON file of times") }
             options.probes = URL(fileURLWithPath: arguments.removeFirst())
@@ -162,6 +174,7 @@ func parseArguments() throws -> ReplayOptions {
     if options.extraTitleSeconds != nil || options.titleSeconds != nil, options.titlePassCost != "flat" {
         throw ReplayError.usage("--extra-title-seconds and --title-seconds need --title-pass-cost flat (the default)")
     }
+    try ReplayCut.validate(options.cuts, engine: options.engine)
     return options
 }
 
@@ -183,7 +196,8 @@ guard let glyphsURL = options.glyphs, !options.frames.isEmpty else {
                         [--gear-lane 103|102] [--cancel-latency seconds]
                         [--game-language auto|en|zh-Hans|zh-Hant|ja|ko] [--commands off|live|exhaustive] [--gear off|live|exhaustive|only] [--gear-gap seconds] [--frames-manifest paths.json]
                         [--expect-bonuses hacking,speed]
-                        [--ablate a,b,...] [--expect-correct-input] [--quiet] <frame.png> ...
+                        [--ablate a,b,...] [--engine swift|cpp] [--cut a,b,...] [--logic swift|cpp]
+                        [--expect-correct-input] [--quiet] <frame.png> ...
 
     Frames must be in capture order. Every frame goes through the same
     recognition, slot-indicator and header-text code the app runs, less any
@@ -210,14 +224,37 @@ guard let glyphsURL = options.glyphs, !options.frames.isEmpty else {
     result and command reads are unaffected. gearSampling reports both
     values (null when absent), titlePasses, extraTitlePasses (passes beyond
     each read's first) and chargedGearSeconds.
-    --gear-lane 103 (default) replays build 103's gear lane: a new panel
+    --gear-lane 103 (default) replays the new-panel gear lane: a new panel
     (geometry, GameTextSchedule.observeGearPanel) stops the gear read in
     flight, which delivers nothing and frees the lane --cancel-latency seconds
     later (default 0.05) or at its own completion if sooner; the new panel's
     first read has no spacing; with --constrained, analysis is every 0.049 s
-    while the last analysed frame showed a panel. 102 replays build 102's lane.
+    while the last analysed frame showed a panel. 102 replays the earlier lane.
     gearSampling reports gearLane, cancelLatency, gearCancels and
     gearPanelFrameTimes (analysed frames with panel geometry; times only).
+    --engine picks the arm that runs the pixel steps (default swift); --cut
+    applies power cuts: \(ReplayCut.allCases.map(\.rawValue).joined(separator: ", ")).
+    directPlanes, lazyImage and planeGate have no effect on decoded pictures; directPlanes,
+    huntBand and huntHalf need --engine cpp. portalSettle stops reading a
+    portal screen once its levels have settled and reports portalHeld, the
+    analysed frames it withheld. headerStillSkip has no effect here: the replay
+    reads headers through its own lane, which never skips a still header.
+    gearSettle answers a gear read due on a settled panel, still against the
+    read that settled it, with that read again, and reports gearHeld, the
+    reads it answered so. resultSettle answers a result read due on a complete
+    result, still against the read that completed it, with that read again,
+    and reports resultHeld. gearLeanRead leaves out a gear read's rereads of
+    clearly red rows the panel pass read whole and of empty cells, and its
+    numeric quantity passes, and reports gearWithheld, the passes left out
+    by kind. gearLanguageSettle keeps a gear read of a portal or Bonus panel
+    with a name read in an automatic game language a screen has confirmed,
+    and reports gearWithheld.languageSweeps, the reads not offered the other
+    languages. headerWindowMask, as headerStillSkip, has no effect here: it
+    refines the still skip the replay's header lane does not make.
+    headerCoverSkip has no effect either: the replay's header lane never
+    looks for the app's window over the header.
+    --logic picks the arm that runs the tracker, sessions, schedules and
+    parsers (default swift).
 
     """.utf8))
     exit(2)
@@ -229,15 +266,22 @@ guard let glyphsURL = options.glyphs, !options.frames.isEmpty else {
 @available(macOS 15.0, iOS 18.0, *)
 func replay(_ options: ReplayOptions, glyphsURL: URL) async throws {
     let table = try GlyphTable.parse(csv: String(contentsOf: glyphsURL, encoding: .utf8))
-    let predictor = try options.sequences.map {
-        SequencePredictor(table: try SequenceTable.parse(csv: String(contentsOf: $0, encoding: .utf8)))
+    let sequenceTable = try options.sequences.map {
+        try SequenceTable.parse(csv: String(contentsOf: $0, encoding: .utf8))
     }
     let layout = GameUILayout()
-    let slotReader = SlotStripReader(layout: layout)
-    let languages = GameLanguageMemory(language: options.gameLanguage ?? .english, isAutomatic: options.gameLanguage == nil)
-    // The header follows the language found on other screens.
-    var headerRecognizer: HeaderTextRecognizer { HeaderTextRecognizer(layout: layout, language: languages.current) }
     let sessionID = CaptureSessionID(rawValue: 1)
+    // Every logic object comes from one arm: the tracker, the sessions, the
+    // schedules, the language memory and the parsers.
+    let logic = makeReplayLogicSet(options.logic, table: table, sequenceTable: sequenceTable, sessionID: sessionID,
+                                   language: options.gameLanguage)
+    let predictor = logic.predictor
+    let languages = logic.languageMemory
+    // The header follows the language found on other screens.
+    var headerRecognizer: HeaderTextRecognizer {
+        let language = languages.current
+        return HeaderTextRecognizer(layout: layout, language: language, matcher: logic.headerPhraseMatcher(language))
+    }
     let sourceTimes = try options.timestamps.map {
         try JSONDecoder().decode([Double].self, from: Data(contentsOf: $0))
     }
@@ -260,12 +304,16 @@ func replay(_ options: ReplayOptions, glyphsURL: URL) async throws {
     let shapeAblator = ShapeAblator(ablations: ablations)
     let freshFitRecognizer = GlyphFrameRecognizer(table: table)
 
-    var session = GlyphFrameSession(table: table)
-    var tracker = PresentationTracker(sessionID: sessionID, policy: Ablation.policy(for: ablations))
-    var validator = PlayerInputValidator(table: table, sessionID: sessionID)
-    var resultSession = ResultObservationSession()
-    let commands = CommandNoticeCapture()
-    var commandScreen = CommandScreenWatch()
+    // The pixel steps: luminance, result panel, node array and Glyph read,
+    // slot strip and timer, gear and portal panels.
+    let engine = try makeReplayEngine(options.engine, cuts: options.cuts, table: table, layout: layout)
+    var tracker = logic.makeTracker(Ablation.policy(for: ablations))
+    guard var validator = logic.inputValidator else {
+        preconditionFailure("a logic set made with a Glyph table has an input validator")
+    }
+    var resultSession = logic.resultSession
+    let commands = logic.commandNoticeCapture
+    var commandScreen = logic.commandScreen
     var pendingCommand: (CommandNoticeFrame, CommandNoticeReading)?
     var commandReadings: [[String: Any]] = []
     func acceptCommand(_ frame: CommandNoticeFrame, _ read: CommandNoticeReading) {
@@ -274,11 +322,12 @@ func replay(_ options: ReplayOptions, glyphsURL: URL) async throws {
                                 "notice": read.notice?.rawValue ?? "unreadable",
                                 "confidence": read.confidence, "language": read.language ?? "unknown"])
     }
-    var textSchedule = GameTextSchedule()
-    let gearReader = GearDropScreenReader()
-    let gearTitleMemory = GearTitleLanguageMemory()
-    var gearTracker = GearDropTracker()
-    var gearSession = GearDropObservationSession()
+    var textSchedule = logic.textSchedule
+    let gearTitleMemory = logic.makeGearTitleMemory()
+    var gearTracker = logic.gearTracker
+    var gearSession = logic.gearSession
+    let gearLogic = logic.gearReaderLogic
+    let commandLogic = logic.commandReaderLogic
     var gearReadings: [GearDropFrameEvidence] = []
     var gearGroups: [GearDropSummary] = []
     func acceptGear(_ evidence: GearDropFrameEvidence) {
@@ -288,11 +337,15 @@ func replay(_ options: ReplayOptions, glyphsURL: URL) async throws {
     // What the pending gear read says beyond its evidence, and each read's
     // OCR passes (counts and confidences only), as the app's session log has.
     var pendingUntitledPanel = false
+    // `gearSettle`: the pending gear read is a settled reading issued again.
+    var pendingGearReissued = false
+    // `resultSettle`: the pending result read is a reading issued again.
+    var pendingResultReissued = false
     var gearReadPasses: [[String: Any]] = []
     // The pending gear read's lane time (`titlePassCost`).
     var pendingGearLatency = options.ocrLatency
-    // Build 103's lane: the frame time a new panel stopped the pending gear
-    // read at, and every such stop (times only).
+    // The new-panel lane ("103"): the frame time a new panel stopped the
+    // pending gear read at, and every such stop (times only).
     let lane103 = options.gearLane == "103"
     var pendingCancelledAt: Double?
     var gearCancels: [[String: Any]] = []
@@ -301,10 +354,23 @@ func replay(_ options: ReplayOptions, glyphsURL: URL) async throws {
     // per hack, for either lane (times only).
     var gearPanelFrameTimes: [Double] = []
     var titlePassCount = 0, chargedGearSeconds = 0.0, extraTitlePassCount = 0
+    let leanGearRead = options.cuts.contains(.gearLeanRead)
+    let settlesGearLanguage = options.cuts.contains(.gearLanguageSettle)
+    /// What `gearLeanRead` and `gearLanguageSettle` left out of every gear
+    /// read, by kind.
+    var gearWithheld = (redRows: 0, emptyCells: 0, quantities: 0, languageSweeps: 0)
+    func noteWithheld(_ withheld: GearReadWithheld) {
+        gearWithheld.redRows += withheld.redRows
+        gearWithheld.emptyCells += withheld.emptyCells
+        gearWithheld.quantities += withheld.quantities
+        gearWithheld.languageSweeps += withheld.languageSweeps
+    }
     func readGear(_ image: CGImage, bounds: GearDropPanelBounds, at time: Double) throws -> GearDropFrameEvidence {
         let reading = try GearDropScreenReader.reading(image, bounds: bounds, sourceTime: time, titleMemory: gearTitleMemory,
                                                        languages: languages, retries: !options.constrained,
-                                                       rereadsUnreadableRows: true)
+                                                       rereadsUnreadableRows: true, lean: leanGearRead,
+                                                       settlesLanguage: settlesGearLanguage, logic: gearLogic)
+        noteWithheld(reading.withheld)
         pendingUntitledPanel = reading.untitledPanel
         let titlePasses = reading.passes.filter { $0.purpose == .title }.count
         titlePassCount += titlePasses
@@ -333,6 +399,93 @@ func replay(_ options: ReplayOptions, glyphsURL: URL) async throws {
         options.constrained && !gearTracker.currentPanelSettled
             ? .init(minimumInterval: 0.1, gearInterval: 0.2) : nil
     }
+    let gearSettle = options.cuts.contains(.gearSettle)
+    var gearLimiter = GearSettleLimiter()
+    /// Gear reads `gearSettle` answered with a settled reading.
+    var gearHeld = 0
+    /// The frame a real gear read was taken from, with its signature.
+    var gearSettleFrame: (time: Double, signature: StillSignature?, region: PanelRegion,
+                          bounds: GearDropPanelBounds)?
+    /// The grid over the panel's region of the decoded picture, as the app
+    /// builds it from the capture's planes.
+    func gearSignature(_ image: CGImage, over region: PanelRegion) -> StillSignature? {
+        let rect = CGRect(x: region.left, y: region.top, width: region.width, height: region.height)
+        guard let crop = try? ImageDecoder.decodeColor(image, in: rect) else { return nil }
+        return StillSignature(rgb: crop.pixels, width: crop.width, rows: 0..<crop.height, frameWidth: image.width,
+                              frameHeight: image.height, columns: GearSettleLimiter.columns,
+                              gridRows: GearSettleLimiter.rows)
+    }
+    /// An analysed frame's look, as `LiveGlyphOutput`'s: the settled reading
+    /// at `time`, or nil to read.
+    func gearSettleLook(_ image: CGImage, bounds: GearDropPanelBounds?, at time: Double) -> GearDropFrameEvidence? {
+        guard gearSettle else { return nil }
+        guard bounds != nil else { gearLimiter.reset(); return nil }
+        guard gearLimiter.isSettled else { return nil }
+        let signature = gearLimiter.region.flatMap { gearSignature(image, over: $0) }
+        return gearLimiter.look(at: time, settled: gearTracker.currentPanelSettled, signature: signature,
+                                bounds: bounds)
+    }
+    /// A real gear read starts on this frame.
+    func noteGearFrame(_ image: CGImage, bounds: GearDropPanelBounds, at time: Double) {
+        guard gearSettle, let region = GearSettleLimiter.region(bounds, width: image.width,
+                                                                height: image.height) else { return }
+        gearSettleFrame = (time, gearSignature(image, over: region), region, bounds)
+    }
+    /// A real gear read was accepted or rejected by the tracker.
+    func noteGearRead(_ evidence: GearDropFrameEvidence, accepted: Bool) {
+        guard gearSettle else { return }
+        defer { gearSettleFrame = nil }
+        guard accepted, let frame = gearSettleFrame, frame.time == evidence.sourceTime else {
+            gearLimiter.reset(); return
+        }
+        gearLimiter.accept(evidence, settled: gearTracker.currentPanelSettled, signature: frame.signature,
+                           region: frame.region, bounds: frame.bounds)
+    }
+    /// Takes the frame's gear read: the settled reading when `settled` is
+    /// given, which costs the lane nothing, else a real read.
+    func takeGear(_ request: GameTextSchedule.Request, _ image: CGImage, bounds: GearDropPanelBounds,
+                  settled: GearDropFrameEvidence?, at time: Double) throws {
+        if let settled {
+            gearHeld += 1
+            pendingGearLatency = 0; pendingUntitledPanel = false; pendingGearReissued = true
+            pending = (request, nil, nil, settled, nil)
+        } else {
+            noteGearFrame(image, bounds: bounds, at: time)
+            pending = (request, nil, nil, try readGear(image, bounds: bounds, at: time), nil)
+        }
+    }
+    let resultSettle = options.cuts.contains(.resultSettle)
+    var resultLimiter = ResultSettleLimiter()
+    /// Result reads `resultSettle` answered with a complete result's reading.
+    var resultHeld = 0
+    var resultSettleFrame: (time: Double, signature: StillSignature?, region: PanelRegion)?
+    func resultSignature(_ image: CGImage, over region: PanelRegion) -> StillSignature? {
+        let rect = CGRect(x: region.left, y: region.top, width: region.width, height: region.height)
+        guard let crop = try? ImageDecoder.decodeColor(image, in: rect) else { return nil }
+        return StillSignature(rgb: crop.pixels, width: crop.width, rows: 0..<crop.height, frameWidth: image.width,
+                              frameHeight: image.height, columns: ResultSettleLimiter.columns,
+                              gridRows: ResultSettleLimiter.rows)
+    }
+    /// An analysed frame's look, as `LiveGlyphOutput`'s.
+    func resultSettleLook(_ image: CGImage, panelCandidate: Bool, at time: Double) -> ResultFrameEvidence? {
+        guard resultSettle else { return nil }
+        let signature = resultLimiter.isSettled ? resultLimiter.region.flatMap { resultSignature(image, over: $0) } : nil
+        return resultLimiter.look(at: time, context: resultSession.context, panelCandidate: panelCandidate,
+                                  signature: signature)
+    }
+    func noteResultFrame(_ image: CGImage, at time: Double) {
+        guard resultSettle, let region = ResultSettleLimiter.region(width: image.width, height: image.height) else {
+            return
+        }
+        resultSettleFrame = (time, resultSignature(image, over: region), region)
+    }
+    func noteResultRead(_ evidence: ResultFrameEvidence) {
+        guard resultSettle else { return }
+        defer { resultSettleFrame = nil }
+        guard let frame = resultSettleFrame, frame.time == evidence.sourceTime else { resultLimiter.reset(); return }
+        resultLimiter.accept(evidence, complete: resultSession.tracker?.result.state == .complete,
+                             signature: frame.signature, region: frame.region)
+    }
     func encoded<T: Encodable>(_ value: T) throws -> Any {
         try JSONSerialization.jsonObject(with: JSONEncoder().encode(value))
     }
@@ -340,15 +493,19 @@ func replay(_ options: ReplayOptions, glyphsURL: URL) async throws {
     var pending: (GameTextSchedule.Request, HeaderReading?, ResultFrameEvidence?, GearDropFrameEvidence?,
                   PortalScreenEvidence?)?
     // The portal screen before each hack, for its level; read with gear.
-    let portalReader = PortalScreenReader()
-    var portalObserver = PortalLevelObserver()
+    let portalReader = PortalScreenReader(parser: logic.portalScreenParser)
+    var portalObserver = logic.portalObserver
+    let portalSettle = options.cuts.contains(.portalSettle)
+    var portalLimiter = PortalReadLimiter()
+    /// Analysed frames whose portal read `portalSettle` withheld.
+    var portalHeld = 0
     var portalScreens: [Int: PortalScreenEvidence] = [:]
     var glyphCounts: [Int: Int] = [:]
     var portalReadings: [PortalScreenEvidence] = []
     var resultReadings: [[String: Any]] = []
     var resultSummaries: [[String: Any]] = []
     var ocrCounts: [String: Int] = [:]
-    func summary(_ result: HackResult, comparison: ValidatorResultComparison?) -> [String: Any] {
+    func summary(_ result: HackResult, comparison: (any ValidatorResultComparing)?) -> [String: Any] {
         var row = result.diagnosticRow
         row["commands"] = result.context.commands.flatMap { try? encoded($0) }
         row["comparisons"] = comparison?.compare(result).map(\.diagnosticRow) ?? []
@@ -357,7 +514,8 @@ func replay(_ options: ReplayOptions, glyphsURL: URL) async throws {
     }
     func consumePending(at time: Double) {
         guard let ready = pending else { return }
-        var done = ready.0.sourceTime + (ready.0.mode == .gear ? pendingGearLatency : options.ocrLatency)
+        var done = ready.0.sourceTime + (ready.0.mode == .gear ? pendingGearLatency
+            : pendingResultReissued ? 0 : options.ocrLatency)
         if let cancelledAt = pendingCancelledAt { done = min(done, cancelledAt + options.cancelLatency) }
         guard time + 1e-9 >= done else { return }
         if let cancelledAt = pendingCancelledAt {
@@ -365,7 +523,8 @@ func replay(_ options: ReplayOptions, glyphsURL: URL) async throws {
             pendingCancelledAt = nil
             gearCancels.append(["sourceTime": ready.0.sourceTime, "requestedAt": cancelledAt, "freedAt": done])
             textSchedule.finish(ready.0)
-            pendingUntitledPanel = false
+            pendingUntitledPanel = false; pendingGearReissued = false
+            if gearSettle { gearLimiter.reset(); gearSettleFrame = nil }
             pending = nil
             return
         }
@@ -376,9 +535,20 @@ func replay(_ options: ReplayOptions, glyphsURL: URL) async throws {
         if let value = ready.2 {
             resultSession.accept(value)
             resultReadings.append(value.diagnosticRow)
+            if !pendingResultReissued { noteResultRead(value) }
         }
-        if let value = ready.3 { acceptGear(value) }
-        if let value = ready.4 { portalObserver.accept(value); portalReadings.append(value) }
+        pendingResultReissued = false
+        if let value = ready.3 {
+            acceptGear(value)
+            if !pendingGearReissued {
+                noteGearRead(value, accepted: gearTracker.readingDisposition == .accepted)
+            }
+        }
+        pendingGearReissued = false
+        if let value = ready.4 {
+            portalObserver.accept(value); portalReadings.append(value)
+            if portalSettle { portalLimiter.accept(value) }
+        }
         if let (frame, read) = pendingCommand { acceptCommand(frame, read); pendingCommand = nil }
         pending = nil
     }
@@ -436,6 +606,9 @@ func replay(_ options: ReplayOptions, glyphsURL: URL) async throws {
     var events: [TrackingEvent] = []
     var headerCounts: [String: Int] = [:]
     var slotRejections: [String: Int] = [:]
+    /// Frames with our own window over one side of the strip; those with an
+    /// indicator row beside it; those with the countdown beside it.
+    var windowCover = (frames: 0, rows: 0, timers: 0)
     var phaseSources: [String: Int] = [:]
     var obstructedFrames = 0
     // As the app without Glyph assistance: panels only, no Glyph hack followed.
@@ -443,7 +616,7 @@ func replay(_ options: ReplayOptions, glyphsURL: URL) async throws {
     // Constrained analysis cadence, as LiveGlyphOutput: a 20-Hz look, then the
     // pace's interval, the full one only inside a hack.
     var lastLooked = -Double.infinity, lastSample = -Double.infinity
-    /// Build 103's new-panel check, on every analysed frame before `take`.
+    /// The new-panel lane's check, on every analysed frame before `take`.
     func observeGearPanel(_ bounds: GearDropPanelBounds?, at time: Double) {
         guard lane103, let request = textSchedule.observeGearPanel(bounds, at: time,
                   previousPanelUnconfirmed: gearTracker.isObserving && !gearTracker.currentPanelSettled),
@@ -464,7 +637,7 @@ func replay(_ options: ReplayOptions, glyphsURL: URL) async throws {
             let policy = AnalysisRateController.Policy()
             guard time < lastLooked || time - lastLooked >= policy.activeInterval else { continue }
             lastLooked = time
-            // Build 103: the full rate while a gear panel shows (rejected
+            // The new-panel lane: the full rate while a gear panel shows (rejected
             // candidates are not modelled).
             let interval = (!gearOnly && inHack(at: time)) || (lane103 && lastAnalysedShowedGear)
                 ? policy.activeInterval : policy.constrainedActiveInterval
@@ -474,10 +647,12 @@ func replay(_ options: ReplayOptions, glyphsURL: URL) async throws {
         analysedFrames += 1
         let gearGap = lastFrameTime.map { time - $0 > options.gearGap } ?? false
         if options.gearMode != "off", gearSession.prepareFrame(at: time, continuityLost: gearGap) {
+            portalLimiter.reset()
+            gearLimiter.reset(); gearSettleFrame = nil
             // Match live invalidation before draining a pre-gap OCR result.
             if let request = pending?.0, request.mode == .gear {
                 textSchedule.finish(request)
-                pending = nil; pendingUntitledPanel = false; pendingCancelledAt = nil
+                pending = nil; pendingUntitledPanel = false; pendingCancelledAt = nil; pendingGearReissued = false
             }
             if let closed = gearTracker.loseContinuity(at: time) {
                 gearGroups.append(gearSession.close(closed))
@@ -492,9 +667,12 @@ func replay(_ options: ReplayOptions, glyphsURL: URL) async throws {
             FileHandle.standardError.write(Data("cannot decode \(url.lastPathComponent)\n".utf8))
             continue
         }
+        let input = FrameInput(planes: nil, time: time) { image }
         if gearOnly {
             consumePending(at: time)
-            let gearBounds = try gearReader.bounds(in: image)
+            let gearBounds = try engine.analyze(input, request: FrameAnalysisRequest(
+                assistsGlyphs: false, searchesArray: false, checksGear: true, checksPortal: false,
+                readsStrip: false)).gearBounds
             lastAnalysedShowedGear = gearBounds != nil
             if gearBounds != nil { gearPanelFrameTimes.append(time) }
             if let closed = gearTracker.observe(at: time, panelCandidate: gearBounds != nil,
@@ -502,12 +680,13 @@ func replay(_ options: ReplayOptions, glyphsURL: URL) async throws {
                 gearGroups.append(gearSession.close(closed))
             }
             observeGearPanel(gearBounds, at: time)
+            let settled = gearSettleLook(image, bounds: gearBounds, at: time)
             if let gearBounds, let request = textSchedule.take(at: time, panelCandidate: false, resultEligible: false,
                                                                minimumInterval: laneInterval,
                                                                gearCandidate: true, readsHeader: false,
                                                                gearInterval: gearInterval, gearPanelPace: gearPanelPace()) {
-                ocrCounts[request.mode.rawValue, default: 0] += 1
-                pending = (request, nil, nil, try readGear(image, bounds: gearBounds, at: time), nil)
+                if settled == nil { ocrCounts[request.mode.rawValue, default: 0] += 1 }
+                try takeGear(request, image, bounds: gearBounds, settled: settled, at: time)
                 consumePending(at: time)
             }
             gearSession.observe(at: time, hackID: 0, inputVisible: false, gameProgressVisible: gearBounds != nil)
@@ -520,48 +699,84 @@ func replay(_ options: ReplayOptions, glyphsURL: URL) async throws {
                 try commands.observe(band: band, at: time)
             }
             if options.commandMode == "exhaustive" {
-                while let frame = commands.take(at: time) { acceptCommand(frame, try CommandNoticeReader.read(frame, languages: languages)) }
+                while let frame = commands.take(at: time) {
+                    acceptCommand(frame, try CommandNoticeReader.read(frame, languages: languages, logic: commandLogic))
+                }
             }
         }
-        let luminance = try ImageDecoder.decode(image)
+        let readsPanels = options.gearMode != "off"
+        // Fresh fits on every frame are the recognizer's own rule, outside
+        // the engine's session: the array search is left to it then.
+        let analysis = try engine.analyze(input, request: FrameAnalysisRequest(
+            assistsGlyphs: true, searchesArray: !ablations.contains(.calibrationCache), checksGear: readsPanels,
+            checksPortal: readsPanels, readsStrip: true))
         let observation = ablations.contains(.calibrationCache)
-            ? freshFitRecognizer.calibrateAndObserve(luminance)
-            : session.observe(luminance, at: time)
+            ? freshFitRecognizer.calibrateAndObserve(try ImageDecoder.decode(image))
+            : analysis.observation
 
         var slots: SlotStripReading?
         var rejection: SlotStripRejection?
-        var timerVisible = false
-        let band = try? ImageDecoder.topBand(image, layout: layout)
-        if let band {
-            timerVisible = !ablations.contains(.timer) && slotReader.hasTimerBar(band)
-        }
-        if let band, !ablations.contains(.strip) {
-            switch slotReader.read(band) {
+        let timerVisible = !ablations.contains(.timer) && analysis.hasInputTimerBar
+        if let reading = analysis.slots, !ablations.contains(.strip) {
+            switch reading {
             case .success(let reading): slots = Ablation.reading(reading, under: ablations)
             case .failure(let failure):
                 rejection = failure
                 slotRejections[failure.rawValue, default: 0] += 1
             }
         }
-        let panelCandidate = ResultPanelDetector().isCandidate(luminance)
+        // As the full strip and the countdown, under the same ablations.
+        let partialSlots = ablations.contains(.strip) ? nil : analysis.slotCover?.row
+        let partialTimerVisible = !ablations.contains(.timer) && analysis.slotCover?.hasPartialInputTimerBar == true
+        if analysis.slotCover != nil {
+            windowCover.frames += 1
+            if partialSlots != nil { windowCover.rows += 1 }
+            if partialTimerVisible { windowCover.timers += 1 }
+        }
+        let panelCandidate = analysis.resultCandidate
+        if portalSettle, readsPanels {
+            if let faction = analysis.portalFaction {
+                portalLimiter.candidate(at: time, faction: faction)
+            } else {
+                portalLimiter.absent(at: time)
+            }
+        }
         consumePending(at: time)
-        let gearBounds = options.gearMode == "off" ? nil : try gearReader.bounds(in: image)
+        let gearBounds = readsPanels ? analysis.gearBounds : nil
         lastAnalysedShowedGear = gearBounds != nil
         if gearBounds != nil { gearPanelFrameTimes.append(time) }
-        let portalCandidate = try options.gearMode != "off" && portalReader.isCandidate(image)
+        let portalWanted = !portalSettle || portalLimiter.wantsRead(at: time)
+        if readsPanels, analysis.portalCandidate, !portalWanted { portalHeld += 1 }
+        let portalCandidate = readsPanels && analysis.portalCandidate && portalWanted
         if options.gearMode != "off" {
             if let closed = gearTracker.observe(at: time, panelCandidate: gearBounds != nil,
                                                 pendingReadSourceTime: pending?.3?.sourceTime) {
                 gearGroups.append(gearSession.close(closed))
             }
             if options.gearMode == "exhaustive", let gearBounds {
-                acceptGear(try GearDropScreenReader.read(image, bounds: gearBounds, sourceTime: time, titleMemory: gearTitleMemory,
-                                                   languages: languages, retries: !options.constrained,
-                                                   rereadsUnreadableRows: true))
+                if let settled = gearSettleLook(image, bounds: gearBounds, at: time) {
+                    gearHeld += 1
+                    acceptGear(settled)
+                } else {
+                    noteGearFrame(image, bounds: gearBounds, at: time)
+                    let reading = try GearDropScreenReader.reading(image, bounds: gearBounds, sourceTime: time,
+                                                                   titleMemory: gearTitleMemory, languages: languages,
+                                                                   retries: !options.constrained,
+                                                                   rereadsUnreadableRows: true, lean: leanGearRead,
+                                                                   settlesLanguage: settlesGearLanguage,
+                                                                   logic: gearLogic)
+                    noteWithheld(reading.withheld)
+                    let evidence = reading.evidence
+                    acceptGear(evidence)
+                    noteGearRead(evidence, accepted: gearTracker.readingDisposition == .accepted)
+                }
+            } else if options.gearMode == "exhaustive", gearSettle {
+                gearLimiter.reset()
             }
             if options.gearMode == "exhaustive", portalCandidate {
                 let screen = try portalReader.read(image, sourceTime: time)
                 portalObserver.accept(screen); portalReadings.append(screen)
+                if portalSettle { portalLimiter.accept(screen) }
             }
         }
         var header: HeaderReading?
@@ -569,9 +784,18 @@ func replay(_ options: ReplayOptions, glyphsURL: URL) async throws {
             if !ablations.contains(.header) { header = try await headerRecognizer.read(image, sourceTime: time) }
         } else if options.resultMode == "exhaustive" && options.gearMode != "live" && options.commandMode != "live" {
             if !ablations.contains(.header) { header = try await headerRecognizer.read(image, sourceTime: time) }
+            let settledResult = resultSettleLook(image, panelCandidate: panelCandidate, at: time)
             if panelCandidate, let context = resultSession.context {
-                let result = try ResultScreenReader.read(image, context: context, sourceTime: time, languages: languages)
-                resultSession.accept(result); resultReadings.append(result.diagnosticRow)
+                if let settledResult {
+                    resultHeld += 1
+                    resultSession.accept(settledResult); resultReadings.append(settledResult.diagnosticRow)
+                } else {
+                    noteResultFrame(image, at: time)
+                    let result = try ResultScreenReader.read(image, context: context, sourceTime: time,
+                                                             languages: languages, parsers: logic.resultTextParser)
+                    resultSession.accept(result); resultReadings.append(result.diagnosticRow)
+                    noteResultRead(result)
+                }
             }
         } else {
             // Constrained, as the app with power saving: headers every 1 s
@@ -579,6 +803,9 @@ func replay(_ options: ReplayOptions, glyphsURL: URL) async throws {
             let headerInterval = options.constrained
                 ? AnalysisRateController.headerInterval(mode: .active, inHack: inHack(at: time), constrained: true) : nil
             if options.gearMode == "live" { observeGearPanel(gearBounds, at: time) }
+            let settled = options.gearMode == "live" ? gearSettleLook(image, bounds: gearBounds, at: time) : nil
+            let settledResult = options.resultMode != "off"
+                ? resultSettleLook(image, panelCandidate: panelCandidate, at: time) : nil
             if let request = textSchedule.take(at: time, panelCandidate: panelCandidate,
                                                resultEligible: options.resultMode != "off" && resultSession.context != nil,
                                                minimumInterval: laneInterval,
@@ -589,16 +816,23 @@ func replay(_ options: ReplayOptions, glyphsURL: URL) async throws {
                                                    && tracker.state != .presenting && tracker.state != .input,
                                                headerInterval: headerInterval,
                                                gearInterval: gearInterval, gearPanelPace: gearPanelPace()) {
-                ocrCounts[request.mode.rawValue, default: 0] += 1
-                if request.mode == .result, let context = resultSession.context {
-                    pending = (request, nil, try ResultScreenReader.read(image, context: context, sourceTime: time, languages: languages), nil, nil)
+                let reissued = request.mode == .gear ? settled != nil : request.mode == .result && settledResult != nil
+                if !reissued { ocrCounts[request.mode.rawValue, default: 0] += 1 }
+                if request.mode == .result, let settledResult {
+                    resultHeld += 1
+                    pendingResultReissued = true
+                    pending = (request, nil, settledResult, nil, nil)
+                } else if request.mode == .result, let context = resultSession.context {
+                    noteResultFrame(image, at: time)
+                    pending = (request, nil, try ResultScreenReader.read(image, context: context, sourceTime: time, languages: languages,
+                                                                         parsers: logic.resultTextParser), nil, nil)
                 } else if request.mode == .gear, let gearBounds {
-                    pending = (request, nil, nil, try readGear(image, bounds: gearBounds, at: time), nil)
+                    try takeGear(request, image, bounds: gearBounds, settled: settled, at: time)
                 } else if request.mode == .portal {
                     pending = (request, nil, nil, nil, try portalReader.read(image, sourceTime: time))
                 } else {
                     if request.mode == .command, let frame = commands.take(at: time) {
-                        pendingCommand = (frame, try CommandNoticeReader.read(frame, languages: languages))
+                        pendingCommand = (frame, try CommandNoticeReader.read(frame, languages: languages, logic: commandLogic))
                     }
                     pending = (request, ablations.contains(.header) ? nil : try await headerRecognizer.read(image, sourceTime: time), nil, nil, nil)
                 }
@@ -614,7 +848,7 @@ func replay(_ options: ReplayOptions, glyphsURL: URL) async throws {
             sessionID: sessionID, time: time, header: header, slots: slots, slotRejection: rejection,
             shape: observation.map(shapeAblator.evidence) ?? .unavailable,
             hasValidCalibration: observation?.calibration != nil && layoutConsistent,
-            hasInputTimerBar: timerVisible)
+            hasInputTimerBar: timerVisible, partialSlots: partialSlots, hasPartialInputTimerBar: partialTimerVisible)
         let produced = tracker.accept(evidence)
         if options.commandMode != "off" {
             for event in produced where event.kind == .hackStarted { commands.bind(hackID: event.hackID) }
@@ -626,11 +860,12 @@ func replay(_ options: ReplayOptions, glyphsURL: URL) async throws {
             case .cancel: commands.cancel()
             case .none: break
             }
-            if !evidence.hasValidCalibration { try commands.observeMode(in: image, at: time) }
+            if !evidence.hasValidCalibration { try commands.observeMode(in: image, at: time, panelShowing: false) }
         }
         if options.gearMode != "off" {
             for event in produced where event.kind == .hackStarted {
                 if let screen = portalObserver.claim(at: event.time) { portalScreens[event.hackID] = screen }
+                portalLimiter.reset()
             }
             if tracker.state == .input, tracker.hackID > 0, let count = tracker.expectedSlotCount, count > 0 {
                 glyphCounts[tracker.hackID] = count
@@ -643,7 +878,7 @@ func replay(_ options: ReplayOptions, glyphsURL: URL) async throws {
         lastTimerVisible = timerVisible
         let oldComparison = resultSession.comparison
         if let retired = resultSession.observe(evidence, presentation: tracker, panelCandidate: panelCandidate,
-                                               commands: options.commandMode == "off" ? nil : commands.summary(hackID: tracker.hackID)) {
+                                               imageAnalyzed: true, commands: options.commandMode == "off" ? nil : commands.summary(hackID: tracker.hackID)) {
             resultSummaries.append(summary(retired, comparison: oldComparison))
         }
         let checks = validator.accept(evidence, tracker: tracker, edgeEvidence: observation?.evidence ?? [])
@@ -735,6 +970,29 @@ func replay(_ options: ReplayOptions, glyphsURL: URL) async throws {
         }
     ]
 
+    // Only off the default, so a baseline report is byte for byte unchanged.
+    if options.engine != .swift || !options.cuts.isEmpty {
+        report["engine"] = options.engine.rawValue
+        report["cuts"] = options.cuts.map(\.rawValue).sorted()
+    }
+    // Only when seen, so a report without our window is unchanged.
+    if windowCover.frames > 0 {
+        report["windowCover"] = ["frames": windowCover.frames, "rows": windowCover.rows, "timers": windowCover.timers]
+    }
+    if portalSettle { report["portalHeld"] = portalHeld }
+    if gearSettle { report["gearHeld"] = gearHeld }
+    if resultSettle { report["resultHeld"] = resultHeld }
+    if leanGearRead || settlesGearLanguage {
+        var withheld: [String: Int] = [:]
+        if leanGearRead {
+            withheld["redRows"] = gearWithheld.redRows
+            withheld["emptyCells"] = gearWithheld.emptyCells
+            withheld["quantities"] = gearWithheld.quantities
+        }
+        if settlesGearLanguage { withheld["languageSweeps"] = gearWithheld.languageSweeps }
+        report["gearWithheld"] = withheld
+    }
+    if options.logic != .swift { report["logic"] = logic.name }
     if options.gearMode != "off" {
         report["gearSampling"] = ["mode": options.gearMode, "simulatedLatency": options.ocrLatency,
                                   "constrained": options.constrained, "analysedFrames": analysedFrames,
@@ -762,8 +1020,7 @@ func replay(_ options: ReplayOptions, glyphsURL: URL) async throws {
         report["portalLevels"] = try Set(portalScreens.keys).union(glyphCounts.keys).sorted().compactMap { hack -> [String: Any]? in
             // As live when commands are read; without them, as before.
             let settled = options.commandMode == "off" || commands.summary(hackID: hack).settlesGlyphCount
-            guard let estimate = PortalLevelRules.estimate(screen: portalScreens[hack], glyphCount: glyphCounts[hack],
-                                                           glyphCountSettled: settled),
+            guard let estimate = logic.portalLevelEstimate(portalScreens[hack], glyphCounts[hack], settled),
                   var row = try encoded(estimate) as? [String: Any] else { return nil }
             row["hackID"] = hack
             return row
@@ -802,7 +1059,12 @@ func replay(_ options: ReplayOptions, glyphsURL: URL) async throws {
 }
 
 if #available(macOS 15.0, iOS 18.0, *) {
-    try await replay(options, glyphsURL: glyphsURL)
+    do {
+        try await replay(options, glyphsURL: glyphsURL)
+    } catch let error as ReplayError {
+        FileHandle.standardError.write(Data("\(error)\n".utf8))
+        exit(2)
+    }
 } else {
     FileHandle.standardError.write(Data("glyph-replay needs macOS 15 or later for text recognition\n".utf8))
     exit(3)

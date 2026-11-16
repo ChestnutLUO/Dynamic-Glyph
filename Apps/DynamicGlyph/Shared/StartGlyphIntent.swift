@@ -1,9 +1,10 @@
 import AppIntents
 
-/// The Control Center switch's start, run by `ToggleGlyphIntent` when the
-/// switch is off: it opens the app, which then asks for screen sharing the
-/// way Home's Start does. It never starts capture by itself; the player still
-/// confirms in the system's sheet.
+/// The Control Center switch's start, run by `ToggleGlyphIntent` (on iOS
+/// 18.0-18.1, `LegacyToggleGlyphIntent`) when the switch is off: it opens the
+/// app, which then asks for screen sharing the way Home's Start does. It
+/// never starts capture by itself; the player still confirms in the system's
+/// sheet.
 ///
 /// Compiled into the app and the widget extension both: the extension's
 /// control names it, and because it opens the app, the system performs it in

@@ -7,8 +7,9 @@ import GlyphRecognition
 
 // The recording benchmark: a screen recording from Files, fed through the
 // capture pipeline (`LiveGlyphOutput`) at the pace live capture feeds it, with
-// power saving off, on, or both one after the other. A tester tool for
-// TestFlight builds; nothing it reads reaches the results, the statistics,
+// power saving off, on, or both one after the other, on the Swift arm of the
+// engine A/B, the C++ arm, or both, and likewise for the logic layer. A
+// tester tool for TestFlight builds; nothing it reads reaches the results, the statistics,
 // the Live Activity, the floating window or the Power section's live figures.
 
 /// Which pipeline the benchmark runs.
@@ -47,6 +48,51 @@ enum BenchmarkPasses: String, CaseIterable, Sendable {
         case .accuracy: return [.accuracy]
         case .realTime: return [.realTime]
         case .both: return [.accuracy, .realTime]
+        }
+    }
+}
+
+/// Which arms of the engine A/B the benchmark runs.
+enum BenchmarkEngines: String, CaseIterable, Sendable {
+    case swift, cpp, both
+
+    /// The one arm `choice` names.
+    init(_ choice: RecognitionEngineChoice) {
+        switch choice {
+        case .swift: self = .swift
+        case .cpp: self = .cpp
+        }
+    }
+
+    /// Swift first: the pipeline shipped before the C++ engine is the
+    /// reference for the C++ arm.
+    var choices: [RecognitionEngineChoice] {
+        switch self {
+        case .swift: return [.swift]
+        case .cpp: return [.cpp]
+        case .both: return [.swift, .cpp]
+        }
+    }
+}
+
+/// Which arms of the logic layer the benchmark runs, beside the engine's.
+enum BenchmarkLogic: String, CaseIterable, Sendable {
+    case swift, cpp, both
+
+    /// The one arm `choice` names.
+    init(_ choice: RecognitionLogicChoice) {
+        switch choice {
+        case .swift: self = .swift
+        case .cpp: self = .cpp
+        }
+    }
+
+    /// Swift first: the shipped logic is the reference for the C++ arm.
+    var choices: [RecognitionLogicChoice] {
+        switch self {
+        case .swift: return [.swift]
+        case .cpp: return [.cpp]
+        case .both: return [.swift, .cpp]
         }
     }
 }
@@ -253,6 +299,16 @@ struct BenchmarkHackRecorder: Sendable {
 struct BenchmarkRunResult: Sendable {
     var powerSaving: Bool
     var pace: BenchmarkPace = .realTime
+    /// The arm chosen for the run, and the name the engine made gave itself:
+    /// they differ when the C++ engine can't take the shape list and the
+    /// Swift one runs instead, for the reason in `engineFallback`.
+    var engine: RecognitionEngineChoice = .swift
+    var engineName = "swift"
+    var engineFallback: String?
+    /// The logic arm chosen for the run, and the name its set gave itself.
+    var logic: RecognitionLogicChoice = .swift
+    var logicName = "swift"
+    var cuts: Set<RecognitionCut> = []
     var cancelled = false
     var error: String?
     var sourceSize: (width: Int, height: Int) = (0, 0)
@@ -292,16 +348,27 @@ final class BenchmarkRunner: @unchecked Sendable {
     private let configuration: BenchmarkConfiguration
     private let powerSaving: Bool
     private let pace: BenchmarkPace
+    private let engineChoice: RecognitionEngineChoice
+    private let logicChoice: RecognitionLogicChoice
+    private let cuts: Set<RecognitionCut>
     private let cancellation: BenchmarkCancellation
     private let progress: @Sendable (Double) -> Void
     private let lock = NSLock()
     private var pending = 0
 
+    /// `engine` and `cuts` are the run's arm of the engine A/B and the power
+    /// cuts it runs with, and `logic` its arm of the logic layer, beside
+    /// `pace` and `powerSaving`.
     init(configuration: BenchmarkConfiguration, powerSaving: Bool, pace: BenchmarkPace = .realTime,
+         engine: RecognitionEngineChoice = .swift, logic: RecognitionLogicChoice = .swift,
+         cuts: Set<RecognitionCut> = [],
          cancellation: BenchmarkCancellation, progress: @escaping @Sendable (Double) -> Void = { _ in }) {
         self.configuration = configuration
         self.powerSaving = powerSaving
         self.pace = pace
+        engineChoice = engine
+        logicChoice = logic
+        self.cuts = cuts
         self.cancellation = cancellation
         self.progress = progress
     }
@@ -309,7 +376,8 @@ final class BenchmarkRunner: @unchecked Sendable {
     /// Blocks for the movie's length, or as long as the accuracy pace takes.
     /// Call on a thread of its own.
     func run(_ source: BenchmarkFrameSource) -> BenchmarkRunResult {
-        var result = BenchmarkRunResult(powerSaving: powerSaving, pace: pace)
+        var result = BenchmarkRunResult(powerSaving: powerSaving, pace: pace, engine: engineChoice,
+                                        logic: logicChoice, cuts: cuts)
         result.sourceSize = source.sourceSize
         result.scaledSize = source.scaledSize
         result.movieDuration = source.duration
@@ -317,23 +385,36 @@ final class BenchmarkRunner: @unchecked Sendable {
         result.lowPowerAtStart = ProcessInfo.processInfo.isLowPowerModeEnabled
 
         let meter = PowerMeter()
-        // Fresh: nothing learned in capture or in an earlier run carries over,
-        // and what this run finds is not remembered for the next capture.
-        let languages = GameLanguageMemory(language: configuration.language,
-                                           isAutomatic: configuration.automaticLanguage)
+        let sessionID = CaptureSessionID(rawValue: UInt64.random(in: 1..<UInt64.max))
+        // A fresh logic set per run, as a capture session gets one. Its
+        // language memory is fresh too: nothing learned in capture or in an
+        // earlier run carries over, and what this run finds is not
+        // remembered for the next capture.
+        let logic = makeRecognitionLogic(choice: logicChoice, table: configuration.table,
+                                         sequenceTable: configuration.sequenceTable, sessionID: sessionID,
+                                         language: configuration.language,
+                                         automaticLanguage: configuration.automaticLanguage)
+        let languages = logic.languageMemory
+        result.logicName = logic.name
         let recorder = Locked(BenchmarkHackRecorder())
         let queue = DispatchQueue(label: "org.szres.DynamicGlyph.benchmark.recognition", qos: .userInitiated)
+        // A fresh engine per run, as a capture session gets one.
+        // A fallback to the Swift engine runs with the cuts it honours.
+        let engineSetup = makeRecognitionEngine(choice: engineChoice, table: configuration.table, cuts: cuts)
+        let engine = engineSetup.engine, runCuts = engineSetup.cuts
+        result.engineName = engine.name
+        result.engineFallback = engineSetup.fallback
+        result.cuts = runCuts
         let output: LiveGlyphOutput
         do {
             output = try LiveGlyphOutput(
                 table: configuration.table, sequenceTable: configuration.sequenceTable,
-                sessionID: CaptureSessionID(rawValue: UInt64.random(in: 1..<UInt64.max)),
+                sessionID: sessionID,
                 directory: nil, readsResults: configuration.readsResults, readsGear: configuration.readsGear,
-                languages: languages,
                 // Pinned: Low Power Mode or heat during one run and not the
                 // other would make the two incomparable.
                 power: PowerConditions(center: NotificationCenter(), read: { .init() }),
-                powerSaving: powerSaving, meter: meter,
+                powerSaving: powerSaving, engine: engine, cuts: runCuts, logic: logic, meter: meter,
                 trace: { trace in recorder.withLock { $0.accept(trace) } },
                 telemetry: { _ in }, deliverResult: { _ in }) { _ in }
         } catch {
@@ -347,7 +428,7 @@ final class BenchmarkRunner: @unchecked Sendable {
 
         // Vision's reads are timed through one process-wide hook: pointed at
         // this run's meter while it runs, and back at the live one after.
-        meter.reset(languages: languages)
+        meter.reset(languages: languages, engine: engineSetup.label, logic: logic.name, cuts: runCuts)
         meter.observeTextReads()
         defer { PowerMeter.shared.observeTextReads() }
 
@@ -537,28 +618,74 @@ struct BenchmarkComparison: Equatable, Sendable {
 enum BenchmarkReport {
     static let width = 42
 
-    /// Each run, then Off against On at each pace. The accuracy pass, when
-    /// run, compares the Glyphs and hack starts; the real pace the power.
+    /// Each run, then Off against On at each pace within each engine and
+    /// logic arm; then, when both engines ran, Swift against C++ at each
+    /// pace and power saving within each logic arm; then, when both logic
+    /// arms ran, likewise within each engine. The accuracy pass, when run,
+    /// compares the Glyphs and hack starts; the real pace the power.
     static func report(_ results: [BenchmarkRunResult]) -> [String] {
         var lines: [String] = []
-        func off(_ pace: BenchmarkPace) -> BenchmarkRunResult? {
-            results.first { !$0.powerSaving && $0.pace == pace }
-        }
-        func on(_ pace: BenchmarkPace) -> BenchmarkRunResult? {
-            results.first { $0.powerSaving && $0.pace == pace }
+        let engines = RecognitionEngineChoice.allCases.filter { choice in results.contains { $0.engine == choice } }
+        let logics = RecognitionLogicChoice.allCases.filter { choice in results.contains { $0.logic == choice } }
+        func run(_ engine: RecognitionEngineChoice, _ logic: RecognitionLogicChoice, _ pace: BenchmarkPace,
+                 saving: Bool) -> BenchmarkRunResult? {
+            results.first { $0.engine == engine && $0.logic == logic && $0.pace == pace && $0.powerSaving == saving }
         }
         for result in results {
             if !lines.isEmpty { lines.append("") }
-            // In Both, the On run's hack starts are timed against the Off run's.
-            let reference = result.powerSaving ? off(result.pace)?.hacks : nil
+            // In Both, the On run's hack starts are timed against the Off
+            // run's of the same engine and logic.
+            let reference = result.powerSaving
+                ? run(result.engine, result.logic, result.pace, saving: false)?.hacks : nil
             lines += BenchmarkReport.lines(result, reference: reference)
         }
-        let accuracyCompared = off(.accuracy) != nil && on(.accuracy) != nil
-        for pace in [BenchmarkPace.accuracy, .realTime] {
-            guard let off = off(pace), let on = on(pace) else { continue }
-            lines.append("")
-            lines += BenchmarkReport.comparisonLines(off: off, on: on,
-                                                     hacks: pace == .accuracy || !accuracyCompared)
+        for engine in engines {
+            for logic in logics {
+                let accuracyCompared = run(engine, logic, .accuracy, saving: false) != nil
+                    && run(engine, logic, .accuracy, saving: true) != nil
+                for pace in [BenchmarkPace.accuracy, .realTime] {
+                    guard let off = run(engine, logic, pace, saving: false),
+                          let on = run(engine, logic, pace, saving: true) else { continue }
+                    lines.append("")
+                    lines += BenchmarkReport.comparisonLines(off: off, on: on,
+                                                             hacks: pace == .accuracy || !accuracyCompared,
+                                                             engine: engines.count > 1 ? engine : nil,
+                                                             logic: logics.count > 1 ? logic : nil)
+                }
+            }
+        }
+        if engines.count > 1 {
+            for logic in logics {
+                let accuracyCompared = [false, true].contains {
+                    run(.swift, logic, .accuracy, saving: $0) != nil && run(.cpp, logic, .accuracy, saving: $0) != nil
+                }
+                for pace in [BenchmarkPace.accuracy, .realTime] {
+                    for saving in [false, true] {
+                        guard let swift = run(.swift, logic, pace, saving: saving),
+                              let cpp = run(.cpp, logic, pace, saving: saving) else { continue }
+                        lines.append("")
+                        lines += BenchmarkReport.engineComparisonLines(swift: swift, cpp: cpp,
+                                                                       hacks: pace == .accuracy || !accuracyCompared,
+                                                                       logic: logics.count > 1 ? logic : nil)
+                    }
+                }
+            }
+        }
+        if logics.count > 1 {
+            for engine in engines {
+                let accuracyCompared = [false, true].contains {
+                    run(engine, .swift, .accuracy, saving: $0) != nil && run(engine, .cpp, .accuracy, saving: $0) != nil
+                }
+                for pace in [BenchmarkPace.accuracy, .realTime] {
+                    for saving in [false, true] {
+                        guard let swift = run(engine, .swift, pace, saving: saving),
+                              let cpp = run(engine, .cpp, pace, saving: saving) else { continue }
+                        lines.append("")
+                        lines += BenchmarkReport.logicComparisonLines(swift: swift, cpp: cpp,
+                                                                      hacks: pace == .accuracy || !accuracyCompared)
+                    }
+                }
+            }
         }
         return lines
     }
@@ -573,6 +700,12 @@ enum BenchmarkReport {
     static func lines(_ run: BenchmarkRunResult, reference: [BenchmarkHack]? = nil) -> [String] {
         var lines: [String] = []
         lines.append("== power saving \(run.powerSaving ? "ON" : "OFF") · \(run.pace.label) ==")
+        // The engine by its own name; the choice and why too when it fell back.
+        let engine = RecognitionEngineSetup.label(name: run.engineName, choice: run.engine,
+                                                  fallback: run.engineFallback)
+        let logic = run.logicName == run.logic.rawValue ? run.logicName
+                                                         : "\(run.logicName) (chose \(run.logic.rawValue))"
+        lines += PowerReport.engineLines(engine, logic: logic, cuts: run.cuts)
         let counts = frameCounts(run)
         lines.append("fed/delivered/analysed: \(counts.fed)/\(counts.delivered)/\(counts.analysed)")
         if run.cancelled { lines.append("CANCELLED") }
@@ -585,12 +718,14 @@ enum BenchmarkReport {
                             run.scaledSize.width, run.scaledSize.height))
         let s = run.power
         if run.pace == .accuracy {
-            // Nothing dropped and no clock: only what decides the reading.
+            // Nothing dropped and no clock: what decides the reading, and the
+            // work held back, counted without rates.
             lines += PowerReport.modeLines(s.modes)
             lines.append(PowerReport.row("text read", "n"))
             for metric in PowerMetric.textReads where s.total(metric).count > 0 {
                 lines.append(PowerReport.row(metric.label, "\(s.total(metric).count)"))
             }
+            lines += PowerReport.workLines(s, perMinute: nil)
             lines += hackLines(run, reference: reference)
             return lines
         }
@@ -620,15 +755,19 @@ enum BenchmarkReport {
                             run.powerSaving ? 1 : BenchmarkRunner.maximumPending))
         lines += PowerReport.modeLines(s.modes)
 
-        // Text reads
+        // Text reads, and the work the header schedule and the cuts held back,
+        // each per minute of movie.
+        func perMovieMinute(_ metric: PowerMetric) -> Double? {
+            run.covered >= 1 ? Double(s.total(metric).count) * 60 / run.covered : nil
+        }
         lines.append(PowerReport.row("text read", "n", "/min", "avg ms", "max ms"))
         for metric in PowerMetric.textReads {
             let total = s.total(metric)
-            let rate = run.covered >= 1 ? Double(total.count) * 60 / run.covered : nil
-            lines.append(PowerReport.row(metric.label, "\(total.count)", PowerReport.rate(rate),
+            lines.append(PowerReport.row(metric.label, "\(total.count)", PowerReport.rate(perMovieMinute(metric)),
                                          PowerReport.milliseconds(total.averageMilliseconds),
                                          PowerReport.milliseconds(total.maxMilliseconds)))
         }
+        lines += PowerReport.workLines(s, perMinute: perMovieMinute)
 
         // Steps
         lines.append(PowerReport.row("step", "runs", "ms/run", "ms/frm", "max"))
@@ -668,49 +807,104 @@ enum BenchmarkReport {
         return lines
     }
 
+    /// How a comparison names its two runs: the reference (Off, or the Swift
+    /// arm) and the candidate judged against it (On, or the C++ arm).
+    struct ComparisonLabels {
+        var reference: String
+        var candidate: String
+        var missed: String
+        var only: String
+
+        static let powerSaving = ComparisonLabels(reference: "off", candidate: "on",
+                                                  missed: "MISSED WITH POWER SAVING", only: "only with power saving")
+        static let engines = ComparisonLabels(reference: "swift", candidate: "cpp",
+                                              missed: "MISSED WITH C++", only: "only with C++")
+        static let logic = ComparisonLabels(reference: "swift", candidate: "cpp",
+                                            missed: "MISSED WITH C++ LOGIC", only: "only with C++ logic")
+    }
+
     /// Off then On at one pace: what changed with power saving. `hacks`
     /// compares the Glyphs and hack starts in full; the accuracy pass does,
-    /// and the real pace when there is no accuracy pass to do it.
+    /// and the real pace when there is no accuracy pass to do it. `engine`
+    /// names the arm in the title when more than one ran; `logic` the logic
+    /// arm, on a line under it, when more than one ran.
     static func comparisonLines(off: BenchmarkRunResult, on: BenchmarkRunResult,
-                                hacks: Bool = true) -> [String] {
-        let comparison = BenchmarkComparison(off: off.hacks, on: on.hacks)
-        var lines = ["== \(off.pace.label): Off vs On =="]
-        let a = frameCounts(off), b = frameCounts(on)
-        lines.append(PowerReport.row("frames", "off", "on"))
+                                hacks: Bool = true, engine: RecognitionEngineChoice? = nil,
+                                logic: RecognitionLogicChoice? = nil) -> [String] {
+        let title = "== \(off.pace.label): Off vs On" + (engine.map { " (\($0.rawValue))" } ?? "") + " =="
+        return comparisonLines(reference: off, candidate: on, title: title, subtitle: logic.map { "logic \($0.rawValue)" },
+                               labels: .powerSaving, hacks: hacks)
+    }
+
+    /// The Swift arm then the C++ arm at one pace and power saving: what the
+    /// port and its cuts changed. A cut is kept only when the C++ run reads
+    /// every hack the Swift run reads.
+    /// `logic` names the logic arm both ran on, under the title, when more
+    /// than one ran.
+    static func engineComparisonLines(swift: BenchmarkRunResult, cpp: BenchmarkRunResult,
+                                      hacks: Bool = true, logic: RecognitionLogicChoice? = nil) -> [String] {
+        let title = "== \(swift.pace.label): swift vs cpp (saving \(swift.powerSaving ? "ON" : "OFF")) =="
+        return comparisonLines(reference: swift, candidate: cpp, title: title,
+                               subtitle: logic.map { "logic \($0.rawValue)" }, labels: .engines, hacks: hacks)
+    }
+
+    /// The Swift logic arm then the C++ one, on the same engine, pace and
+    /// power saving: the port of the logic layer should change nothing read.
+    static func logicComparisonLines(swift: BenchmarkRunResult, cpp: BenchmarkRunResult,
+                                     hacks: Bool = true) -> [String] {
+        let title = "== \(swift.pace.label): logic swift vs cpp =="
+        let subtitle = "engine \(swift.engine.rawValue) · saving \(swift.powerSaving ? "ON" : "OFF")"
+        return comparisonLines(reference: swift, candidate: cpp, title: title, subtitle: subtitle, labels: .logic,
+                               hacks: hacks)
+    }
+
+    private static func comparisonLines(reference: BenchmarkRunResult, candidate: BenchmarkRunResult, title: String,
+                                        subtitle: String? = nil, labels: ComparisonLabels,
+                                        hacks: Bool) -> [String] {
+        let comparison = BenchmarkComparison(off: reference.hacks, on: candidate.hacks)
+        var lines = [title]
+        if let subtitle { lines.append(subtitle) }
+        let a = frameCounts(reference), b = frameCounts(candidate)
+        lines.append(PowerReport.row("frames", labels.reference, labels.candidate))
         lines.append(PowerReport.row("fed", "\(a.fed)", "\(b.fed)"))
         lines.append(PowerReport.row("delivered", "\(a.delivered)", "\(b.delivered)"))
         lines.append(PowerReport.row("analysed", "\(a.analysed)", "\(b.analysed)"))
-        if off.pace == .realTime {
-            lines.append(PowerReport.row("dropped", "\(off.power.total(.backlogDropped).count)",
-                                         "\(on.power.total(.backlogDropped).count)"))
+        if reference.pace == .realTime {
+            lines.append(PowerReport.row("dropped", "\(reference.power.total(.backlogDropped).count)",
+                                         "\(candidate.power.total(.backlogDropped).count)"))
         }
         if hacks {
-            lines += hackComparisonLines(comparison)
+            lines += hackComparisonLines(comparison, labels: labels)
         } else {
             let missed = comparison.missedWithPowerSaving.count
-            lines.append("hacks off \(off.hacks.count) · on \(on.hacks.count)"
+            lines.append("hacks \(labels.reference) \(reference.hacks.count) · \(labels.candidate) \(candidate.hacks.count)"
                          + (missed > 0 ? " · \(missed) MISSED" : ""))
         }
-        guard off.pace == .realTime else { return lines }
+        guard reference.pace == .realTime else { return lines }
         // CPU seconds, not % of a core: a run that falls behind runs on
         // after the movie, which spreads the same work over a longer time.
-        let offCPU = off.power.cpuSeconds, onCPU = on.power.cpuSeconds
-        let change = offCPU > 0 ? String(format: " (%+.0f%%)", (onCPU - offCPU) / offCPU * 100) : ""
-        lines.append(String(format: "app CPU %.1f s -> %.1f s", offCPU, onCPU) + change)
-        let late = off.wallSeconds - on.wallSeconds
-        if late >= 1 { lines.append("Off ran \(clock(late)) longer: backlog") }
+        let referenceCPU = reference.power.cpuSeconds, candidateCPU = candidate.power.cpuSeconds
+        let change = referenceCPU > 0
+            ? String(format: " (%+.0f%%)", (candidateCPU - referenceCPU) / referenceCPU * 100) : ""
+        lines.append(String(format: "app CPU %.1f s -> %.1f s", referenceCPU, candidateCPU) + change)
+        let late = reference.wallSeconds - candidate.wallSeconds
+        if late >= 1 { lines.append("\(labels.reference) ran \(clock(late)) longer: backlog") }
         for metric in [PowerMetric.headerFast, .headerAccurate] {
-            let a = off.power.total(metric).count, b = on.power.total(metric).count
+            let a = reference.power.total(metric).count, b = candidate.power.total(metric).count
             if a + b > 0 { lines.append(String(format: "%@ reads %llu -> %llu", metric.label, a, b)) }
+        }
+        for metric in PowerMetric.headerStill + PowerMetric.headerMasked + PowerMetric.headerCovered {
+            let a = reference.power.total(metric).count, b = candidate.power.total(metric).count
+            if a + b > 0 { lines.append(String(format: "%@ skips %llu -> %llu", metric.label, a, b)) }
         }
         return lines
     }
 
-    private static func hackComparisonLines(_ comparison: BenchmarkComparison) -> [String] {
+    private static func hackComparisonLines(_ comparison: BenchmarkComparison, labels: ComparisonLabels) -> [String] {
         var lines: [String] = []
         let identical = comparison.sequencesIdentical
         lines.append("identical Glyph sequences: " + (identical ? "yes" : "NO"))
-        lines.append(PowerReport.row("hack", "off s", "on s", "diff"))
+        lines.append(PowerReport.row("hack", "\(labels.reference) s", "\(labels.candidate) s", "diff"))
         for (number, pair) in comparison.pairs.enumerated() {
             let label = "#\(number + 1) " + clock(pair.off?.shownAt ?? pair.on?.recognisedAt ?? 0)
             let offDelay = pair.off?.ownDelay
@@ -719,16 +913,16 @@ enum BenchmarkReport {
             let diff = onDelay.flatMap { on in offDelay.map { on - $0 } }
             lines.append(PowerReport.row(label, seconds(offDelay), pair.on == nil ? "-" : seconds(onDelay),
                                          diff.map { String(format: "%+.2f", $0) } ?? "-"))
-            if pair.on == nil, pair.off != nil { lines.append("   MISSED WITH POWER SAVING") }
-            if pair.off == nil { lines.append("   only with power saving") }
+            if pair.on == nil, pair.off != nil { lines.append("   " + labels.missed) }
+            if pair.off == nil { lines.append("   " + labels.only) }
             if (pair.off?.glyphs ?? []) != (pair.on?.glyphs ?? []) {
-                lines += wrap("off: " + glyphText(pair.off), first: "   ", rest: "        ")
-                lines += wrap("on: " + glyphText(pair.on), first: "   ", rest: "        ")
+                lines += wrap("\(labels.reference): " + glyphText(pair.off), first: "   ", rest: "        ")
+                lines += wrap("\(labels.candidate): " + glyphText(pair.on), first: "   ", rest: "        ")
             }
         }
         if comparison.pairs.isEmpty { lines.append("  no hacks in either run") }
         let missed = comparison.missedWithPowerSaving.count
-        if missed > 0 { lines.append("\(missed) hack(s) MISSED WITH POWER SAVING") }
+        if missed > 0 { lines.append("\(missed) hack(s) " + labels.missed) }
         return lines
     }
 

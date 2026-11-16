@@ -162,9 +162,22 @@ struct LiveGlyphOutputTests {
         #expect(try !Harness(keepsLogs: false, readsResults: false, readsGear: true).output.readsGear)
     }
 
-    @Test("Without a shape list only gear is read, whatever the result switches say")
-    func gearOnlySwitches() throws {
-        let harness = try Harness(keepsLogs: false, assistsGlyphs: false)
+    /// Gear-only capture on the harness's Swift arm, or on what a capture runs
+    /// for a player who never chose: the default engine, cuts and logic, made
+    /// as `CaptureEngine` makes them.
+    private static func gearOnlyHarness(keepsLogs: Bool, onDefaults: Bool) throws -> Harness {
+        guard onDefaults else { return try Harness(keepsLogs: keepsLogs, assistsGlyphs: false) }
+        let cuts = AppPreferences.defaultRecognitionCuts
+        let setup = makeRecognitionEngine(choice: AppPreferences.defaultRecognitionEngine, table: nil, cuts: cuts)
+        #expect(setup.engine.name == "cpp" && setup.fallback == nil && setup.cuts == cuts)
+        return try Harness(keepsLogs: keepsLogs, assistsGlyphs: false, engine: setup.engine, cuts: setup.cuts,
+                           logic: AppPreferences.defaultRecognitionLogic)
+    }
+
+    @Test("Without a shape list only gear is read, whatever the result switches say, on Swift and on the defaults",
+          arguments: [false, true])
+    func gearOnlySwitches(onDefaults: Bool) throws {
+        let harness = try Self.gearOnlyHarness(keepsLogs: false, onDefaults: onDefaults)
         #expect(!harness.output.assistsGlyphs && harness.output.readsGear)
         // A Glyph on screen is not looked for: the display only watches for gear.
         harness.output.process(try harness.frame(try Frames.recorded(), at: 0))
@@ -174,9 +187,10 @@ struct LiveGlyphOutputTests {
         #expect(snapshot.gear == GearDropDisplay(state: .watching, hackID: nil, itemCount: 0))
     }
 
-    @Test("Gear-only capture saves a drop group with what its panel showed")
-    func gearOnlyDrop() throws {
-        let harness = try Harness(keepsLogs: true, assistsGlyphs: false)
+    @Test("Gear-only capture saves a drop group with what its panel showed, on Swift and on the defaults",
+          arguments: [false, true])
+    func gearOnlyDrop(onDefaults: Bool) throws {
+        let harness = try Self.gearOnlyHarness(keepsLogs: true, onDefaults: onDefaults)
         let panel = try Frames.recorded("five-base")
         let blank = try Frames.solid(width: CVPixelBufferGetWidth(panel), height: CVPixelBufferGetHeight(panel))
         // Text recognition runs on its own queue. Each frame waits for its
@@ -915,6 +929,299 @@ struct LiveGlyphOutputTests {
         #expect(saving.allSatisfy { $0["analysisMode"] as? String == "active" })
     }
 
+    /// One hack from the fixtures through the output at 20 Hz, waiting for
+    /// each text read: the map, the command channel, two Glyphs, the input,
+    /// the result, both gear panels, the map again. Nil `logic` and `engine`
+    /// leave the output its own Swift arms.
+    private struct ScriptedHack {
+        var snapshots: [GlyphDisplaySnapshot]
+        var logs: [String: [String]]
+        var results: [HackResultSummary]
+        var gear: [HackGearAttachment]
+        var drops: [GearDrop]
+        var logicName: String
+        var engineName: String
+        /// Gear and result reads the lane ran, and those the settle cuts
+        /// answered instead.
+        var gearReads = 0
+        var gearHeld: UInt64 = 0
+        var resultReads = 0
+        var resultHeld: UInt64 = 0
+        /// What the gear read cuts left out (`PowerMetric.gearSkipped`).
+        var gearSkipped: [PowerMetric: UInt64] = [:]
+
+        static func run(logic: RecognitionLogicChoice? = nil, engine: FrameRecognitionEngine? = nil,
+                        cuts: Set<RecognitionCut> = [],
+                        table: GlyphTable = SetupDemo.builtInTable) throws -> ScriptedHack {
+            let empty = try Frames.recorded("field-00456"), glyph = try Frames.recorded("field-00443")
+            let input = try Frames.recorded("field-00492"), command = try Frames.recorded("field-00381")
+            let width = CVPixelBufferGetWidth(empty), height = CVPixelBufferGetHeight(empty)
+            let size = (width: width, height: height)
+            let result = try Frames.recorded("four-final", size: size)
+            let base = try Frames.recorded("five-base", size: size)
+            let bonus = try Frames.recorded("five-bonus", size: size)
+            let map = try Frames.recorded("frame-02092", ext: "jpg")
+            let script: [(CVPixelBuffer, Int)] = [(map, 20), (command, 20), (empty, 20), (glyph, 20), (empty, 4),
+                                                  (glyph, 20), (input, 30), (result, 60), (base, 40), (bonus, 40),
+                                                  (map, 40)]
+            let meter = LiveGlyphOutputTests.meter()
+            let harness = try Harness(readsResults: true, readsGear: true, table: table, engine: engine, cuts: cuts,
+                                      logic: logic, meter: meter)
+            var index = 0
+            for (buffer, count) in script {
+                for _ in 0..<count {
+                    let time = Double(index) / 20
+                    harness.output.process(try harness.frame(buffer, at: time, arrival: 100 + time))
+                    try harness.waitForTextReads()
+                    index += 1
+                }
+            }
+            let logicName = harness.output.logicName
+            let gearReads = harness.output.textReadMetrics.gearSubmitted
+            let resultReads = harness.output.textReadMetrics.resultSubmitted
+            _ = try harness.finish()
+            let folder = try #require(harness.directory).url
+            // Every log a session keeps, less the per-frame timings, the
+            // text lane's latencies and each gear read pass's Vision time,
+            // which no logic decides.
+            let timed: Set<String> = ["processingMilliseconds", "queueMilliseconds", "recordingOfferMilliseconds",
+                                      "headerLatencyMilliseconds", "resultLatencyMilliseconds",
+                                      "resultTotalLatencyMilliseconds"]
+            var logs: [String: [String]] = [:]
+            for name in ["recognition", "tracking", "results", "gear-drops", "commands", "input-validation"] {
+                let text = try String(contentsOf: folder.appendingPathComponent("\(name).jsonl"), encoding: .utf8)
+                logs[name] = try text.split(separator: "\n").map { line in
+                    var row = try #require(try JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: Any])
+                    for key in timed { row[key] = nil }
+                    if let passes = row["passes"] as? [[String: Any]] {
+                        row["passes"] = passes.map { pass in pass.filter { $0.key != "milliseconds" } }
+                    }
+                    return String(decoding: try JSONSerialization.data(withJSONObject: row, options: [.sortedKeys]),
+                                  as: UTF8.self)
+                }
+            }
+            // Each run has its own session folder; the pictures in it match.
+            func local(_ pictures: [HackGearPicture]) -> [HackGearPicture] {
+                pictures.map { HackGearPicture(path: URL(fileURLWithPath: $0.path).lastPathComponent, stage: $0.stage) }
+            }
+            let gear = harness.gear.values.map { attachment -> HackGearAttachment in
+                var attachment = attachment
+                attachment.sessionFolder = nil
+                attachment.pictures = attachment.pictures.map(local)
+                return attachment
+            }
+            let drops = harness.drops.values.map { drop -> GearDrop in
+                var drop = drop
+                drop.sessionFolder = nil
+                drop.pictures = local(drop.pictures)
+                return drop
+            }
+            return ScriptedHack(snapshots: harness.updates.values.map(\.snapshot), logs: logs,
+                                results: harness.results.values, gear: gear, drops: drops, logicName: logicName,
+                                engineName: engine?.name ?? "swift", gearReads: gearReads,
+                                gearHeld: meter.snapshot().total(.gearHeld).count, resultReads: resultReads,
+                                resultHeld: meter.snapshot().total(.resultHeld).count,
+                                gearSkipped: Dictionary(uniqueKeysWithValues: PowerMetric.gearSkipped.map {
+                                    ($0, meter.snapshot().total($0).count)
+                                }))
+        }
+
+        /// The hack was followed and its result and drop read, so a
+        /// comparison with this run covers every area.
+        func expectCoversEveryArea() {
+            #expect(snapshots.contains { $0.state == .input && $0.expectedSlotCount != nil })
+            #expect(results.contains { $0.hackingBonus != nil })
+            #expect(!(logs["tracking"] ?? []).isEmpty && !(logs["gear-drops"] ?? []).isEmpty)
+        }
+    }
+
+    @Test("The C++ logic set reads a hack, its result and its gear drop exactly as the Swift set does",
+          .timeLimit(.minutes(10)))
+    func logicArmsAgree() throws {
+        // The output's default is the Swift set the Swift choice makes, so
+        // the shipped run stands for both; the factory test covers the choice.
+        let shipped = try ScriptedHack.run(), cpp = try ScriptedHack.run(logic: .cpp)
+        #expect(shipped.logicName == "swift" && cpp.logicName == "cpp")
+        shipped.expectCoversEveryArea()
+        #expect(cpp.snapshots == shipped.snapshots)
+        for (log, rows) in shipped.logs {
+            #expect(cpp.logs[log] == rows, "\(log).jsonl")
+        }
+        #expect(cpp.results == shipped.results)
+        #expect(cpp.gear == shipped.gear)
+        #expect(cpp.drops == shipped.drops)
+    }
+
+    @Test("A settle cut reads the scripted hack, its result and its gear drop as without it, with fewer panel reads",
+          .timeLimit(.minutes(10)),
+          arguments: [Set<RecognitionCut>([.gearSettle]), [.resultSettle], [.gearSettle, .resultSettle]])
+    func settleCutsAgreeWithoutThem(_ cuts: Set<RecognitionCut>) throws {
+        let off = try ScriptedHack.run()
+        let on = try ScriptedHack.run(cuts: cuts)
+        off.expectCoversEveryArea()
+        #expect(on.snapshots == off.snapshots)
+        // A settled reading issued again is logged as such, with no OCR
+        // passes of its own, and the per-frame log counts the lane's OCR,
+        // which the cut lowers; everything else in the logs is the same.
+        func plain(_ rows: [String]) throws -> [String] {
+            try rows.map { line in
+                var row = try #require(try JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: Any])
+                for key in ["reissued", "passes", "headerSubmitted", "headerCompleted", "resultSubmitted",
+                            "resultCompleted"] { row[key] = nil }
+                return String(decoding: try JSONSerialization.data(withJSONObject: row, options: [.sortedKeys]),
+                              as: UTF8.self)
+            }
+        }
+        for (log, rows) in off.logs {
+            let settled = try plain(on.logs[log] ?? []), read = try plain(rows)
+            let first = zip(read, settled).first { $0 != $1 }.map { "\($0.0)\n  became \($0.1)" } ?? "none"
+            #expect(settled == read, "\(log).jsonl: \(read.count) rows off, \(settled.count) on; first difference \(first)")
+        }
+        #expect(on.results == off.results)
+        #expect(on.gear == off.gear)
+        #expect(on.drops == off.drops)
+        #expect(off.gearHeld == 0 && off.resultHeld == 0)
+        if cuts.contains(.gearSettle) {
+            #expect(on.gearHeld > 0 && on.gearReads + Int(on.gearHeld) == off.gearReads,
+                    "\(on.gearReads) gear reads and \(on.gearHeld) held, against \(off.gearReads)")
+        } else {
+            #expect(on.gearHeld == 0 && on.gearReads == off.gearReads)
+        }
+        if cuts.contains(.resultSettle) {
+            #expect(on.resultHeld > 0 && on.resultReads + Int(on.resultHeld) == off.resultReads,
+                    "\(on.resultReads) result reads and \(on.resultHeld) held, against \(off.resultReads)")
+        } else {
+            #expect(on.resultHeld == 0 && on.resultReads == off.resultReads)
+        }
+    }
+
+    @Test("The gear lean read reads the scripted hack, its result and its gear drop as without it, with the passes it left out counted",
+          .timeLimit(.minutes(10)))
+    func leanGearReadAgreesWithoutIt() throws {
+        let off = try ScriptedHack.run()
+        let on = try ScriptedHack.run(cuts: [.gearLeanRead])
+        off.expectCoversEveryArea()
+        #expect(on.snapshots == off.snapshots)
+        #expect(on.results == off.results)
+        #expect(on.gear == off.gear)
+        #expect(on.drops == off.drops)
+        #expect(on.gearReads == off.gearReads)
+        // Each gear read's passes are logged, and a shorter gear read frees
+        // the lane sooner, which the per-frame log's lane counts show; only
+        // they may differ.
+        func passes(_ rows: [String]) throws -> (count: Int, rest: [String]) {
+            var count = 0
+            let rest = try rows.map { line in
+                var row = try #require(try JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: Any])
+                count += (row["passes"] as? [Any])?.count ?? 0
+                for key in ["passes", "headerSubmitted", "headerCompleted", "resultSubmitted", "resultCompleted"] {
+                    row[key] = nil
+                }
+                return String(decoding: try JSONSerialization.data(withJSONObject: row, options: [.sortedKeys]),
+                              as: UTF8.self)
+            }
+            return (count, rest)
+        }
+        for (log, rows) in off.logs {
+            #expect(try passes(on.logs[log] ?? []).rest == passes(rows).rest, "\(log).jsonl")
+        }
+        #expect(off.gearSkipped.values.allSatisfy { $0 == 0 })
+        // The Bonus panel's three items leave its last row's right half empty;
+        // the English game has no numeric pass, and no quantity here is red.
+        let skipped = on.gearSkipped
+        #expect((skipped[.gearEmptyCellSkipped] ?? 0) > 0 && skipped[.gearRedRowSkipped] == 0
+                    && skipped[.gearQuantitySkipped] == 0 && skipped[.gearLanguageSkipped] == 0, "\(skipped)")
+        let passesLeft = [PowerMetric.gearRedRowSkipped, .gearEmptyCellSkipped, .gearQuantitySkipped]
+            .reduce(UInt64(0)) { $0 + (skipped[$1] ?? 0) }
+        // Vision's pass timings reach only the launch meter, so the passes
+        // made are counted from the reads' log rows.
+        let passesOn = try passes(on.logs["gear-drops"] ?? []).count
+        let passesOff = try passes(off.logs["gear-drops"] ?? []).count
+        #expect(passesOn < passesOff && UInt64(passesOn) + passesLeft == UInt64(passesOff),
+                "\(passesOn) passes on, \(passesOff) off, \(skipped) left out")
+    }
+
+    @Test("The defaults read a hack, its result and its gear drop as the Swift pipeline without cuts does",
+          .timeLimit(.minutes(10)))
+    func defaultsAgreeWithSwift() throws {
+        let cuts = AppPreferences.defaultRecognitionCuts
+        let setup = makeRecognitionEngine(choice: AppPreferences.defaultRecognitionEngine, table: SetupDemo.builtInTable,
+                                          cuts: cuts)
+        #expect(setup.fallback == nil && setup.cuts == cuts)
+        let swift = try ScriptedHack.run(logic: .swift)
+        let defaults = try ScriptedHack.run(logic: AppPreferences.defaultRecognitionLogic, engine: setup.engine,
+                                            cuts: setup.cuts)
+        #expect(defaults.engineName == "cpp" && defaults.logicName == "swift")
+        swift.expectCoversEveryArea()
+        #expect(defaults.snapshots == swift.snapshots)
+        for (log, rows) in swift.logs where log != "recognition" && log != "gear-drops" {
+            #expect(defaults.logs[log] == rows, "\(log).jsonl")
+        }
+        // The gear lean read, a default, leaves out passes that change no
+        // read: each gear read logs its passes, and only they may differ.
+        func gearRows(_ run: ScriptedHack) throws -> (rows: [String], passes: Int) {
+            var passes = 0
+            let rows = try (run.logs["gear-drops"] ?? []).map { line in
+                var row = try #require(try JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: Any])
+                passes += (row.removeValue(forKey: "passes") as? [Any])?.count ?? 0
+                return String(decoding: try JSONSerialization.data(withJSONObject: row, options: [.sortedKeys]),
+                              as: UTF8.self)
+            }
+            return (rows, passes)
+        }
+        let swiftGear = try gearRows(swift), defaultGear = try gearRows(defaults)
+        #expect(!swiftGear.rows.isEmpty && defaultGear.rows == swiftGear.rows)
+        #expect(defaultGear.passes < swiftGear.passes, "\(defaultGear.passes) passes against \(swiftGear.passes)")
+        // The per-frame log also carries what each engine measured on its
+        // own pixels (the Y plane against Core Graphics' grey), such as the
+        // fit's sub-pixel geometry and ink counts: there only the decisions
+        // must agree.
+        func rows(_ run: ScriptedHack) throws -> [[String: Any]] {
+            try (run.logs["recognition"] ?? []).map {
+                try #require(try JSONSerialization.jsonObject(with: Data($0.utf8)) as? [String: Any])
+            }
+        }
+        let swiftRows = try rows(swift), defaultRows = try rows(defaults)
+        #expect(swiftRows.count == defaultRows.count)
+        let decisions = ["presentationTime", "state", "phase", "phaseSource", "hackID", "exactMatches", "edges",
+                         "extensions", "slotCount", "slotHighlight", "inputTimerVisible", "analysisMode"]
+        func decided(_ row: [String: Any]) -> String {
+            decisions.map { "\($0)=\(row[$0] ?? "-")" }.joined(separator: "|") + "|fit=\(row["calibration"] != nil)"
+        }
+        #expect(defaultRows.map(decided) == swiftRows.map(decided))
+        let measured = Set(zip(swiftRows, defaultRows).flatMap { pair in
+            Set(pair.0.keys).union(pair.1.keys).filter { key in
+                let one = pair.0[key].map { "\($0)" }, other = pair.1[key].map { "\($0)" }
+                return one != other
+            }
+        })
+        print("DEFAULTS AGAINST SWIFT, recognition.jsonl keys that differ: \(measured.sorted())")
+        #expect(defaults.results == swift.results)
+        #expect(defaults.gear == swift.gear)
+        #expect(defaults.drops == swift.drops)
+    }
+
+    @Test("A shape list too large for the C++ engine reads a hack on the Swift engine the defaults fall back to",
+          .timeLimit(.minutes(10)))
+    func oversizedListFallsBack() throws {
+        let table = RecognitionEngineChoiceTests.demoTable(glyphs: 513)
+        let setup = makeRecognitionEngine(choice: AppPreferences.defaultRecognitionEngine, table: table,
+                                          cuts: AppPreferences.defaultRecognitionCuts)
+        #expect(setup.engine is SwiftFrameRecognitionEngine
+                && setup.cuts == [.lazyImage, .planeGate, .headerStillSkip, .gearLeanRead])
+        #expect(setup.label == "swift (chose cpp: 513 Glyphs, the C++ engine takes at most 512)")
+        let hack = try ScriptedHack.run(logic: AppPreferences.defaultRecognitionLogic, engine: setup.engine,
+                                        cuts: setup.cuts, table: table)
+        #expect(hack.engineName == "swift" && hack.logicName == "swift")
+        hack.expectCoversEveryArea()
+        // Each update of the one hack is delivered; the last closes it with
+        // the fixture's four slots and its 120% hacking bonus.
+        #expect(Set(hack.results.map(\.hackID)) == [1])
+        let closed = try #require(hack.results.last)
+        #expect(closed.isClosed && closed.state == .complete && closed.slots.count == 4)
+        #expect(closed.hackingBonus?.percent == 120)
+    }
+
     @Test("Frames arriving after close are ignored")
     func afterClose() throws {
         let harness = try Harness()
@@ -923,6 +1230,651 @@ struct LiveGlyphOutputTests {
         #expect(harness.updates.values.isEmpty)
         #expect(harness.telemetry.values.isEmpty)
     }
+
+    // MARK: The engine
+
+    @Test("The engine is asked for what the settings and the pace want: a quiet screen skips the array search")
+    func engineRequestsFollowThePace() throws {
+        let engine = RecordingEngine(rendersImage: true)
+        let harness = try Harness(keepsLogs: false, readsResults: true, readsGear: true, engine: engine)
+        let map = try Frames.recorded("frame-02092", ext: "jpg")
+        // 30 Hz, as a broadcast delivers: four seconds of map settle the gate.
+        for index in 0..<120 { harness.output.process(try harness.frame(map, at: Double(index) / 30)) }
+        harness.output.close()
+        let requests = engine.requests
+        #expect(requests.count == harness.updates.values.count, "one analysis per analysed frame")
+        #expect(requests.count > 8)
+        #expect(requests.allSatisfy { $0.request.assistsGlyphs && $0.request.checksGear && $0.request.checksPortal
+                                      && $0.request.readsStrip })
+        // The first looks are at the full pace and search for the array; the
+        // settled map is quiet and does not.
+        #expect(requests.first?.request.searchesArray == true)
+        let quiet = requests.filter { $0.time >= 2.5 }
+        #expect(!quiet.isEmpty && quiet.allSatisfy { !$0.request.searchesArray })
+        #expect(harness.updates.values.last?.snapshot.state == .inactive)
+        // Every frame reached the engine with its planes and the frame's time.
+        #expect(requests.allSatisfy { $0.hadPlanes })
+        #expect(requests.map(\.time) == requests.map(\.time).sorted())
+    }
+
+    @Test("Without power saving every analysed frame searches for the array, and gear-only capture asks for panels alone")
+    func engineRequestsWithoutSavingAndGearOnly() throws {
+        let engine = RecordingEngine(rendersImage: true)
+        let harness = try Harness(keepsLogs: false, powerSaving: false, engine: engine)
+        let map = try Frames.recorded("frame-02092", ext: "jpg")
+        for index in 0..<90 { harness.output.process(try harness.frame(map, at: Double(index) / 30)) }
+        harness.output.close()
+        let requests = engine.requests
+        // 30-Hz frames through the 20-Hz throttle: every second one.
+        #expect(requests.count == 45)
+        #expect(requests.allSatisfy { $0.request.searchesArray && !$0.request.checksGear && !$0.request.checksPortal })
+
+        let gearEngine = RecordingEngine(rendersImage: true)
+        let gearOnly = try Harness(keepsLogs: false, readsResults: true, readsGear: true, assistsGlyphs: false,
+                                   engine: gearEngine)
+        gearOnly.output.process(try gearOnly.frame(map, at: 0))
+        gearOnly.output.close()
+        let request = try #require(gearEngine.requests.first?.request)
+        #expect(request == FrameAnalysisRequest(assistsGlyphs: false, searchesArray: true, checksGear: true,
+                                                checksPortal: false, readsStrip: false))
+    }
+
+    @Test("The engine's step times land in the Power section under the steps' names")
+    func engineTimingsReachTheMeter() throws {
+        var timings = FrameStepTimings()
+        timings.conversion = 1_000_000; timings.decode = 2_000_000; timings.gearCheck = 3_000_000
+        timings.portalCheck = 4_000_000; timings.resultCheck = 5_000_000; timings.gridHunt = 6_000_000
+        timings.glyphRead = 7_000_000; timings.slotStrip = nil
+        var analysis = FrameAnalysis()
+        analysis.timings = timings
+        // The engine renders the image itself, as the Swift arm does, so the
+        // only conversion counted is the one it reports.
+        let engine = RecordingEngine(analysis: analysis, rendersImage: true)
+        let meter = Self.meter()
+        let harness = try Harness(keepsLogs: false, powerSaving: false, engine: engine, meter: meter)
+        let dark = try Frames.solid()
+        for index in 0..<4 { harness.output.process(try harness.frame(dark, at: Double(index) / 20)) }
+        try harness.waitForTextReads()
+        harness.output.close()
+        let snapshot = meter.snapshot()
+        let frames = snapshot.total(.framesAnalysed).count
+        #expect(frames == 4)
+        let expected: [(PowerMetric, UInt64)] = [(.conversion, 1), (.decode, 2), (.gearCheck, 3), (.portalCheck, 4),
+                                                 (.resultCheck, 5), (.gridHunt, 6), (.glyphRead, 7)]
+        for (metric, milliseconds) in expected {
+            let total = snapshot.total(metric)
+            #expect(total.count == frames, "\(metric.label) runs \(total.count)")
+            #expect(total.nanoseconds == milliseconds * 1_000_000 * frames, "\(metric.label)")
+        }
+        #expect(snapshot.total(.slotStrip).count == 0, "a step that did not run is not counted")
+    }
+
+    @Test("With the lazy image cut, a frame the text lane does not take is never rendered and a header read renders only its rows; without it every frame is rendered")
+    func lazyImageRendersOnlyForAdmittedReads() throws {
+        // An engine that leaves the image to the text lane, as one reading
+        // the planes does: the only renders are then LiveGlyphOutput's own,
+        // whole frames timed as conversion and header rows as headerRender.
+        func run(cuts: Set<RecognitionCut>) throws -> (renders: UInt64, headerRenders: UInt64, analysed: UInt64,
+                                                       reads: Int) {
+            let gate = AsyncHeaderGate()
+            defer { gate.signal() }
+            let engine = RecordingEngine(analysis: FrameAnalysis())
+            let meter = Self.meter()
+            let harness = try Harness(keepsLogs: false, powerSaving: false, engine: engine, cuts: cuts, meter: meter,
+                                      headerOperation: { _, time in
+                await gate.wait()
+                return HeaderReading(phase: .unknown, matchedText: "", confidence: 0, sourceTime: time)
+            })
+            let dark = try Frames.solid()
+            // The first frame's read holds the lane; the next nine are
+            // analysed, submitted and dropped as busy.
+            for index in 0..<10 { harness.output.process(try harness.frame(dark, at: Double(index) / 20)) }
+            let snapshot = meter.snapshot()
+            let metrics = harness.output.textReadMetrics
+            gate.signal()
+            try harness.waitForTextReads()
+            harness.output.close()
+            #expect(engine.requests.count == 10)
+            #expect(metrics.submitted == 1 && metrics.droppedBusy == 9, "\(metrics)")
+            return (snapshot.total(.conversion).count, snapshot.total(.headerRender).count,
+                    snapshot.total(.framesAnalysed).count, metrics.submitted)
+        }
+        let lazy = try run(cuts: [.lazyImage])
+        #expect(lazy.analysed == 10)
+        #expect(lazy.renders == 0 && lazy.headerRenders == UInt64(lazy.reads),
+                "the header's rows rendered once, for the one admitted read: \(lazy)")
+        let eager = try run(cuts: [])
+        #expect(eager.renders == eager.analysed && eager.headerRenders == 0,
+                "every analysed frame is rendered for the text lane: \(eager)")
+    }
+
+    /// Renders so far: whole frames, the drone footer's label alone, the
+    /// command band alone and a header read's rows alone; with the footer
+    /// probes and band checks run, the footer and band renders the plane
+    /// gate skipped, and the frames analysed.
+    struct RenderCounts: Equatable, CustomStringConvertible {
+        let full: UInt64, footer: UInt64, band: UInt64, header: UInt64
+        let probes: UInt64, bandChecks: UInt64, footerGated: UInt64, bandGated: UInt64, analysed: UInt64
+
+        init(_ meter: PowerMeter) {
+            let snapshot = meter.snapshot()
+            full = snapshot.total(.conversion).count
+            footer = snapshot.total(.footerRender).count
+            band = snapshot.total(.bandRender).count
+            header = snapshot.total(.headerRender).count
+            probes = snapshot.total(.footerProbe).count
+            bandChecks = snapshot.total(.commandBand).count
+            footerGated = snapshot.total(.footerGated).count
+            bandGated = snapshot.total(.bandGated).count
+            analysed = snapshot.total(.framesAnalysed).count
+        }
+
+        var all: UInt64 { full + footer + band + header }
+        var description: String {
+            "full \(full), footer \(footer), band \(band), header \(header), probes \(probes), "
+                + "band checks \(bandChecks), gated footer \(footerGated) and band \(bandGated), analysed \(analysed)"
+        }
+    }
+
+    /// `frames` at 20 Hz between hacks, as the C++ arm with `directPlanes` and
+    /// `lazyImage` sees them: results read, power saving on, no calibration,
+    /// an engine that leaves the image to the text lane unless `rendersImage`,
+    /// and a lane held by its first read so that it admits no other.
+    static func heldLaneRun(_ frames: [CVPixelBuffer], analysis: FrameAnalysis = FrameAnalysis(),
+                            rendersImage: Bool, cuts: Set<RecognitionCut> = [.lazyImage]) throws
+        -> (counts: [RenderCounts], admitted: Int, snapshots: [GlyphDisplaySnapshot]) {
+        let gate = AsyncHeaderGate()
+        defer { gate.signal() }
+        let engine = RecordingEngine(analysis: analysis, rendersImage: rendersImage)
+        let meter = Self.meter()
+        let harness = try Harness(keepsLogs: false, readsResults: true, powerSaving: true, engine: engine,
+                                  cuts: cuts, meter: meter, headerOperation: { _, time in
+            await gate.wait()
+            return HeaderReading(phase: .unknown, matchedText: "", confidence: 0, sourceTime: time)
+        })
+        var counts: [RenderCounts] = []
+        for (index, frame) in frames.enumerated() {
+            harness.output.process(try harness.frame(frame, at: Double(index) / 20))
+            counts.append(RenderCounts(meter))
+        }
+        let admitted = harness.output.textReadMetrics.submitted
+        gate.signal()
+        try harness.waitForTextReads()
+        harness.output.close()
+        return (counts, admitted, harness.updates.values.map(\.snapshot))
+    }
+
+    @Test("Between hacks the footer probe renders only on frames it probes, and then only the footer's label")
+    func footerRendersOnlyWhenDue() throws {
+        let drone = try Frames.recorded("field-00666"), dark = try Frames.solid()
+        var panel = FrameAnalysis()
+        panel.gearBounds = GearDropPanelBounds(top: 0.3, bottom: 0.7)
+        let scenarios: [(name: String, frames: [CVPixelBuffer], analysis: FrameAnalysis)] = [
+            ("gear panel", Array(repeating: drone, count: 20), panel),
+            ("drone footer", Array(repeating: drone, count: 40), FrameAnalysis()),
+            ("quiet screen", Array(repeating: dark, count: 40), FrameAnalysis())
+        ]
+        for scenario in scenarios {
+            let run = try Self.heldLaneRun(scenario.frames, analysis: scenario.analysis, rendersImage: false)
+            let first = run.counts[0], last = try #require(run.counts.last)
+            let lane = UInt64(run.admitted)
+            #expect(last.analysed > 4 && last.band == 0, "\(scenario.name): \(last)")
+            // With a panel on screen the lane's admitted read is a gear read,
+            // which takes the whole frame; otherwise it is a header read,
+            // which renders only the header's rows.
+            let panelReads = scenario.name == "gear panel"
+            #expect(last.full == (panelReads ? lane : 0) && last.header == (panelReads ? 0 : lane),
+                    "\(scenario.name): \(last), lane \(lane)")
+            switch scenario.name {
+            case "gear panel":
+                #expect(last.probes == 0 && last.footer == 0, "a panel on screen is no time to probe: \(last)")
+            case "drone footer":
+                // A candidate at 0 closes the gate until 1: nothing renders
+                // on the frames between, then one probe in the next second.
+                let gated = run.counts[19]
+                #expect(first.probes == 1 && gated.probes == 1 && gated.all == first.all,
+                        "inside the gate: \(first) then \(gated)")
+                #expect(gated.analysed > first.analysed + 2)
+                #expect(last.probes == 2 && last.footer == last.probes, "\(last)")
+            default:
+                // No candidate leaves the gate open: every analysed frame is
+                // probed, each on its label alone.
+                #expect(last.probes == last.analysed && last.footer == last.probes, "\(last)")
+            }
+            // The same frames with an engine that renders them: no region
+            // render, and nothing else changes.
+            let rendered = try Self.heldLaneRun(scenario.frames, analysis: scenario.analysis, rendersImage: true)
+            let renderedLast = try #require(rendered.counts.last)
+            #expect(renderedLast.footer == 0 && renderedLast.band == 0 && renderedLast.header == 0
+                    && renderedLast.full == 0,
+                    "\(scenario.name): the engine's own image is cut: \(renderedLast)")
+            #expect(renderedLast.probes == last.probes && renderedLast.analysed == last.analysed
+                    && rendered.admitted == run.admitted, "\(scenario.name): \(renderedLast) against \(last)")
+            #expect(rendered.snapshots == run.snapshots, "\(scenario.name): the snapshots differ")
+        }
+    }
+
+    /// `frames` at 20 Hz, each frame's text read held until `process` has
+    /// returned and finished before the next frame. A read that could finish
+    /// inside the frame that submitted it would reach the tracker one frame
+    /// early on some runs and not others.
+    private static func processReleasingReads(_ harness: Harness, gates: Collected<AsyncHeaderGate>,
+                                              frames: [CVPixelBuffer]) throws {
+        for (index, frame) in frames.enumerated() {
+            let gate = AsyncHeaderGate()
+            gates.append(gate)
+            harness.output.process(try harness.frame(frame, at: Double(index) / 20))
+            gate.signal()
+            try harness.waitForTextReads()
+        }
+    }
+
+    @Test("A lazy lane renders the whole frame only for a panel read, and only the header's rows for a header read")
+    func lazyLaneRendersWhatEachReadTakes() throws {
+        var panel = FrameAnalysis()
+        panel.gearBounds = GearDropPanelBounds(top: 0.3, bottom: 0.7)
+        func run(_ frame: CVPixelBuffer, analysis: FrameAnalysis, rendersImage: Bool) throws
+            -> (counts: RenderCounts, whole: Int, header: Int) {
+            let meter = Self.meter()
+            let harness = try Harness(keepsLogs: false, readsGear: true, powerSaving: true,
+                                      engine: RecordingEngine(analysis: analysis, rendersImage: rendersImage),
+                                      cuts: [.lazyImage], meter: meter, headerOperation: { _, time in
+                HeaderReading(phase: .unknown, matchedText: "", confidence: 0, sourceTime: time)
+            })
+            for index in 0..<20 {
+                harness.output.process(try harness.frame(frame, at: Double(index) / 20))
+                try harness.waitForTextReads()
+            }
+            let counts = RenderCounts(meter), metrics = harness.output.textReadMetrics
+            harness.output.close()
+            return (counts, metrics.resultSubmitted + metrics.gearSubmitted + metrics.portalSubmitted,
+                    metrics.headerInHackSubmitted + metrics.headerOutsideSubmitted)
+        }
+        let scenarios = [("headers", try Frames.recorded("field-00443"), FrameAnalysis()),
+                         ("gear panel", try Frames.recorded("five-bonus"), panel)]
+        for (name, frame, analysis) in scenarios {
+            let lazy = try run(frame, analysis: analysis, rendersImage: false)
+            #expect(lazy.counts.full == UInt64(lazy.whole) && lazy.counts.header == UInt64(lazy.header),
+                    "\(name): \(lazy.counts), \(lazy.whole) panel and \(lazy.header) header reads")
+            #expect(name == "headers" ? lazy.header > 0 && lazy.whole == 0 : lazy.whole > 0,
+                    "\(name): \(lazy.whole) panel and \(lazy.header) header reads")
+            // An engine that renders the frame leaves nothing to render: the
+            // header's rows are cut from its image.
+            let rendered = try run(frame, analysis: analysis, rendersImage: true)
+            #expect(rendered.counts.full == 0 && rendered.counts.header == 0, "\(name): \(rendered.counts)")
+        }
+    }
+
+    @Test("With portal settle, a portal screen is read until one read settles its levels, then not until another screen shows; without it, for as long as it shows")
+    func portalSettleStopsReadingASettledScreen() throws {
+        // Resistance 0–2 s, no screen 2–4 s, Enlightened 4–5 s, then
+        // Resistance again with no gap: three screens.
+        let faction: @Sendable (Double) -> PortalFaction? = { time in
+            time < 2 - 1e-9 ? .resistance : time < 4 - 1e-9 ? nil : time < 5 - 1e-9 ? .enlightened : .resistance
+        }
+        func run(cuts: Set<RecognitionCut>) throws -> (reads: [Double], held: UInt64, frames: Int) {
+            let reads = Collected<Double>()
+            let meter = Self.meter()
+            // Gear, and with it the portal screen, is read alongside results.
+            let harness = try Harness(keepsLogs: false, readsResults: true, readsGear: true, powerSaving: false,
+                                      engine: PortalScreenEngine(faction: faction), cuts: cuts, meter: meter,
+                                      headerOperation: { _, time in
+                HeaderReading(phase: .unknown, matchedText: "", confidence: 0, sourceTime: time)
+            }, portalOperation: { _, time in
+                reads.append(time)
+                // Every label read, none unread, and the L8 badge: one read
+                // decides the level.
+                return PortalScreenEvidence(sourceTime: time, resonators: Array(repeating: 8, count: 8),
+                                            unreadSlots: 0, badgeHue: 259, faction: faction(time))
+            })
+            let dark = try Frames.solid()
+            let frames = 120
+            for index in 0..<frames {
+                harness.output.process(try harness.frame(dark, at: Double(index) / 20))
+                try harness.waitForTextReads()
+            }
+            let held = meter.snapshot().total(.portalHeld).count
+            harness.output.close()
+            return (reads.values, held, frames)
+        }
+        let screens: [Range<Double>] = [0..<2, 4..<5, 5..<6]
+        func perScreen(_ reads: [Double]) -> [Int] {
+            screens.map { screen in reads.filter { screen.contains($0) }.count }
+        }
+        let settled = try run(cuts: [.portalSettle])
+        #expect(perScreen(settled.reads) == [1, 1, 1], "\(settled.reads)")
+        #expect(settled.reads.count == 3, "no read without a screen: \(settled.reads)")
+        for (screen, read) in zip(screens, settled.reads) {
+            #expect(read - screen.lowerBound < 0.3, "each screen is read on arrival: \(settled.reads)")
+        }
+        // Each frame with a screen and no read wanted is held.
+        let portalFrames = (0..<settled.frames).filter { faction(Double($0) / 20) != nil }.count
+        #expect(settled.held > 0 && settled.held <= UInt64(portalFrames - 3), "\(settled.held) of \(portalFrames)")
+        let all = try run(cuts: [])
+        #expect(perScreen(all.reads).allSatisfy { $0 >= 3 }, "\(all.reads)")
+        #expect(all.held == 0)
+    }
+
+    @Test("With gear settle, a settled drop panel is answered with its settling read while it stays still, a new panel in its place is read at the next look, and the group closes as without it",
+          arguments: [true, false])
+    func gearSettleAnswersASettledPanel(assistsGlyphs: Bool) throws {
+        // A portal panel 0–3 s, then a Bonus panel in the same place with
+        // other pixels 3–5 s, then none: one drop group of two panels.
+        let bounds = GearDropPanelBounds(top: 0.30, bottom: 0.50)
+        let panelAt: @Sendable (Double) -> GearDropPanelBounds? = { $0 < 5 - 1e-9 ? bounds : nil }
+        let portal = [GearDropEntry(column: 0, row: 0, item: "Resonator", levelState: .known, level: 5, quantity: 3),
+                      GearDropEntry(column: 1, row: 0, item: "Power Cube", levelState: .known, level: 6, quantity: 1)]
+        let bonus = [GearDropEntry(column: 0, row: 0, item: "XMP Burster", levelState: .known, level: 7, quantity: 2)]
+        let frames = (portal: try Frames.panel(luma: 90, bounds: bounds), bonus: try Frames.panel(luma: 170, bounds: bounds),
+                      none: try Frames.solid())
+        struct Run {
+            var reads: [Double]
+            var held: UInt64
+            var drops: [GearDropSummary]
+        }
+        func run(cuts: Set<RecognitionCut>) throws -> Run {
+            let reads = Collected<Double>()
+            let meter = Self.meter()
+            // With Glyphs, gear is read alongside results.
+            let harness = try Harness(keepsLogs: false, readsResults: assistsGlyphs, readsGear: true,
+                                      assistsGlyphs: assistsGlyphs, powerSaving: false,
+                                      engine: GearPanelEngine(bounds: panelAt), cuts: cuts,
+                                      meter: meter, headerOperation: { _, time in
+                HeaderReading(phase: .unknown, matchedText: "", confidence: 0, sourceTime: time)
+            }, gearReadingOperation: { _, bounds, time in
+                reads.append(time)
+                let isPortal = time < 3 - 1e-9
+                return GearPanelReading(evidence: GearDropFrameEvidence(
+                    sourceTime: time, stage: isPortal ? .portal : .bonus, bounds: bounds,
+                    entries: isPortal ? portal : bonus))
+            })
+            for index in 0..<160 {
+                let time = Double(index) / 20
+                let buffer = time < 3 - 1e-9 ? frames.portal : time < 5 - 1e-9 ? frames.bonus : frames.none
+                harness.output.process(try harness.frame(buffer, at: time))
+                try harness.waitForTextReads()
+            }
+            harness.output.close()
+            return Run(reads: reads.values, held: meter.snapshot().total(.gearHeld).count,
+                       drops: harness.drops.values.map(\.summary))
+        }
+        let off = try run(cuts: [])
+        let on = try run(cuts: [.gearSettle])
+        func reads(_ run: Run, in range: Range<Double>) -> [Double] { run.reads.filter { range.contains($0) } }
+
+        // Without the cut, a panel is read at every gear look while it shows.
+        #expect(off.held == 0)
+        let offPortal = reads(off, in: 0..<3)
+        #expect(offPortal.count >= 12, "\(off.reads)")
+        #expect(zip(offPortal, offPortal.dropFirst()).allSatisfy { $1 - $0 < 0.26 }, "\(off.reads)")
+
+        // With it, the portal panel settles on two agreeing reads and is
+        // then read for real only once its settling read is a second old.
+        let onPortal = reads(on, in: 0..<3)
+        #expect(onPortal.count >= 2 && onPortal.count <= 5, "\(on.reads)")
+        #expect(zip(onPortal, onPortal.dropFirst()).allSatisfy { $1 - $0 <= GearSettleLimiter.refreshAfter + 0.26 },
+                "\(on.reads)")
+        // Every due look is answered: held ones stand for reads one for one.
+        #expect(on.held > 0 && UInt64(on.reads.count) + on.held == UInt64(off.reads.count),
+                "\(on.reads.count) reads and \(on.held) held, against \(off.reads.count) reads")
+
+        // The Bonus panel in the same place has other pixels: it is read at
+        // the first gear look after it shows, with the cut as without it.
+        let firstBonus = try #require(reads(on, in: 3..<5).first)
+        #expect(firstBonus == reads(off, in: 3..<5).first && firstBonus - 3 < 0.26, "\(on.reads)")
+        #expect(reads(on, in: 3..<5).count >= 2)
+        #expect(reads(on, in: 5..<8).isEmpty && reads(off, in: 5..<8).isEmpty)
+
+        // The same group, closed at the same time, with both panels' rows.
+        #expect(off.drops.count == 1 && off.drops.first?.panels.map(\.entries) == [portal, bonus], "\(off.drops)")
+        #expect(on.drops == off.drops)
+    }
+
+    /// `commands.jsonl`'s rows of one kind, without the fields that name
+    /// files.
+    static func commandRows(_ directory: URL, kind: String) throws -> [[String: String]] {
+        let text = try String(contentsOf: directory.appendingPathComponent("commands.jsonl"), encoding: .utf8)
+        return try text.split(separator: "\n").compactMap { line -> [String: String]? in
+            let row = try #require(try JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: Any])
+            guard row["kind"] as? String == kind else { return nil }
+            return row.filter { $0.key != "image" && $0.key != "imageStatus" }.mapValues { "\($0)" }
+        }
+    }
+
+    /// What a run left: its notice rows, renders and snapshots.
+    struct CommandRun {
+        let rows: [[String: String]]
+        let counts: RenderCounts
+        let snapshots: [GlyphDisplaySnapshot]
+    }
+
+    /// `frames` between hacks with results read and power saving on, each
+    /// frame's header read finished before the next.
+    static func footerRun(_ frames: [CVPixelBuffer], rendersImage: Bool,
+                          cuts: Set<RecognitionCut> = [.lazyImage]) throws -> CommandRun {
+        let meter = Self.meter()
+        let engine = RecordingEngine(rendersImage: rendersImage)
+        let gates = Collected<AsyncHeaderGate>()
+        let harness = try Harness(readsResults: true, powerSaving: true, engine: engine, cuts: cuts,
+                                  meter: meter, headerOperation: { _, time in
+            await gates.values.last?.wait()
+            return HeaderReading(phase: .unknown, matchedText: "", confidence: 0, sourceTime: time)
+        })
+        try Self.processReleasingReads(harness, gates: gates, frames: frames)
+        let counts = RenderCounts(meter)
+        _ = try harness.finish()
+        let directory = try #require(harness.directory).url
+        return CommandRun(rows: try Self.commandRows(directory, kind: "notice"), counts: counts,
+                          snapshots: harness.updates.values.map(\.snapshot))
+    }
+
+    /// A fitted empty array from the real Swift engine, which the test
+    /// engine then reports on every frame: the cached fit and a command
+    /// header keep the command screen watched.
+    static func fittedEmptyArray() throws -> FrameAnalysis {
+        let source = try #require(CGImageSourceCreateWithURL(try TestFixtures.url("field-00381", "png") as CFURL, nil))
+        let fitted = try #require(CGImageSourceCreateImageAtIndex(source, 0, nil))
+        var analysis = try SwiftFrameRecognitionEngine(table: SetupDemo.builtInTable).analyze(
+            FrameInput(planes: nil, time: 0) { fitted },
+            request: FrameAnalysisRequest(assistsGlyphs: true, searchesArray: true, checksGear: false,
+                                          checksPortal: false, readsStrip: true))
+        #expect(analysis.observation?.calibration != nil)
+        analysis.image = nil
+        analysis.timings = FrameStepTimings()
+        return analysis
+    }
+
+    /// `frames` on a watched command screen (`fittedEmptyArray` and command
+    /// headers), each frame's header read finished before the next.
+    static func commandRun(_ frames: [CVPixelBuffer], analysis: FrameAnalysis, rendersImage: Bool,
+                           cuts: Set<RecognitionCut> = [.lazyImage]) throws -> CommandRun {
+        let meter = Self.meter()
+        let engine = RecordingEngine(analysis: analysis, rendersImage: rendersImage)
+        let gates = Collected<AsyncHeaderGate>()
+        let harness = try Harness(readsResults: true, powerSaving: true, engine: engine, cuts: cuts,
+                                  meter: meter, headerOperation: { _, time in
+            await gates.values.last?.wait()
+            return WatchReproductionHarness.header(.command, at: time)
+        })
+        try Self.processReleasingReads(harness, gates: gates, frames: frames)
+        let counts = RenderCounts(meter)
+        _ = try harness.finish()
+        let directory = try #require(harness.directory).url
+        return CommandRun(rows: try Self.commandRows(directory, kind: "notice"), counts: counts,
+                          snapshots: harness.updates.values.map(\.snapshot))
+    }
+
+    @Test("The footer's label rendered alone is read as the whole frame's crop is: the same drone reads")
+    func footerRegionReadsTheSameFooter() throws {
+        let frames = Array(repeating: try Frames.recorded("field-00666"), count: 60)
+        let region = try Self.footerRun(frames, rendersImage: false)
+        let whole = try Self.footerRun(frames, rendersImage: true)
+        #expect(region.counts.footer > 0 && whole.counts.footer == 0, "\(region.counts); \(whole.counts)")
+        #expect(region.rows.contains { $0["notice"] == "drone" }, "the footer is read: \(region.rows)")
+        #expect(region.rows == whole.rows)
+        #expect(region.counts.probes == whole.counts.probes)
+        #expect(region.snapshots == whole.snapshots)
+    }
+
+    @Test("The command band rendered alone gives the same notices as the band cut from the whole frame")
+    func bandRegionReadsTheSameNotices() throws {
+        let analysis = try Self.fittedEmptyArray()
+        let frames = Array(repeating: try NoticeDrawingFrame.make("simple"), count: 30)
+        let region = try Self.commandRun(frames, analysis: analysis, rendersImage: false)
+        let whole = try Self.commandRun(frames, analysis: analysis, rendersImage: true)
+        #expect(region.counts.bandChecks > 10, "the command screen is watched: \(region.counts)")
+        #expect(region.counts.band == region.counts.bandChecks && whole.counts.band == 0,
+                "\(region.counts); \(whole.counts)")
+        #expect(region.counts.bandChecks == whole.counts.bandChecks, "\(region.counts); \(whole.counts)")
+        #expect(region.rows.contains { $0["notice"] == "simple" }, "the notice is read: \(region.rows)")
+        #expect(region.rows == whole.rows, "\(region.rows) against \(whole.rows)")
+        #expect(region.snapshots == whole.snapshots)
+    }
+
+    @Test("With the plane gate a quiet dark screen renders nothing once the lane is held, and a dark command band is not rendered")
+    func planeGateSkipsDarkRegions() throws {
+        let cuts: Set<RecognitionCut> = [.lazyImage, .planeGate]
+        let quiet = Array(repeating: try Frames.solid(), count: 40)
+        let gated = try Self.heldLaneRun(quiet, rendersImage: false, cuts: cuts)
+        let first = gated.counts[0], last = try #require(gated.counts.last)
+        // The first frame's admitted read renders the header's rows; after
+        // it, nothing at all.
+        #expect(gated.admitted == 1 && first.all == first.header && first.header == 1, "\(first)")
+        #expect(last.all == first.all && last.analysed > 4, "\(last)")
+        #expect(last.probes == 0 && last.footerGated == last.analysed, "every due probe is gated: \(last)")
+        let ungated = try Self.heldLaneRun(quiet, rendersImage: false)
+        #expect(ungated.snapshots == gated.snapshots)
+        #expect(try #require(ungated.counts.last).footer == last.footerGated)
+
+        let analysis = try Self.fittedEmptyArray()
+        let blank = Array(repeating: try CommandDrawingFrame.make(), count: 30)
+        let command = try Self.commandRun(blank, analysis: analysis, rendersImage: false, cuts: cuts)
+        #expect(command.counts.bandChecks > 10 && command.counts.band == 0
+                && command.counts.bandGated == command.counts.bandChecks, "\(command.counts)")
+        let rendered = try Self.commandRun(blank, analysis: analysis, rendersImage: false)
+        #expect(rendered.counts.band == command.counts.bandGated && rendered.snapshots == command.snapshots,
+                "\(rendered.counts) against \(command.counts)")
+    }
+
+    @Test("The plane gate changes no output: drone footers and notices that come and go on a dark screen read the same with it on and off")
+    func planeGateKeepsOutputs() throws {
+        let cuts: Set<RecognitionCut> = [.lazyImage, .planeGate]
+        let drone = try Frames.recorded("field-00666"), dark = try Frames.solid()
+        let droneFrames = Array(repeating: drone, count: 25) + Array(repeating: dark, count: 30)
+            + Array(repeating: drone, count: 25)
+        let footerOn = try Self.footerRun(droneFrames, rendersImage: false, cuts: cuts)
+        let footerOff = try Self.footerRun(droneFrames, rendersImage: false)
+        // The pace slows on the still dark stretch, so only some of its
+        // frames are analysed and due a probe.
+        #expect(footerOn.counts.footerGated > 4 && footerOff.counts.footerGated == 0, "\(footerOn.counts)")
+        // A gated probe is one that would have found no candidate: the gate
+        // only moves probes from rendered to skipped.
+        #expect(footerOn.counts.probes + footerOn.counts.footerGated == footerOff.counts.probes
+                && footerOn.counts.footer == footerOn.counts.probes,
+                "\(footerOn.counts) against \(footerOff.counts)")
+        #expect(footerOn.rows.contains { $0["notice"] == "drone" }, "the footer is read: \(footerOn.rows)")
+        #expect(footerOn.rows == footerOff.rows, "\(footerOn.rows) against \(footerOff.rows)")
+        #expect(footerOn.snapshots == footerOff.snapshots)
+
+        let analysis = try Self.fittedEmptyArray()
+        let notice = try NoticeDrawingFrame.make("simple"), blank = try CommandDrawingFrame.make()
+        let noticeFrames = Array(repeating: notice, count: 10) + Array(repeating: blank, count: 10)
+            + Array(repeating: notice, count: 10) + Array(repeating: blank, count: 5)
+        let bandOn = try Self.commandRun(noticeFrames, analysis: analysis, rendersImage: false, cuts: cuts)
+        let bandOff = try Self.commandRun(noticeFrames, analysis: analysis, rendersImage: false)
+        #expect(bandOn.counts.bandGated > 5 && bandOff.counts.bandGated == 0, "\(bandOn.counts)")
+        #expect(bandOn.counts.band + bandOn.counts.bandGated == bandOff.counts.band
+                && bandOn.counts.bandChecks == bandOff.counts.bandChecks,
+                "\(bandOn.counts) against \(bandOff.counts)")
+        #expect(bandOn.rows.contains { $0["notice"] == "simple" }, "the notice is read: \(bandOn.rows)")
+        #expect(bandOn.rows == bandOff.rows, "\(bandOn.rows) against \(bandOff.rows)")
+        #expect(bandOn.snapshots == bandOff.snapshots)
+    }
+}
+
+/// A `FrameRecognitionEngine` that records what it is asked and answers with
+/// a fixed analysis. Its gate is the real luma gate, so the pace settles as
+/// it does live.
+private final class RecordingEngine: FrameRecognitionEngine, @unchecked Sendable {
+    struct Call: Sendable {
+        let request: FrameAnalysisRequest
+        let time: Double
+        let hadPlanes: Bool
+    }
+
+    let name = "recording"
+    private let lock = NSLock()
+    private var calls: [Call] = []
+    private let analysis: FrameAnalysis
+    /// Whether the engine renders the frame's image itself, as the Swift arm
+    /// does; off, it leaves the image to the text lane, as one reading the
+    /// planes does.
+    private let rendersImage: Bool
+    private let gateReader = SwiftFrameRecognitionEngine(table: nil)
+
+    init(analysis: FrameAnalysis = FrameAnalysis(), rendersImage: Bool = false) {
+        self.analysis = analysis
+        self.rendersImage = rendersImage
+    }
+
+    var requests: [Call] { lock.withLock { calls } }
+
+    func gate(_ planes: FramePlanes, step: Int) -> LumaGateReading? { gateReader.gate(planes, step: step) }
+
+    func analyze(_ input: FrameInput, request: FrameAnalysisRequest) throws -> FrameAnalysis {
+        lock.withLock { calls.append(Call(request: request, time: input.time, hadPlanes: input.planes != nil)) }
+        var analysis = analysis
+        if rendersImage { analysis.image = try input.image() }
+        return analysis
+    }
+
+    func resetSession() {}
+    var sessionValidatedAt: Double? { nil }
+    var sessionCalibration: NodeArrayDetection? { nil }
+}
+
+/// An engine that sees a portal screen of `faction(time)`'s colour, and
+/// nothing else.
+private final class PortalScreenEngine: FrameRecognitionEngine {
+    let name = "portal"
+    private let faction: @Sendable (Double) -> PortalFaction?
+    private let gateReader = SwiftFrameRecognitionEngine(table: nil)
+
+    init(faction: @escaping @Sendable (Double) -> PortalFaction?) { self.faction = faction }
+
+    func gate(_ planes: FramePlanes, step: Int) -> LumaGateReading? { gateReader.gate(planes, step: step) }
+
+    func analyze(_ input: FrameInput, request: FrameAnalysisRequest) throws -> FrameAnalysis {
+        var analysis = FrameAnalysis()
+        if request.checksPortal { analysis.portalFaction = faction(input.time) }
+        return analysis
+    }
+
+    func resetSession() {}
+    var sessionValidatedAt: Double? { nil }
+    var sessionCalibration: NodeArrayDetection? { nil }
+}
+
+/// An engine that sees a gear drop panel at `bounds(time)`, and nothing
+/// else.
+private final class GearPanelEngine: FrameRecognitionEngine {
+    let name = "gear"
+    private let bounds: @Sendable (Double) -> GearDropPanelBounds?
+    private let gateReader = SwiftFrameRecognitionEngine(table: nil)
+
+    init(bounds: @escaping @Sendable (Double) -> GearDropPanelBounds?) { self.bounds = bounds }
+
+    func gate(_ planes: FramePlanes, step: Int) -> LumaGateReading? { gateReader.gate(planes, step: step) }
+
+    func analyze(_ input: FrameInput, request: FrameAnalysisRequest) throws -> FrameAnalysis {
+        var analysis = FrameAnalysis()
+        if request.checksGear { analysis.gearBounds = bounds(input.time) }
+        return analysis
+    }
+
+    func resetSession() {}
+    var sessionValidatedAt: Double? { nil }
+    var sessionCalibration: NodeArrayDetection? { nil }
 }
 
 @Suite("Header startup cue")
@@ -960,7 +1912,10 @@ struct HeaderStartupCueTests {
         defer { gate.signal() }
         let harness = try Harness(readsResults: false, readsGear: false, headerOperation: { image, time in
             if time > 0 { await gate.wait() }
-            let crop = try #require(HeaderTextRecognizer().headerCrop(of: image))
+            guard case .frame(let frame) = image else {
+                throw Frames.Failure(description: "a lane without lazyImage reads the whole frame")
+            }
+            let crop = try #require(HeaderTextRecognizer().headerCrop(of: frame))
             let pixels = try ImageDecoder.decodeColor(crop, in: CGRect(x: 0, y: 0, width: crop.width, height: crop.height))
             crops.append(pixels.pixels)
             let phase: GamePhase = time > 0 && becomesKnown ? .presenting : .unknown
@@ -1029,18 +1984,31 @@ private struct Harness {
     /// Unconstrained unless asked: the test machine's own thermal state must
     /// not change the sampling rate under test.
     init(keepsLogs: Bool = true, readsResults: Bool = false, readsGear: Bool = false,
-         assistsGlyphs: Bool = true, power: PowerConditions.State = .init(), powerSaving: Bool = true,
+         assistsGlyphs: Bool = true, table: GlyphTable = SetupDemo.builtInTable,
+         power: PowerConditions.State = .init(), powerSaving: Bool = true,
+         engine: FrameRecognitionEngine? = nil, cuts: Set<RecognitionCut> = [],
+         logic: RecognitionLogicChoice? = nil,
          readingMode: ReadingModeSignal? = nil, meter: PowerMeter = .shared,
-         headerOperation: GameHeaderReader.HeaderOperation? = nil) throws {
+         headerOperation: GameHeaderReader.HeaderOperation? = nil,
+         portalOperation: GameHeaderReader.PortalOperation? = nil,
+         gearReadingOperation: GameHeaderReader.GearReadingOperation? = nil) throws {
         let directory = keepsLogs ? try TemporaryDirectory("recognition") : nil
         self.directory = directory
         let updates = updates, telemetry = telemetry, results = results, drops = drops, gear = gear
+        let table = assistsGlyphs ? table : nil
+        // Nil leaves LiveGlyphOutput to make its own Swift set, as shipped.
+        let logicSet = logic.map {
+            makeRecognitionLogic(choice: $0, table: table, sequenceTable: nil, sessionID: CaptureSessionID(rawValue: 1),
+                                 language: .english, automaticLanguage: false)
+        }
         output = try LiveGlyphOutput(
-            table: assistsGlyphs ? SetupDemo.builtInTable : nil, sequenceTable: nil,
+            table: table, sequenceTable: nil,
             sessionID: CaptureSessionID(rawValue: 1),
             directory: directory?.url, readsResults: readsResults, readsGear: readsGear,
             power: PowerConditions(center: NotificationCenter(), read: { power }), powerSaving: powerSaving,
-            meter: meter, readingMode: readingMode, headerOperation: headerOperation, telemetry: { telemetry.append($0) }, deliverResult: { results.append($0) },
+            engine: engine, cuts: cuts, logic: logicSet,
+            meter: meter, readingMode: readingMode, headerOperation: headerOperation, portalOperation: portalOperation,
+            gearReadingOperation: gearReadingOperation, telemetry: { telemetry.append($0) }, deliverResult: { results.append($0) },
             deliverGear: { gear.append($0) }, deliverDrop: { drops.append($0) }) { updates.append($0) }
     }
 
@@ -1231,6 +2199,23 @@ enum Frames {
             guard let base = CVPixelBufferGetBaseAddressOfPlane(buffer, plane) else { continue }
             memset(base, value, CVPixelBufferGetBytesPerRowOfPlane(buffer, plane)
                                 * CVPixelBufferGetHeightOfPlane(buffer, plane))
+        }
+        return buffer
+    }
+
+    /// A black 420f frame whose rows inside `bounds` are grey `luma`: where
+    /// a test engine reports a drop panel, painted so that two panels differ.
+    static func panel(luma: UInt8, bounds: GearDropPanelBounds, width: Int = 603,
+                      height: Int = 1311) throws -> CVPixelBuffer {
+        let buffer = try solid(width: width, height: height)
+        CVPixelBufferLockBaseAddress(buffer, [])
+        defer { CVPixelBufferUnlockBaseAddress(buffer, []) }
+        guard let base = CVPixelBufferGetBaseAddressOfPlane(buffer, 0) else {
+            throw Failure(description: "no luma plane")
+        }
+        let stride = CVPixelBufferGetBytesPerRowOfPlane(buffer, 0)
+        for y in Int(bounds.top * Double(height))..<Int(bounds.bottom * Double(height)) {
+            memset(base + y * stride, Int32(luma), width)
         }
         return buffer
     }

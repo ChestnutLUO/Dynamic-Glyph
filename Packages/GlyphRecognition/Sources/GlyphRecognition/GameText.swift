@@ -10,7 +10,7 @@ public enum GameLanguage: String, CaseIterable, Codable, Sendable {
     case korean = "ko"
 
     /// Checked against a recording of the game in this language. The others
-    /// come from the player's sheet alone and may need corrections.
+    /// come from a community translation sheet alone and may need corrections.
     public var isRecorded: Bool { self == .english || self == .simplifiedChinese || self == .japanese }
 
     /// Vision's languages, the game's own first. English follows because
@@ -63,8 +63,8 @@ public enum GameLanguage: String, CaseIterable, Codable, Sendable {
     }
 }
 
-/// Every game phrase the recognizers match, for one game language, from the
-/// player's sheet and recordings (Docs/GAME_TEXT_TRANSLATIONS_ALL.csv).
+/// Every game phrase the recognizers match, for one game language, from a
+/// community translation sheet and recordings.
 /// Matching is exact after `GameText.normalized`: case, spaces and
 /// punctuation don't count, and nothing is matched loosely.
 public struct GameText: Sendable {
@@ -224,6 +224,42 @@ public struct GameText: Sendable {
         })
     }
 
+    // MARK: - Export for the C++ logic layer
+
+    /// One language pack's text, as the C++ parsers receive it at creation
+    /// through the C ABI. The strings are already normalized
+    /// where the pack stores them normalized, so a C++ matcher normalizes
+    /// only the text it reads. `GameText` stays the one source of this data.
+    public struct Table: Sendable, Equatable {
+        public let code: String
+        public let headers: [HeaderPhraseMatcher.Phrase]
+        public let notices: [String: CommandNoticeReading.Notice]
+        public let droneFooter: String
+        public let hackingLabel: String
+        public let speedLabel: String
+        public let bonusTitle: String
+        public let bountyTitle: String
+        public let messageFragments: [String]
+        public let effectSuffixes: [String]
+        public let effectPrefixes: [String]
+        public let items: [String: String]
+        public let leadingWords: [String: Set<String>]
+    }
+
+    /// The packs this text matches against, the game's own language first.
+    public var tables: [Table] {
+        packs.map { pack in
+            Table(code: pack.code, headers: pack.headers, notices: pack.notices, droneFooter: pack.droneFooter,
+                  hackingLabel: pack.hackingLabel, speedLabel: pack.speedLabel, bonusTitle: pack.bonusTitle,
+                  bountyTitle: pack.bountyTitle, messageFragments: pack.messageFragments,
+                  effectSuffixes: pack.effectSuffixes, effectPrefixes: pack.effectPrefixes, items: pack.items,
+                  leadingWords: pack.leadingWords)
+        }
+    }
+
+    /// Every language's Bonus title, normalized: `title(_:)`'s `unsupported`.
+    public static var allBonusTitles: Set<String> { otherBonusTitles }
+
     // MARK: - Packs
 
     private struct Pack: Sendable {
@@ -293,9 +329,9 @@ public struct GameText: Sendable {
             effectSuffixes: ["applied"],
             items: table((levelledItems.union(unlevelledItems)).filter { !$0.hasPrefix("ITO EN") }.map { ($0, $0) }))
 
-        // Recorded on 2026-09-25 and 2026-09-29: notices, drone footer, result
-        // labels, Bonus title and ten item names. The headers, the other
-        // messages and the remaining names come from the player's sheet only.
+        // Seen in field recordings: notices, drone footer, result labels,
+        // Bonus title and ten item names. The headers, the other messages
+        // and the remaining names come from a translation sheet only.
         static let simplifiedChineseNames: [(String, String)] = [
                 ("共振器", "Resonator"), ("XMP 能量炮", "XMP Burster"), ("破甲弹", "Ultra Strike"),
                 ("能量塔护盾", "Portal Shield"), ("埃癸斯盾", "Aegis Shield"), ("多次入侵模组", "Multi-Hack"),
@@ -319,9 +355,9 @@ public struct GameText: Sendable {
             effectSuffixes: ["已应用"],
             items: table(simplifiedChineseNames), leadingWords: leading(simplifiedChineseNames))
 
-        // Recorded on 2026-09-29: notices except SIMPLE and INVALID, drone
+        // Seen in field recordings: notices except SIMPLE and INVALID, drone
         // footer, result labels, Bonus title, the cooldown message and eight
-        // item names. The rest comes from the player's sheet only.
+        // item names. The rest comes from a translation sheet only.
         static let japaneseNames: [(String, String)] = [
                 ("レゾネーター", "Resonator"), ("XMPバースター", "XMP Burster"), ("ウルトラ ストライク", "Ultra Strike"),
                 ("パワーキューブ", "Power Cube"), ("ポータル シールド", "Portal Shield"), ("Aegis シールド", "Aegis Shield"),
@@ -347,7 +383,7 @@ public struct GameText: Sendable {
             effectSuffixes: ["を適用しました"],
             items: table(japaneseNames), leadingWords: leading(japaneseNames))
 
-        // From the player's sheet only; no recording yet. The sheet gives
+        // From the translation sheet only; no recording yet. The sheet gives
         // 能量塔鑰匙 for Portal Key, which may be the inventory's name: English
         // "Portal Key" still matches.
         static let traditionalChineseNames: [(String, String)] = [
@@ -372,7 +408,7 @@ public struct GameText: Sendable {
             effectSuffixes: [], effectPrefixes: ["已使用"],
             items: table(traditionalChineseNames), leadingWords: leading(traditionalChineseNames))
 
-        // From the player's sheet only; no recording yet. The sheet spells
+        // From the translation sheet only; no recording yet. The sheet spells
         // 쉴드 for Portal Shield and 실드 for Aegis Shield, as given.
         static let koreanNames: [(String, String)] = [
                 ("레저네이터", "Resonator"), ("XMP 버스터", "XMP Burster"), ("울트라 스트라이크", "Ultra Strike"),

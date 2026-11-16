@@ -1,6 +1,7 @@
 import SwiftUI
 import CloudKit
 import GlyphRecognition
+import TipKit
 
 /// Every hack result this app has read and kept, newest first, and the two
 /// choices that control reading and keeping them.
@@ -23,6 +24,8 @@ struct HackResultsView: View {
     /// Where the timeline's handles stand, for the whole page; the Home
     /// Screen widget's link sets it too.
     @Binding var timelineSelection: StatisticsSelection
+    /// Not capturing, preparing or in setup: the only time a tip may show.
+    var showsTips = true
     @State private var selecting = false
     /// Entry ids, so a list that reorders or grows never shifts the choice.
     @State private var selection: Set<String> = []
@@ -31,6 +34,7 @@ struct HackResultsView: View {
     @State private var exporting: ExportRequest?
     /// The sorted, grouped and totalled records, kept between evaluations.
     @State private var model = StatisticsPageModel()
+    private var gameLanguageTip: GameLanguageTip { GameLanguageTip() }
 
     var body: some View {
         // A live end moves on each minute; the store's changes count at once.
@@ -53,6 +57,11 @@ struct HackResultsView: View {
             LazyVStack(alignment: .leading, spacing: 16) {
                 StatisticsRangeHeader(selection: $timelineSelection, history: history,
                                       ticks: snapshot.ticks, now: now)
+                if showsTips {
+                    TipView(gameLanguageTip, arrowEdge: .bottom)
+                        .tipBackground(Color(.secondarySystemGroupedBackground))
+                        .tipCornerRadius(20)
+                }
                 ItemsDroppedCard(statistics: statistics, range: range, history: history,
                                  empty: emptyReason(history.drops, history, range), problem: results.problem)
                     .animation(reduceMotion ? nil : .default, value: statistics.items)
@@ -364,7 +373,7 @@ struct HackResultsView: View {
                                 comment: "Statistics, delete confirmation, with iCloud sync on."))
         }
         if request.hasPictures {
-            notes.append(String(localized: "Panel pictures stay in the session's logs until you delete them under Settings › Session logs and reports.",
+            notes.append(String(localized: "Panel pictures stay in the session's logs until you delete them under Settings › Bug reports › Session logs and reports.",
                                 comment: "Statistics, delete confirmation: deleting history leaves the session's picture files."))
         }
         notes.append(String(localized: "This can't be undone.", comment: "Statistics, delete confirmation."))

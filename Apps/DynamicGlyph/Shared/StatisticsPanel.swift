@@ -1,6 +1,7 @@
 import SwiftUI
 import Charts
 import WidgetKit
+import GlyphRecognition
 
 /// The pieces of the Statistics summary panel: its figures, its two charts
 /// and its gear row. The app's Statistics page puts them together with its
@@ -20,9 +21,10 @@ enum StatisticsPanelStyle: Equatable {
     var isWidget: Bool { self != .app }
 
     /// A line's colour: the app's, or a stronger one of the same hue, so a
-    /// widget's marks keep 3:1 against its lighter background.
-    func color(_ series: ChartSeries) -> Color {
-        isWidget ? series.strongColor : series.color
+    /// widget's marks keep 3:1 against its lighter background. `theme` is
+    /// the app's chosen theme; the widget reads its App Group copy.
+    func color(_ series: ChartSeries, theme: AppTheme = .default) -> Color {
+        isWidget ? series.strongColor : series.color(theme: theme)
     }
 }
 
@@ -59,8 +61,8 @@ struct SummaryFigures<Statistics: StatisticsPanelFigures>: View {
         if statistics.onlyDrops && !valuesUnknown {
             // Gear read without Glyph hacks: drop groups, never counted as hacks.
             figures {
-                figure("Drops", value: "\(statistics.drops)", change: nil, favourable: nil)
-                figure("Items", value: "\(statistics.items)", change: nil, favourable: nil)
+                figure("Drops", value: statistics.drops.formatted(), change: nil, favourable: nil)
+                figure("Items", value: statistics.items.formatted(), change: nil, favourable: nil)
                 figure("Per drop", value: statistics.itemsPerDrop.map { $0.formatted(.number.precision(.fractionLength(1))) } ?? "—",
                        change: nil, favourable: nil)
             }
@@ -105,7 +107,7 @@ struct SummaryFigures<Statistics: StatisticsPanelFigures>: View {
     }
 
     private func hacks(_ change: StatisticsFigures.Change?) -> some View {
-        figure("Hacks", value: "\(statistics.hacks)", change: change?.hacks, favourable: nil)
+        figure("Hacks", value: statistics.hacks.formatted(), change: change?.hacks, favourable: nil)
     }
 
     private func hacking(_ change: StatisticsFigures.Change?) -> some View {
@@ -255,6 +257,7 @@ struct LengthBonusChart: View {
     /// A widget short of height: the chart asks only the least it reads at.
     var compact = false
     @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(\.appTheme) private var theme
 
     static func isShown(for statistics: some StatisticsPanelFigures) -> Bool {
         statistics.lengthAverages.contains { $0.hacking != nil || $0.speed != nil }
@@ -289,8 +292,8 @@ struct LengthBonusChart: View {
                 }
             }
         }
-        .chartForegroundStyleScale([String(localized: "Hacking"): style.color(.hacking),
-                                    String(localized: "Speed"): style.color(.speed)])
+        .chartForegroundStyleScale([String(localized: "Hacking"): style.color(.hacking, theme: theme),
+                                    String(localized: "Speed"): style.color(.speed, theme: theme)])
         .chartLegend(position: .bottom, alignment: .leading)
         .percentYAxis(style, upTo: rows.flatMap { [$0.hacking, $0.speed] }.compactMap { $0 }.max() ?? 0,
                       bars: true)
@@ -307,7 +310,7 @@ struct LengthBonusChart: View {
             ForEach(rows) { row in
                 VStack(alignment: .leading, spacing: 4) {
                     Text(verbatim: Self.length(row)).font(.headline)
-                    bonus("Hacking Bonus", row.hacking, color: .accentColor)
+                    bonus("Hacking Bonus", row.hacking, color: theme.hackingSeriesColor)
                     bonus("Speed Bonus", row.speed, color: .orange)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -384,9 +387,10 @@ enum ChartSeries: String, CaseIterable, Identifiable {
         }
     }
 
-    var color: Color {
+    /// The accent for Hacking, unless the theme keeps it the default blue.
+    func color(theme: AppTheme = .default) -> Color {
         switch self {
-        case .hacking: return .accentColor
+        case .hacking: return theme.hackingSeriesColor
         case .speed: return .orange
         case .accepted: return .green
         }
@@ -403,7 +407,12 @@ enum ChartSeries: String, CaseIterable, Identifiable {
             return Color(uiColor: UIColor { $0.userInterfaceStyle == .dark ? color(dark) : color(light) })
         }
         switch self {
-        case .hacking: return dynamic(0x0066CC, 0x64A8FF)
+        // The chosen theme's Hacking colour, read from the App Group
+        // copy: 0x0066CC / 0x64A8FF by default and for the themes that pin
+        // it. Speed and Accepted never change.
+        case .hacking:
+            let accent = AppTheme.mirrored.widgetAccentHex
+            return dynamic(accent.light, accent.dark)
         case .speed: return dynamic(0xB45F00, 0xFFB15C)
         case .accepted: return dynamic(0x27823A, 0x76D68A)
         }
@@ -447,9 +456,10 @@ struct SeriesCapsule: View {
     var style: StatisticsPanelStyle = .app
     /// The line's own point shape, where colour is lost.
     var patterned = false
+    @Environment(\.appTheme) private var theme
 
     var body: some View {
-        let color = style.color(series)
+        let color = style.color(series, theme: theme)
         HStack(spacing: 4) {
             if patterned {
                 Image(systemName: series.symbolName).font(.system(size: 7)).foregroundStyle(color)
@@ -496,6 +506,7 @@ struct DailyAveragesChart: View {
     var style: StatisticsPanelStyle = .app
     /// Each line its own dashes and point shape, where colour is lost.
     var patterned = false
+    @Environment(\.appTheme) private var theme
 
     /// Only for days: Today would chart single hacks, which says little.
     static func isShown(for statistics: some StatisticsPanelFigures, period: StatisticsPeriod) -> Bool {
@@ -518,7 +529,7 @@ struct DailyAveragesChart: View {
             ChartSeries.allCases.filter(shown.contains).compactMap { value($0, of: point) }
         }.max() ?? 0)
         .chartForegroundStyleScale(domain: ChartSeries.allCases.map(\.label),
-                                   range: ChartSeries.allCases.map(style.color))
+                                   range: ChartSeries.allCases.map { style.color($0, theme: theme) })
         .chartLegend(.hidden)
         if let selection {
             chart.chartXSelection(value: selection)
@@ -671,6 +682,35 @@ func dayAxis(_ period: StatisticsPeriod) -> some AxisContent {
 
 // MARK: - Gear
 
+private struct GameItemLanguageKey: EnvironmentKey {
+    static let defaultValue: GameLanguage? = nil
+}
+
+extension EnvironmentValues {
+    /// The language for item names, chosen in Settings or on Automatic the
+    /// one last found (`GameLanguage.itemNameLanguage`): set at the app's
+    /// root. Nil, as in the widget extension, shows English.
+    var gameItemLanguage: GameLanguage? {
+        get { self[GameItemLanguageKey.self] }
+        set { self[GameItemLanguageKey.self] = newValue }
+    }
+}
+
+/// An item's name as the game shows it in the chosen game language, after
+/// its level as the app always printed it: "L8 共振器". Display only: the
+/// saved item and exports keep the English name.
+struct GameItemName: View {
+    let item: String
+    var level: Int? = nil
+    @Environment(\.gameItemLanguage) private var language
+
+    var body: some View {
+        let name = GameLanguage.itemName(item, shownIn: language)
+        Text(verbatim: level.map { "L\($0) \(name)" } ?? name)
+    }
+}
+
+
 enum GearSummary {
     /// "164 items · 3.9 per drop · 26 multiplied"
     /// A widget short of room leaves out the multiplied items, then the
@@ -752,6 +792,8 @@ struct GearStrip<Statistics: StatisticsPanelFigures>: View {
     /// nothing before it.
     var leadingLine: ((AnyView) -> AnyView)? = nil
     @Environment(\.dynamicTypeSize) private var typeSize
+    /// Item names, for VoiceOver as on screen: see `GameItemName`.
+    @Environment(\.gameItemLanguage) private var itemLanguage
 
     var body: some View {
         VStack(alignment: .leading, spacing: style == .app ? 4 : lineGap) {
@@ -762,15 +804,15 @@ struct GearStrip<Statistics: StatisticsPanelFigures>: View {
                     ForEach(statistics.gear.prefix(5)) { group in
                         HStack(alignment: .firstTextBaseline, spacing: 8) {
                             Image(systemName: GearSummary.symbol(for: group.item)).foregroundStyle(.tint)
-                            // Game terms, printed as the English game prints them.
-                            Text(verbatim: group.item)
+                            // Game terms, as the game prints them in its language.
+                            GameItemName(item: group.item)
                                 .fixedSize(horizontal: false, vertical: true)
                             Spacer(minLength: 8)
-                            Text(verbatim: "\(group.total)").bold().monospacedDigit()
+                            Text(group.total, format: .number).bold().monospacedDigit()
                                 .layoutPriority(1)
                         }
                         .accessibilityElement(children: .ignore)
-                        .accessibilityLabel(Text(verbatim: "\(group.total) \(group.item)"))
+                        .accessibilityLabel(Text(verbatim: GameLanguage.itemCountLabel(group.total, group.item, shownIn: itemLanguage)))
                     }
                 }
                 .font(.callout)
@@ -778,13 +820,13 @@ struct GearStrip<Statistics: StatisticsPanelFigures>: View {
                 HStack(spacing: 12) {
                     ForEach(statistics.gear.prefix(5)) { group in
                         Label {
-                            Text(verbatim: "\(group.total)").monospacedDigit()
+                            Text(group.total, format: .number).monospacedDigit()
                         } icon: {
                             Image(systemName: GearSummary.symbol(for: group.item)).foregroundStyle(.tint)
                         }
                         .labelStyle(.titleAndIcon)
                         .accessibilityElement(children: .ignore)
-                        .accessibilityLabel(Text(verbatim: "\(group.total) \(group.item)"))
+                        .accessibilityLabel(Text(verbatim: GameLanguage.itemCountLabel(group.total, group.item, shownIn: itemLanguage)))
                     }
                 }
                 .font(.callout)
@@ -841,7 +883,7 @@ struct GearStrip<Statistics: StatisticsPanelFigures>: View {
         return HStack(spacing: 0) {
             ForEach(groups) { group in
                 Label {
-                    Text(verbatim: "\(group.total)").monospacedDigit()
+                    Text(group.total, format: .number).monospacedDigit()
                         .font(style == .medium ? .caption : .footnote)
                 } icon: {
                     Image(systemName: GearSummary.symbol(for: group.item)).foregroundStyle(.tint)
@@ -851,7 +893,7 @@ struct GearStrip<Statistics: StatisticsPanelFigures>: View {
                 .lineLimit(1)
                 .fixedSize()
                 .accessibilityElement(children: .ignore)
-                .accessibilityLabel(Text(verbatim: "\(group.total) \(group.item)"))
+                .accessibilityLabel(Text(verbatim: GameLanguage.itemCountLabel(group.total, group.item, shownIn: itemLanguage)))
                 if group.id != groups.last?.id { Spacer(minLength: 6) }
             }
             // A short row stays leading, as the app's.

@@ -1,5 +1,7 @@
 import Combine
+import GlyphRecognition
 import SwiftUI
+import TipKit
 import UIKit
 import UniformTypeIdentifiers
 
@@ -28,6 +30,18 @@ struct ContentView: View {
     @State private var showingSetup = AppPreferences().needsSetup
     #endif
     @Environment(\.scenePhase) private var scenePhase
+    /// The chosen theme, for Start at rest.
+    @Environment(\.appTheme) private var theme
+    /// Bumped to ask iOS for its rating sheet (`requestsReview`).
+    @State private var reviewRequest = 0
+    /// The newest saved hack once Home or Statistics has been on screen
+    /// with it: the result has been seen, so a later arrival may ask.
+    @State private var viewedResultID: String?
+    /// The wait after arriving on Home or Statistics before deciding.
+    @State private var reviewArrival: Task<Void, Never>?
+    /// Tips 2 and 4 done (TipKit's status), for the order of Home's tips.
+    @State private var floatingWindowTipDone = false
+    @State private var shortcutsTipDone = false
 
     var body: some View {
         TabView(selection: $tab) {
@@ -41,7 +55,7 @@ struct ContentView: View {
                                     assistsGlyphs: engine.assistsGlyphs,
                                     sessionDiagnosticsEnabled: engine.sessionDiagnosticsEnabled,
                                     shapeTable: engine.shapeTable, results: engine.results,
-                                    timelineSelection: $statisticsSelection)
+                                    timelineSelection: $statisticsSelection, showsTips: showsTips)
                 }
                 .environment(\.isPiPHostActive, tab == .results)
             }
@@ -55,6 +69,29 @@ struct ContentView: View {
         .fullScreenCover(isPresented: $showingSetup) {
             SetupView(engine: engine) { showingSetup = false }
         }
+        // The tips' parameters follow the saved hacks and the capture state.
+        .onChange(of: tipFacts, initial: true) { _, facts in AppTips.update(facts) }
+        .task {
+            for await status in FloatingWindowTip().statusUpdates { floatingWindowTipDone = AppTips.isDone(status) }
+        }
+        .task {
+            for await status in ShortcutsTip().statusUpdates { shortcutsTipDone = AppTips.isDone(status) }
+        }
+        .onReceive(engine.results.$records) { _ in
+            // Published as it will change; read the store's hacks after.
+            DispatchQueue.main.async { AppTips.update(tipFacts) }
+        }
+        // The automatic rating prompt, at a calm moment: arriving on Home or
+        // Statistics, a second later, when ReviewPromptPolicy allows it.
+        .requestsReview(on: reviewRequest)
+        .onChange(of: tab, initial: true) { _, _ in arrivedForReview() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { arrivedForReview() } else { reviewArrival?.cancel() }
+        }
+        // Item names in the game language chosen in Settings; on Automatic,
+        // the one last found, else English.
+        .environment(\.gameItemLanguage, GameLanguage.itemNameLanguage(chosen: engine.gameLanguage,
+                                                                        detected: engine.detectedGameLanguage))
         // The Control Center button: on a cold launch its request is already
         // waiting when this screen appears, on a warm one it arrives while
         // the app comes forward or is already in front.
@@ -175,7 +212,16 @@ struct ContentView: View {
                         }
                         .buttonStyle(.plain)
                     }
+                    if showsTips {
+                        TipView(StartTip(), arrowEdge: .bottom).homeTipStyle()
+                    }
                     startButton
+                    if showsTips {
+                        // One slot, two tips: the daily limit and their rules
+                        // show at most one.
+                        TipView(ShortcutsTip(), arrowEdge: nil).homeTipStyle()
+                        TipView(AppearanceTip(), arrowEdge: nil).homeTipStyle()
+                    }
                     ForEach(RecordingKind.allCases, id: \.self) { kind in
                         if let message = engine.recordingWarnings.messages[kind] {
                             Label(message, systemImage: "record.circle")
@@ -201,6 +247,9 @@ struct ContentView: View {
                         }
                         .buttonStyle(.plain)
                     }
+                    if showsTips {
+                        TipView(FloatingWindowTip(), arrowEdge: .bottom).homeTipStyle()
+                    }
                     DisplayChoicesCard(engine: engine)
                     if engine.isCapturing { runningCard } else { howItWorksCard }
                 }
@@ -208,6 +257,66 @@ struct ContentView: View {
             }
             .navigationTitle("Dynamic Glyph")
         }
+    }
+
+    // MARK: - Tips and the rating prompt
+
+    /// Never while capturing, getting ready or stopping, or in setup.
+    private var showsTips: Bool {
+        !engine.isCapturing && !engine.isPreparing && !engine.isStopping && !showingSetup
+    }
+
+    private var tipFacts: TipFacts {
+        TipFacts(saved: engine.results.savedRecords, isIdle: showsTips, floatingWindowOn: engine.pipEnabled,
+                 chosenGameLanguage: engine.gameLanguage, detectedGameLanguage: engine.detectedGameLanguage,
+                 floatingWindowTipDone: floatingWindowTipDone, shortcutsTipDone: shortcutsTipDone)
+    }
+
+    private func arrivedForReview() {
+        reviewArrival?.cancel()
+        let arrivedOn = tab
+        guard arrivedOn != .settings else { return }
+        reviewArrival = Task { @MainActor in
+            // Not mid-transition.
+            try? await Task.sleep(for: .seconds(1))
+            guard !Task.isCancelled, tab == arrivedOn, scenePhase == .active else { return }
+            considerReview(on: arrivedOn)
+        }
+    }
+
+    private func considerReview(on arrivedOn: AppTab) {
+        let finished = ReviewPromptPolicy.finishedHacks(engine.results.savedRecords)
+        let latest = finished.max { $0.date < $1.date }
+        let screen: ReviewPromptPolicy.Screen = arrivedOn == .home ? .home : arrivedOn == .results ? .statistics : .other
+        let tipShowing: Bool = switch screen {
+        case .home: showsTips && (StartTip().shouldDisplay || FloatingWindowTip().shouldDisplay
+                                  || ShortcutsTip().shouldDisplay || AppearanceTip().shouldDisplay)
+        case .statistics: showsTips && GameLanguageTip().shouldDisplay
+        case .other: false
+        }
+        let record = ReviewPromptRecord()
+        let version = ReviewPromptRecord.currentVersion
+        let now = Date()
+        let input = ReviewPromptPolicy.Input(
+            savedHackCount: finished.count,
+            savedHackDays: ReviewPromptPolicy.distinctDays(finished),
+            latestHackIsClean: latest.map(ReviewPromptPolicy.isClean) ?? false,
+            screen: screen,
+            hasViewedLatestResult: latest != nil && viewedResultID == latest?.id,
+            isCaptureActive: engine.isCapturing || engine.isPreparing || engine.isStopping,
+            isFloatingWindowUp: engine.pip.isActive || engine.pip.isOpening,
+            isPresentingSomething: showingSetup || importingTable || PresentationDismisser.isPresenting,
+            isTipShowing: tipShowing,
+            isFirstLaunchAfterUpdate: ReviewPromptSession.isFirstLaunchAfterUpdate,
+            appVersion: version,
+            lastAskedVersion: record.lastAskedVersion,
+            lastAskedDate: record.lastAskedDate,
+            now: now)
+        // Seen now: the next calm arrival counts it as viewed.
+        if screen != .other { viewedResultID = latest?.id }
+        guard ReviewPromptPolicy.shouldAsk(input) else { return }
+        record.recordAsk(version: version, at: now)
+        reviewRequest += 1
     }
 
     // MARK: - Start and stop
@@ -229,7 +338,9 @@ struct ContentView: View {
                 .padding(.vertical, 6)
             }
             .buttonStyle(.borderedProminent)
-            .tint(engine.isCapturing ? .red : engine.isPreparing ? .gray : .accentColor)
+            // At rest the accent, which follows the theme, unless the theme
+            // keeps it blue: red here means capturing.
+            .tint(engine.isCapturing ? .red : engine.isPreparing ? .gray : theme.idleStartTint)
             .controlSize(.large)
             .disabled(engine.isStopping)
             // Right under Stop: once capture runs, going to the game is the
@@ -364,5 +475,13 @@ private struct StartCaption: View {
         }
         .font(.caption)
         .multilineTextAlignment(.center)
+    }
+}
+
+private extension View {
+    /// Home's tips sit like its cards: same width, corner and fill.
+    func homeTipStyle() -> some View {
+        tipBackground(Color(.secondarySystemBackground))
+            .tipCornerRadius(16)
     }
 }

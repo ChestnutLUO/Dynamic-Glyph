@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import GlyphRecognition
 
-/// Build 103, fix 1 (Ato 1954): a gear read that started while its panel was
+/// A gear read that started while its panel was
 /// still sliding in is stopped when a new panel slides in before the old one
 /// rests: its top more than `newPanelShift` further down the screen than
 /// where the read started. A panel slides in from below and settles upwards,
@@ -10,9 +10,9 @@ import Testing
 /// same rules hold: one stop per read, none for the read after a stopped one,
 /// none while the old panel's rows are unconfirmed. Lane timelines as
 /// `GearNewPanelLaneTests` (injected reads, no Vision): every short-portal
-/// case of the 2026-10-30 synthetic sweep where build 103 lost a Bonus panel
-/// that build 102 kept, before this fix.
-@Suite("Build 103: a new panel while the old one still slides in")
+/// case of a synthetic sweep where the new-panel lane, without this rule,
+/// lost a Bonus panel that the old lane kept.
+@Suite("New-panel lane: a new panel while the old one still slides in")
 struct GearNewPanelSlideTests {
     typealias Sim = GearLaneSimulation
     static let pace = GameTextSchedule.Pace(minimumInterval: 0.1, gearInterval: 0.2)
@@ -81,10 +81,69 @@ struct GearNewPanelSlideTests {
         #expect(other.inFlight == second)
     }
 
+    /// A field recording at 495.3 s, as the lane log recorded it (gearSettle on, Mac
+    /// real time): the portal panel rests at top 0.2863; its Bonus panel
+    /// slides in from 495.29 s, and the slide's first step (0.3183 to 0.3160)
+    /// eases in within the still tolerance before 0.0061, 0.0099 and 0.0137.
+    static let easedSlide: [(time: Double, top: Double, bottom: Double)] = [
+        (494.991667, 0.2862595, 0.4190840), (495.041667, 0.2862595, 0.4190840),
+        (495.091667, 0.2862595, 0.4190840), (495.141667, 0.2862595, 0.4190840),
+        (495.191667, 0.2862595, 0.4190840), (495.241667, 0.2862595, 0.4190840),
+        (495.291667, 0.3183206, 0.4511450), (495.341667, 0.3160305, 0.4488550),
+        (495.391667, 0.3099237, 0.4427481), (495.441667, 0.3000000, 0.4328244),
+        (495.491667, 0.2862595, 0.4190840), (495.541667, 0.2862595, 0.4190840),
+        (495.591667, 0.2862595, 0.4190840), (495.641667, 0.2862595, 0.4190840)]
+
+    @Test("A new panel's first read is not stopped when its slide's first step eases in (a field recording, 495.3 s)",
+          arguments: [0, 1])
+    func easedFirstStep(_ startFrame: Int) throws {
+        var schedule = GameTextSchedule()
+        var first: GameTextSchedule.Request?
+        let slideStart = 6
+        for (index, sample) in Self.easedSlide.enumerated() {
+            let shown = GearDropPanelBounds(top: sample.top, bottom: sample.bottom)
+            if first == nil, index >= slideStart, index < slideStart + startFrame {
+                // The lane is busy elsewhere: the first read starts a frame later,
+                // on the eased step itself.
+                #expect(schedule.observeGearPanel(shown, at: sample.time) == nil)
+                continue
+            }
+            let result = frame(&schedule, at: sample.time, shown)
+            #expect(result.stop == nil, "frame \(sample.time)")
+            guard let request = result.request else { continue }
+            if index < slideStart {
+                // Reads of the resting portal panel, which return at once (the
+                // gearSettle reissue that left the lane idle).
+                schedule.finish(request, panelPresent: true)
+            } else if first == nil {
+                first = request
+            }
+        }
+        let read = try #require(first)
+        #expect(read.sourceTime == Self.easedSlide[slideStart + startFrame].time)
+        #expect(schedule.inFlight == read && schedule.cancelledGearRequest == nil)
+    }
+
+    @Test("A new panel replacing that first read during the eased slide still stops it")
+    func easedSlideThenNewPanel() throws {
+        var schedule = GameTextSchedule()
+        var first: GameTextSchedule.Request?
+        for sample in Self.easedSlide.prefix(9) {
+            let result = frame(&schedule, at: sample.time, GearDropPanelBounds(top: sample.top, bottom: sample.bottom))
+            if let request = result.request {
+                if sample.time < 495.29 { schedule.finish(request, panelPresent: true) } else { first = first ?? request }
+            }
+        }
+        let read = try #require(first)
+        // Another panel slides in from below, its top 0.012 under where the read started.
+        let stop = frame(&schedule, at: 495.441667, GearDropPanelBounds(top: 0.3303, bottom: 0.4631)).stop
+        #expect(stop == read && schedule.newGearPanel)
+    }
+
     /// The sweep's cases: constrained, a 0.25-s portal panel, then the Bonus.
     static let cases: [(bonus: Double, cost: Double)] = [(0.45, 0.25), (0.45, 0.35), (0.7, 0.55), (1.0, 0.55)]
 
-    @Test("Short portal panel, constrained: the Bonus panel 102 kept is kept, at every start nothing 102 keeps is lost",
+    @Test("Short portal panel, constrained: the Bonus panel the old lane kept is kept, at every start nothing the old lane keeps is lost",
           arguments: 0..<4)
     func shortPortalCases(_ index: Int) {
         let (bonus, cost) = Self.cases[index]

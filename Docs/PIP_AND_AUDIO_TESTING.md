@@ -1,7 +1,7 @@
 # PiP size and music coexistence
 
 The video canvas and inline source view default to a 10:1 aspect ratio
-(640×64 at 2×; 4:1 at 384×96 before 2026-09-23). The
+(640×64 at 2×; earlier versions used 4:1 at 384×96). The
 **Settings → Floating window → Shape and sharpness** controls let testers change
 canvas width (256–640), height (64–192), and render resolution (1–3×). **Apply** saves the settings and
 updates the active render loop; **Reset** restores 640×64 at 2×. Higher resolution
@@ -50,14 +50,14 @@ movie does not stop screen capture, which recognition still needs.
 
 ### Current field result
 
-The user reports that Apple Music becomes silent at capture startup with
+A field report says that Apple Music becomes silent at capture startup with
 Island-only selected. On pressing Play, Music appears to keep playing but
 remains inaudible; Ingress sound effects remain audible. Treat this as selective
 silence, not a confirmed paused player or a global output failure. Deferring
 PiP audio activation was not a sufficient fix. DRM or capture-related suppression
 is a hypothesis, not an established diagnosis.
 
-The next build configures mixing before the picker and logs category, mixing,
+The app now configures mixing before the picker and logs category, mixing,
 other-audio playback and PiP ownership before and after `startCapture`. These
 flags do not identify a track, DRM status or the capture service's own
 audio-session policy. No device result has confirmed this additional change.

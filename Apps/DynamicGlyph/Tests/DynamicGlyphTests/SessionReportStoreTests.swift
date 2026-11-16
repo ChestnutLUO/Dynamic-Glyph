@@ -16,32 +16,32 @@ struct SessionReportStoreTests {
     @Test("Only session folders are listed, newest first, with their start time")
     func listsSessions() throws {
         let root = try TemporaryDirectory("reports")
-        _ = try makeSession("spikeB-2026-09-18T20-00-22Z", in: root.url)
-        _ = try makeSession("spikeB-2026-09-22T05-58-06Z", in: root.url, video: true)
+        _ = try makeSession("spikeB-2001-01-02T20-00-22Z", in: root.url)
+        _ = try makeSession("spikeB-2001-01-06T05-58-06Z", in: root.url, video: true)
         try Data("x".utf8).write(to: root.url.appendingPathComponent("glyph_line.csv"))
         try FileManager.default.createDirectory(at: root.url.appendingPathComponent("Inbox"),
                                                 withIntermediateDirectories: true)
 
         let reports = try SessionReportStore(root: root.url).reports()
-        #expect(reports.map(\.name) == ["spikeB-2026-09-22T05-58-06Z", "spikeB-2026-09-18T20-00-22Z"])
+        #expect(reports.map(\.name) == ["spikeB-2001-01-06T05-58-06Z", "spikeB-2001-01-02T20-00-22Z"])
         #expect(reports[0].hasScreenRecording)
         #expect(!reports[1].hasScreenRecording)
         #expect(reports[0].byteCount > 64)
-        let expected = ISO8601DateFormatter().date(from: "2026-09-22T05:58:06Z")
+        let expected = ISO8601DateFormatter().date(from: "2001-01-06T05:58:06Z")
         #expect(reports[0].startedAt == expected)
     }
 
     @Test("A folder name that is not a stamp has no start date rather than a wrong one")
     func unparseableStamp() {
         #expect(SessionReportStore.startDate(of: "spikeB-copy") == nil)
-        #expect(SessionReportStore.startDate(of: "notes-2026-09-22T05-58-06Z") == nil)
+        #expect(SessionReportStore.startDate(of: "notes-2001-01-06T05-58-06Z") == nil)
     }
 
     @Test("The event log is read back, and its absence is not an error")
     func readsEventLog() throws {
         let root = try TemporaryDirectory("reports-log")
-        _ = try makeSession("spikeB-2026-09-22T05-58-06Z", in: root.url, log: "startCapture ok\n")
-        _ = try makeSession("spikeB-2026-09-21T05-58-06Z", in: root.url)
+        _ = try makeSession("spikeB-2001-01-06T05-58-06Z", in: root.url, log: "startCapture ok\n")
+        _ = try makeSession("spikeB-2001-01-05T05-58-06Z", in: root.url)
         let store = SessionReportStore(root: root.url)
         let reports = try store.reports()
         #expect(store.eventLog(for: reports[0]) == "startCapture ok\n")
@@ -52,14 +52,14 @@ struct SessionReportStoreTests {
     func archivesAndDeletes() throws {
         let root = try TemporaryDirectory("reports-zip")
         let outbox = try TemporaryDirectory("reports-outbox")
-        _ = try makeSession("spikeB-2026-09-22T05-58-06Z", in: root.url, log: "hello\n")
+        _ = try makeSession("spikeB-2001-01-06T05-58-06Z", in: root.url, log: "hello\n")
         let store = SessionReportStore(root: root.url)
         let report = try #require(try store.reports().first)
 
         let zip = try store.archive(report, into: outbox.url)
         let bytes = try Data(contentsOf: zip)
         #expect(bytes.starts(with: [0x50, 0x4B]))  // "PK", a zip header
-        #expect(zip.lastPathComponent == "DynamicGlyph-spikeB-2026-09-22T05-58-06Z.zip")
+        #expect(zip.lastPathComponent == "DynamicGlyph-spikeB-2001-01-06T05-58-06Z.zip")
         // Sharing twice replaces the old archive instead of failing.
         _ = try store.archive(report, into: outbox.url)
         #expect(FileManager.default.fileExists(atPath: report.url.path))
@@ -72,7 +72,7 @@ struct SessionReportStoreTests {
     func archivesWithNote() throws {
         let root = try TemporaryDirectory("reports-note")
         let outbox = try TemporaryDirectory("reports-note-outbox")
-        let folder = try makeSession("spikeB-2026-09-22T05-58-06Z", in: root.url, log: "hello\n")
+        let folder = try makeSession("spikeB-2001-01-06T05-58-06Z", in: root.url, log: "hello\n")
         let store = SessionReportStore(root: root.url)
         let report = try #require(try store.reports().first)
 

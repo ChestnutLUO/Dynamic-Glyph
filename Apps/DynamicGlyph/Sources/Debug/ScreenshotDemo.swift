@@ -269,10 +269,23 @@ enum ScreenshotDemo {
 /// reaches a player.
 struct ScreenshotDemoSection: View {
     @AppStorage(ScreenshotDemo.defaultsKey) private var isOn = false
+    #if DEBUG
+    @AppStorage(AppTips.showOneKey) private var shownTip = ""
+    @AppStorage(AppTips.resetKey) private var resetsTips = false
+    #endif
 
     var body: some View {
         Section {
             Toggle(isOn: $isOn) { Text(verbatim: "Screenshot demo data") }
+            #if DEBUG
+            Picker(selection: $shownTip) {
+                Text(verbatim: "By their rules").tag("")
+                ForEach(AppTips.testingIDs, id: \.self) { Text(verbatim: $0).tag($0) }
+            } label: {
+                Text(verbatim: "Show tip")
+            }
+            Toggle(isOn: $resetsTips) { Text(verbatim: "Reset tips at launch") }
+            #endif
         } footer: {
             Text(verbatim: "Simulator only. Relaunch the app to apply.")
         }

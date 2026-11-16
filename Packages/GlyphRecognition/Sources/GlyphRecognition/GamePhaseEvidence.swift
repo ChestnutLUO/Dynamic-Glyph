@@ -25,6 +25,9 @@ public enum PhaseSource: String, Sendable, Equatable {
     case retained
     /// A visible countdown below the strip, within an already observed hack.
     case inputTimer
+    /// The countdown's visible part beside our own floating window, keeping
+    /// input that was already established.
+    case partialInputTimer
     /// A stable unselected indicator row followed by selection of slot zero.
     case indicatorTransition
     /// No evidence at all.
@@ -221,10 +224,17 @@ public struct FrameEvidence: Sendable {
     public let hasValidCalibration: Bool
     /// Read independently of the indicators.
     public let hasInputTimerBar: Bool
+    /// The indicators beside our own floating window over one side of the
+    /// strip, when `slots` is nil because of it.
+    public let partialSlots: PartialSlotStripReading?
+    /// The countdown's rail runs from its visible end to our own window, with
+    /// progress on it (`SlotStripWindowCover.hasPartialInputTimerBar`).
+    public let hasPartialInputTimerBar: Bool
 
     public init(sessionID: CaptureSessionID, time: Double, header: HeaderReading?,
                 slots: SlotStripReading?, slotRejection: SlotStripRejection? = nil,
-                shape: ShapeEvidence, hasValidCalibration: Bool, hasInputTimerBar: Bool = false) {
+                shape: ShapeEvidence, hasValidCalibration: Bool, hasInputTimerBar: Bool = false,
+                partialSlots: PartialSlotStripReading? = nil, hasPartialInputTimerBar: Bool = false) {
         self.sessionID = sessionID
         self.time = time
         self.header = header
@@ -233,5 +243,7 @@ public struct FrameEvidence: Sendable {
         self.shape = shape
         self.hasValidCalibration = hasValidCalibration
         self.hasInputTimerBar = hasInputTimerBar || slots?.hasInputTimerBar == true
+        self.partialSlots = partialSlots
+        self.hasPartialInputTimerBar = hasPartialInputTimerBar
     }
 }

@@ -2,7 +2,7 @@
 """Replay original video frames/timestamps and compare conclusion annotations.
 
 The annotation is an assertion file only: nothing from it enters recognition.
-Private movies stay local; output contains machine readings and comparisons.
+Movies stay local; output contains machine readings and comparisons.
 """
 import argparse
 import json

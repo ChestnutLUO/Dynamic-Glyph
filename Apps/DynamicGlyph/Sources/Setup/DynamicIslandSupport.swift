@@ -9,7 +9,7 @@ import Foundation
 enum DynamicIslandSupport: Equatable {
     case hasIsland, noIsland, unknown
 
-    /// Identifiers from AppleDB, checked 2026-09-23.
+    /// Identifiers from AppleDB.
     private static let island: Set<String> = [
         "iPhone15,2", "iPhone15,3",                             // 14 Pro, 14 Pro Max
         "iPhone15,4", "iPhone15,5", "iPhone16,1", "iPhone16,2", // 15, 15 Plus, 15 Pro, 15 Pro Max

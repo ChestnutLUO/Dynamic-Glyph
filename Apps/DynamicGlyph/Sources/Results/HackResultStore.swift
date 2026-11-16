@@ -1,3 +1,4 @@
+import CoreData
 import Foundation
 import SwiftData
 import GlyphRecognition
@@ -263,10 +264,27 @@ final class HackResultStore {
 
     let retention: Retention
     private let context: ModelContext
+    /// The files this store keeps its hacks in.
+    let storeURLs: Set<URL>
 
     init(container: ModelContainer, retention: Retention = Retention()) {
         self.retention = retention
         context = ModelContext(container)
+        storeURLs = Set(container.configurations.map { Self.comparable($0.url) })
+    }
+
+    /// Whether an `NSPersistentStoreRemoteChange` is this store's: a change
+    /// written by another process, such as an iCloud import. Every Core Data
+    /// store in the app posts it, TipKit's datastore too, each with its own
+    /// file in `NSPersistentStoreURLKey`.
+    func isOwnRemoteChange(_ notification: Notification) -> Bool {
+        guard let url = notification.userInfo?[NSPersistentStoreURLKey] as? URL else { return false }
+        return storeURLs.contains(Self.comparable(url))
+    }
+
+    /// One spelling per file: `/private/var/…` and `/var/…` are the same.
+    private static func comparable(_ url: URL) -> URL {
+        url.standardizedFileURL.resolvingSymlinksInPath()
     }
 
     /// The on-disk store, or nil with the reason it could not be opened.

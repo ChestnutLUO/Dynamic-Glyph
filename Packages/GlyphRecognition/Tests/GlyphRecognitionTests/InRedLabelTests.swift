@@ -2,8 +2,8 @@ import Foundation
 import Testing
 
 /// The flag a red quantity sets is shown as "multiplied" (加倍, 倍増), the
-/// players' word, never "in red": the owner confirmed red always means the
-/// game multiplied the drop (msg 2015, check updated with his OK in msg 2031).
+/// players' word, never "in red": red always means the game multiplied the
+/// drop.
 /// Read from the source tree, like `LocalizationCatalogTests`.
 @Suite("Red quantities are labelled multiplied")
 struct InRedLabelTests {

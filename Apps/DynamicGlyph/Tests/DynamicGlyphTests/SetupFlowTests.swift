@@ -105,7 +105,7 @@ struct SetupFlowTests {
     @Test("Setup starts at 10:1 at 2x unless the saved shape is one it offers")
     func startingCanvas() {
         #expect(PiPCanvasConfiguration.standard.aspectRatio == 10)
-        // The pre-2026-09-23 default, and any shape set only in Settings.
+        // The earlier default, and any shape set only in Settings.
         #expect(SetupFlow.startingCanvas(saved: PiPCanvasConfiguration(width: 384, height: 96, resolution: 1))
                 == .standard)
         #expect(SetupFlow.startingCanvas(saved: PiPCanvasConfiguration(width: 400, height: 64, resolution: 3))

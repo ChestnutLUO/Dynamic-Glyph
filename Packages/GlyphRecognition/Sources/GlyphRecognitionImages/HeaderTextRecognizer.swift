@@ -12,7 +12,9 @@ import GlyphRecognition
 @available(iOS 18.0, macOS 15.0, *)
 public struct HeaderTextRecognizer: Sendable {
     public let layout: GameUILayout
-    public let matcher: HeaderPhraseMatcher
+    /// The Swift `HeaderPhraseMatcher`, or a logic arm's
+    /// (`RecognitionLogicSet.headerPhraseMatcher`).
+    public let matcher: any HeaderPhraseMatching
     public let recognitionLanguages: [Locale.Language]
 
     /// Chinese and Japanese need Vision's accurate recognition, which is
@@ -36,21 +38,40 @@ public struct HeaderTextRecognizer: Sendable {
                   accurate: language.needsAccurateRecognition)
     }
 
-    /// The header region of a frame, cropped from the layout's measured
-    /// fractions. Above the slot indicators, below the status bar and the
-    /// Dynamic Island cut-out.
+    /// The headers of one game language, read in its script and matched by
+    /// `matcher`, which a logic arm made for that language.
+    public init(layout: GameUILayout = GameUILayout(), language: GameLanguage, matcher: any HeaderPhraseMatching) {
+        self.layout = layout
+        self.matcher = matcher
+        recognitionLanguages = language.recognitionLanguages.map { Locale.Language(identifier: $0) }
+        accurate = language.needsAccurateRecognition
+    }
+
+    /// The header region of a `width` by `height` frame, in top-left
+    /// coordinates, from the layout's measured fractions: full width, above
+    /// the slot indicators, below the status bar and the Dynamic Island
+    /// cut-out.
+    public func headerRect(width: Int, height: Int) -> CGRect {
+        let height = Double(height)
+        return CGRect(x: 0, y: layout.headerTextTop * height, width: Double(width),
+                      height: (layout.headerTextBottom - layout.headerTextTop) * height).integral
+    }
+
+    /// The header region of a frame, cropped at `headerRect`.
     public func headerCrop(of image: CGImage) -> CGImage? {
-        let height = Double(image.height)
-        let rect = CGRect(x: 0, y: layout.headerTextTop * height,
-                          width: Double(image.width),
-                          height: (layout.headerTextBottom - layout.headerTextTop) * height)
-        return image.cropping(to: rect.integral)
+        image.cropping(to: headerRect(width: image.width, height: image.height))
     }
 
     public func read(_ image: CGImage, sourceTime: Double) async throws -> HeaderReading {
         guard let crop = headerCrop(of: image) else {
             return HeaderReading(phase: .unknown, matchedText: "", confidence: 0, sourceTime: sourceTime)
         }
+        return try await read(headerRegion: crop, sourceTime: sourceTime)
+    }
+
+    /// The same read of a frame's `headerRect` alone, such as a crop of it or
+    /// that rectangle rendered on its own.
+    public func read(headerRegion crop: CGImage, sourceTime: Double) async throws -> HeaderReading {
         var request = RecognizeTextRequest()
         // `fast`, and no language correction: the four headers are fixed
         // strings matched word by word, and correction has more ways to turn

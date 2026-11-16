@@ -1,6 +1,7 @@
 import SwiftUI
 import Charts
 import UIKit
+import GlyphRecognition
 
 /// The Statistics page's colours: system semantics, and a green and red
 /// chosen for 4.5:1 on white and on #1C1C1E.
@@ -168,6 +169,8 @@ struct ItemsDroppedCard: View {
 private struct ItemKindsRow: View {
     let statistics: HackStatistics
     @Environment(\.dynamicTypeSize) private var typeSize
+    /// Item names, for VoiceOver as on screen: see `GameItemName`.
+    @Environment(\.gameItemLanguage) private var itemLanguage
     /// One column for the symbols in the named list, so the names line up:
     /// the widest symbol (XMP Burster's) fits.
     @ScaledMetric(relativeTo: .callout) private var symbolWidth: CGFloat = 22
@@ -185,13 +188,13 @@ private struct ItemKindsRow: View {
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         Image(systemName: GearSummary.symbol(for: group.item)).foregroundStyle(.tint)
                             .frame(width: symbolWidth)
-                        // Game terms, printed as the English game prints them.
-                        Text(verbatim: group.item).fixedSize(horizontal: false, vertical: true)
+                        // Game terms, as the game prints them in its language.
+                        GameItemName(item: group.item).fixedSize(horizontal: false, vertical: true)
                         Spacer(minLength: 8)
                         Text(verbatim: group.total.formatted()).bold().monospacedDigit().layoutPriority(1)
                     }
                     .accessibilityElement(children: .ignore)
-                    .accessibilityLabel(Text(verbatim: "\(group.total) \(group.item)"))
+                    .accessibilityLabel(Text(verbatim: GameLanguage.itemCountLabel(group.total, group.item, shownIn: itemLanguage)))
                 }
                 if other > 0 {
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
@@ -217,7 +220,7 @@ private struct ItemKindsRow: View {
                     }
                     .fixedSize()
                     .accessibilityElement(children: .ignore)
-                    .accessibilityLabel(Text(verbatim: "\(group.total) \(group.item)"))
+                    .accessibilityLabel(Text(verbatim: GameLanguage.itemCountLabel(group.total, group.item, shownIn: itemLanguage)))
                 }
                 if other > 0 {
                     Spacer(minLength: 8)

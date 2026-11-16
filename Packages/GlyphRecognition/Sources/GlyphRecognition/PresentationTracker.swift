@@ -317,6 +317,19 @@ public struct PresentationTracker: Sendable {
             lastPhaseTime = evidence.time
         }
 
+        // Our own floating window over one side of the strip hides the
+        // countdown's far end along with the full row. The visible part, still
+        // running up to the window, keeps input that is already established:
+        // it never starts input, resumes it after an interruption or
+        // overrides a header naming another phase.
+        if source != .inputTimer, evidence.hasPartialInputTimerBar, evidence.hasValidCalibration,
+           observedPresentationForCurrentHack, state == .input,
+           resolved != .command, resolved != .presenting, resolved != .completed {
+            resolved = .input
+            source = .partialInputTimer
+            lastPhaseTime = evidence.time
+        }
+
         let target = trackingState(for: resolved)
         guard target != state else { phaseSource = source; return events }
 
@@ -540,6 +553,11 @@ public struct PresentationTracker: Sendable {
             coveredSince = nil
             indicatorsObstructed = false
         }
+        if evidence.slots == nil, state == .input,
+           evidence.partialSlots != nil || evidence.hasPartialInputTimerBar {
+            applyPartialInputSlots(evidence)
+            return []
+        }
         guard let reading = evidence.slots else { return [] }
         var events: [TrackingEvent] = []
 
@@ -616,6 +634,23 @@ public struct PresentationTracker: Sendable {
             break
         }
         return events
+    }
+
+    /// Beside our own window over one side of the strip, the player's slot is
+    /// known only while its highlight shows: the visible indicators are placed
+    /// in the row the strip has shown, and only alongside the countdown. A
+    /// highlight under the window is unknown, not held from an earlier frame.
+    private mutating func applyPartialInputSlots(_ evidence: FrameEvidence) {
+        if !slots.contains(where: { $0.status == .inferred }),
+           evidence.hasInputTimerBar || evidence.hasPartialInputTimerBar,
+           let count = expectedSlotCount,
+           let highlighted = evidence.partialSlots?.resolved(slotCount: count)?.highlightedIndex {
+            inputSlotIndex = highlighted
+            inputHighlightTime = evidence.time
+        } else {
+            inputSlotIndex = nil
+            inputHighlightTime = nil
+        }
     }
 
     /// Once the last Glyph has been shown the game clears the array and

@@ -3,7 +3,8 @@ import Foundation
 import GlyphRecognition
 import Testing
 
-/// Desired watch/grace policy regressions, intentionally red on shipped build 91.
+/// Desired watch/grace policy regressions, written to fail on the policy they
+/// replaced.
 /// Only header OCR is injected; geometry, fit retention, tracker,
 /// command watch, sampling and meter all use the real live-output pipeline.
 @Suite("Cached calibration command-watch reproduction", .serialized)

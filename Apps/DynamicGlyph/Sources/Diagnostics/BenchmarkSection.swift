@@ -41,11 +41,20 @@ final class RecordingBenchmarkModel: ObservableObject {
         var runs: Int
         var powerSaving: Bool
         var pace: BenchmarkPace
+        var engine: RecognitionEngineChoice
+        var logic: RecognitionLogicChoice
         var fraction: Double
     }
 
     @Published var mode: BenchmarkMode = .both
     @Published var passes: BenchmarkPasses = .both
+    /// Which arms of the engine A/B run, with the cuts set in Power saving.
+    /// By default the engine a capture runs unless one was chosen; Swift or
+    /// both compare it with the engine shipped before.
+    @Published var engines = BenchmarkEngines(AppPreferences.defaultRecognitionEngine)
+    /// Which arms of the logic layer run, beside the engines. By default the
+    /// logic a capture runs unless one was chosen.
+    @Published var logics = BenchmarkLogic(AppPreferences.defaultRecognitionLogic)
     @Published private(set) var progress: Progress?
     @Published private(set) var fileName: String?
     @Published private(set) var lines: [String] = []
@@ -74,13 +83,24 @@ final class RecordingBenchmarkModel: ObservableObject {
             automaticLanguage: engine.gameLanguage == nil)
         let cancellation = BenchmarkCancellation()
         self.cancellation = cancellation
-        // Accuracy Off, accuracy On, then real pace Off and On.
-        let runs = passes.paces.flatMap { pace in mode.runs.map { (pace: pace, powerSaving: $0) } }
+        // The cuts as set in Power saving when the run starts, like the
+        // other capture settings; the same for every run of the benchmark.
+        let cuts = AppPreferences().recognitionCuts
+        // Accuracy before real pace; within a pace, the Swift engine before
+        // the C++ one, then the Swift logic before the C++ one; within those,
+        // Off before On: each run's reference comes before it.
+        let runs = passes.paces.flatMap { pace in
+            engines.choices.flatMap { engine in
+                logics.choices.flatMap { logic in
+                    mode.runs.map { (pace: pace, engine: engine, logic: logic, powerSaving: $0) }
+                }
+            }
+        }
         fileName = url.lastPathComponent
         lines = []
         message = nil
         progress = Progress(run: 1, runs: runs.count, powerSaving: runs[0].powerSaving, pace: runs[0].pace,
-                            fraction: 0)
+                            engine: runs[0].engine, logic: runs[0].logic, fraction: 0)
         // A capture session needs the meter's text-read hook and the CPU:
         // the benchmark gives way to it. So it does when the app leaves the
         // screen, where real-time pacing no longer holds.
@@ -98,12 +118,13 @@ final class RecordingBenchmarkModel: ObservableObject {
             var failure: String?
             for (index, run) in runs.enumerated() where !cancellation.isCancelled {
                 progress = Progress(run: index + 1, runs: runs.count, powerSaving: run.powerSaving, pace: run.pace,
-                                    fraction: 0)
+                                    engine: run.engine, logic: run.logic, fraction: 0)
                 do {
                     // Each run decodes the file anew.
                     let source = try await BenchmarkFrameSource(url: url)
                     let result = await Self.run(source, configuration: configuration, powerSaving: run.powerSaving,
-                                                pace: run.pace, cancellation: cancellation) { [weak self] fraction in
+                                                pace: run.pace, engine: run.engine, logic: run.logic, cuts: cuts,
+                                                cancellation: cancellation) { [weak self] fraction in
                         Task { @MainActor in self?.progress?.fraction = fraction }
                     }
                     results.append(result)
@@ -131,14 +152,16 @@ final class RecordingBenchmarkModel: ObservableObject {
 
     /// On a thread of its own: the run sleeps between frames.
     nonisolated private static func run(_ source: BenchmarkFrameSource, configuration: BenchmarkConfiguration,
-                                        powerSaving: Bool, pace: BenchmarkPace,
+                                        powerSaving: Bool, pace: BenchmarkPace, engine: RecognitionEngineChoice,
+                                        logic: RecognitionLogicChoice, cuts: Set<RecognitionCut>,
                                         cancellation: BenchmarkCancellation,
                                         progress: @escaping @Sendable (Double) -> Void) async -> BenchmarkRunResult {
         let box = UncheckedBox(source)
         return await withCheckedContinuation { done in
             let thread = Thread {
                 let runner = BenchmarkRunner(configuration: configuration, powerSaving: powerSaving, pace: pace,
-                                             cancellation: cancellation, progress: progress)
+                                             engine: engine, logic: logic, cuts: cuts, cancellation: cancellation,
+                                             progress: progress)
                 done.resume(returning: runner.run(box.value))
             }
             thread.name = "org.szres.DynamicGlyph.benchmark.feeder"
@@ -182,10 +205,27 @@ struct BenchmarkSection: View {
                     Text(verbatim: "Passes")
                 }
                 .disabled(model.isRunning)
+                Picker(selection: $model.engines) {
+                    Text(verbatim: "Swift only").tag(BenchmarkEngines.swift)
+                    Text(verbatim: "C++ only").tag(BenchmarkEngines.cpp)
+                    Text(verbatim: "Both").tag(BenchmarkEngines.both)
+                } label: {
+                    Text(verbatim: "Engine")
+                }
+                .disabled(model.isRunning)
+                Picker(selection: $model.logics) {
+                    Text(verbatim: "Swift only").tag(BenchmarkLogic.swift)
+                    Text(verbatim: "C++ only").tag(BenchmarkLogic.cpp)
+                    Text(verbatim: "Both").tag(BenchmarkLogic.both)
+                } label: {
+                    Text(verbatim: "Logic")
+                }
+                .disabled(model.isRunning)
                 if let progress = model.progress {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(verbatim: "Run \(progress.run) of \(progress.runs) · \(progress.pace.label) · "
-                             + "power saving " + (progress.powerSaving ? "on" : "off"))
+                             + "\(progress.engine.rawValue) · logic \(progress.logic.rawValue) · power saving "
+                             + (progress.powerSaving ? "on" : "off"))
                         ProgressView(value: progress.fraction)
                         if let name = model.fileName {
                             Text(verbatim: name).font(.caption).foregroundStyle(.secondary).lineLimit(1)
@@ -226,7 +266,13 @@ struct BenchmarkSection: View {
                      + "the Power section are left alone. The recording stays where it is. "
                      + "Hack start: from the first frame the header showed the hack's first phase "
                      + "(in Both, as the Off run saw it) to the frame the hack was recognised. "
-                     + "CPU is this app's, including decoding the movie.")
+                     + "CPU is this app's, including decoding the movie. "
+                     + "Engine runs the C++ engine captures use by default, the Swift engine shipped before "
+                     + "it, or Swift then C++, each with the cuts set under Power saving (the Swift engine "
+                     + "honours only Lazy image, Plane gate and Portal settle; for the Swift pipeline as "
+                     + "shipped, turn the cuts off); with both, each C++ run is compared with its Swift run. "
+                     + "Logic runs the tracking, sessions and parsers in Swift, C++ or both the same way; "
+                     + "with both, each C++ logic run is compared with its Swift logic run on the same engine.")
             }
         }
     }

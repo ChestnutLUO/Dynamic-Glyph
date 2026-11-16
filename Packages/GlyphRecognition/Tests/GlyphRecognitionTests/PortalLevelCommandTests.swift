@@ -6,7 +6,7 @@ import Testing
 /// unreliable: it can still flag a conflict, which widens the level to the
 /// strongest source as before, but it never narrows the level. The
 /// uncalibrated badge range warmer than L5 (L1–L4) doesn't narrow it either.
-/// Together they had put an L7 portal at L3–L4 (2026-10-27, hack 1: badge
+/// Together they had put an L7 portal at L3–L4 (a field report's hack 1: badge
 /// read as L1–L4, 3 Glyphs, one L6 resonator and 7 unread). The resonators,
 /// calibrated hues and the L7 band narrow as before; a settled count changes
 /// nothing.
@@ -40,7 +40,7 @@ struct PortalLevelCommandTests {
         }
     }
 
-    @Test("A contradicting count still flags the conflict, as on 2026-10-23 (spikeB hack 2)")
+    @Test("A contradicting count still flags the conflict, as in an earlier field session's hack 2")
     func contradictingCount() throws {
         // No resonator read, badge at 347° (calibrated L5), 4 Glyphs (L6–L7), command unresolved.
         let spikeB2 = try #require(PortalLevelRules.estimate(resonators: [], unreadSlots: 8, badgeHue: 347.1,
@@ -83,7 +83,7 @@ struct PortalLevelCommandTests {
             #expect(settled == before)
         }
         let hack1 = try #require(PortalLevelRules.estimate(resonators: [6], unreadSlots: 7, badgeHue: 10, glyphCount: 3))
-        #expect(hack1.lowest == 3 && hack1.highest == 4, "the settled path is build 100's")
+        #expect(hack1.lowest == 3 && hack1.highest == 4, "the settled path is unchanged")
     }
 
     @Test("A resolved presentation command, or a command window seen without one, settles the count")

@@ -1,6 +1,6 @@
 # Gear item vocabulary
 
-Checked 2026-09-27. This is a name-recognition list, not a drop-rate table or a
+This is a name-recognition list, not a drop-rate table or a
 claim that every listed item is available from every portal. Names require an
 explicit quantity in a recognized item panel; inventory and reward screens
 are not alternative inputs.
@@ -32,7 +32,7 @@ and is at least half of it, such as `Kinetic C…` for Kinetic Capsule or
 column's edge without a mark, and two-word names that lose their last word,
 are recorded in Japanese panels; see [GAME_LANGUAGES.md](GAME_LANGUAGES.md).
 A drop row names a transmuter by its short label with its sign, `ITO EN (-)`
-(player report, 2026-10-01), which counts as ITO EN Transmuter (-). An
+(seen in a field report), which counts as ITO EN Transmuter (-). An
 abbreviated name without the sign cannot distinguish the two variants, so it
 stays unknown. Item names in other game languages are in `GameText.swift`.
 
@@ -47,7 +47,7 @@ saved before the rule covered them. No meter read is claimed for this rule.
 
 | Fixed rarity | Items | Source |
 |---|---|---|
-| Very Rare | Aegis Shield, Hypercube, ADA Refactor, JARVIS Virus | player's reports; [item reference](https://ingress.wiki.gg/wiki/Portal_Shield#Aegis_Shield) for Aegis |
+| Very Rare | Aegis Shield, Hypercube, ADA Refactor, JARVIS Virus | field reports; [item reference](https://ingress.wiki.gg/wiki/Portal_Shield#Aegis_Shield) for Aegis |
 | Very Rare | SoftBank Ultra Link, ITO EN Transmuter (+), ITO EN Transmuter (-) | [FevGames rarity guide](https://fevgames.net/ingress/ingress-guide/concepts/rarity/) |
 | Rare | Turret, Force Amp | FevGames rarity guide; [Turret](https://ingress.fandom.com/wiki/Turret) and [Force Amp](https://ingress.fandom.com/wiki/Force_Amp) wiki pages; the recorded `five-base` Turret shows two purple bars |
 
@@ -85,8 +85,8 @@ and the fixed-rarity confirmation and serialization path.
 
 ## ITO EN effects
 
-An applied effect is separate from receiving a transmuter item. The player's
-report gives `ITO EN (+) applied.`; the [documented full label](https://ingress.fandom.com/wiki/ITO_EN_Transmuter)
+An applied effect is separate from receiving a transmuter item. A field
+report shows `ITO EN (+) applied.`; the [documented full label](https://ingress.fandom.com/wiki/ITO_EN_Transmuter)
 is `ITO EN Transmuter (+) applied.` (and the corresponding minus variant).
 Both spellings map to `ITO EN (+)` or `ITO EN (-)`. Unicode minus, and the en
 and em dashes OCR can read it as, are accepted; the sign must be present. Truncated item names never identify either variant.
@@ -107,8 +107,8 @@ to item quantities or imply that any other mod was applied.
 ## Multiplied quantities
 
 The game prints a quantity in white, or in red when a multiplier applied to
-the drop, such as on the first hack of the day. In the player's 2026-09-28
-capture of a first hack of the day, every quantity in both the portal and
+the drop, such as on the first hack of the day. In a field capture of a
+first hack of the day, every quantity in both the portal and
 Bonus panels was red. Which multipliers exist, and whether the game ever
 prints some quantities of a panel in red and others in white, is not known.
 
@@ -130,8 +130,8 @@ the game coloured the number, and an x1 was not multiplied by anything. The
 Statistics details count those items, and the summary card adds that count
 ("26 in red") when there are any. The export keeps its `multiplied` column.
 
-Validation: `multiplied-base` and `multiplied-bonus` are masked frames of the
-2026-09-28 capture, and every entry in them reads as multiplied; every entry
+Validation: `multiplied-base` and `multiplied-bonus` are masked frames of that
+capture, and every entry in them reads as multiplied; every entry
 in the four earlier fixtures reads as not multiplied, including the white
 quantity beside an L5 level. The full capture replays with all six entries
 multiplied in both live and exhaustive modes (`multiplied-annotation.json`).

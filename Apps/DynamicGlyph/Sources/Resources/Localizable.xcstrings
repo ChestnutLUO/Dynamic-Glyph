@@ -1,6 +1,1117 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Recognition engine" : {
+      "comment" : "Diagnostics, Power saving, engine A/B: picker title. Which pipeline (Swift or C++) runs the pixel steps of a capture.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "認識エンジン"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "识别引擎"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "辨識引擎"
+          }
+        }
+      }
+    },
+    "Old (Swift)" : {
+      "comment" : "Settings, recognition engine: the recognition the app used before the C++ engine became the default, written in Swift. Keep \"Swift\", a programming language.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "旧（Swift）"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "旧版（Swift）"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "舊版（Swift）"
+          }
+        }
+      }
+    },
+    "New (C++)" : {
+      "comment" : "Settings, recognition engine: the default, the same recognition with its pixel work rewritten in C++, which uses less power. Keep \"C++\", a programming language.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "新（C++）"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "新版（C++）"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "新版（C++）"
+          }
+        }
+      }
+    },
+    "Custom (see Diagnostics)" : {
+      "comment" : "Settings, recognition engine: the engine, logic and power cuts were set in Diagnostics to something other than Old or New, so neither choice applies.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "カスタム（診断を参照）"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "自定义（见诊断）"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "自訂（見診斷）"
+          }
+        }
+      }
+    },
+    "New, the default, is the same recognition with its pixel work rewritten in C++, and uses less power. Old is the Swift recognition the app used before. Both should recognize the same; the Power section in Diagnostics shows which engine is running." : {
+      "comment" : "Settings, recognition engine page footer. \"New\" and \"Old\" are the two choices above it. Keep \"C++\", \"Swift\" and \"Power\" (a Diagnostics section with an untranslated title) as written.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "「新」は標準の設定で、同じ認識のピクセル処理を C++ で書き直したもので、消費電力が少なくなります。「旧」はこれまでアプリが使っていた Swift の認識です。どちらも認識結果は同じになるはずです。動作中のエンジンは、診断の「Power」セクションに表示されます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "“新版”是默认设置，即将同一套识别的像素处理用 C++ 重写，耗电更少。“旧版”是应用之前使用的 Swift 识别。两者的识别结果应相同；诊断中的“Power”部分会显示正在运行的引擎。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "「新版」是預設設定，即將同一套辨識的像素處理以 C++ 重寫，耗電更少。「舊版」是 App 之前使用的 Swift 辨識。兩者的辨識結果應相同；診斷中的「Power」區段會顯示正在執行的引擎。"
+          }
+        }
+      }
+    },
+    "Recognition logic" : {
+      "comment" : "Diagnostics, Power saving, engine A/B: picker title. Which implementation (Swift or C++) runs the recognition logic after the pixel steps: sequence tracking, result, gear and command reading, text parsing.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "認識ロジック"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "识别逻辑"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "辨識邏輯"
+          }
+        }
+      }
+    },
+    "Recognition logic runs the sequence tracking, result, gear and command reading, and the text parsers in Swift or C++. It takes effect at the next Start; Power says which ran." : {
+      "comment" : "Diagnostics, Power saving, engine A/B: footer for the recognition logic picker. 'Power' is the untranslated title of a Diagnostics section; 'Start' the capture button.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "認識ロジックは、シーケンスの追跡、結果・ギア・コマンドの読み取り、テキストの解析を Swift または C++ で実行します。次回の開始時から有効になり、「Power」にどちらが動作したかが表示されます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "识别逻辑以 Swift 或 C++ 运行序列跟踪、结果、装备和指令的读取以及文本解析。它在下次开始时生效；“Power”会显示实际运行的是哪一个。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "辨識邏輯以 Swift 或 C++ 執行序列追蹤、結果、裝備和指令的讀取以及文字解析。它在下次開始時生效；「Power」會顯示實際執行的是哪一個。"
+          }
+        }
+      }
+    },
+    "Direct planes" : {
+      "comment" : "Diagnostics, Power saving, engine A/B: switch title for a power cut. Reads the captured pixel planes directly.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "プレーンを直接読む"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "直接读取平面"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "直接讀取平面"
+          }
+        }
+      }
+    },
+    "Reads luma and colour from the captured planes, without the Core Image render. C++ only." : {
+      "comment" : "Diagnostics, Power saving, engine A/B: one-line explanation under the 'Direct planes' switch. 'Core Image' is Apple's framework name.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Core Image の描画を行わず、キャプチャしたプレーンから輝度と色を読み取ります。C++ のみ。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "直接从捕获的像素平面读取亮度和颜色，不经过 Core Image 渲染。仅限 C++。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "直接從擷取的像素平面讀取亮度和顏色，不經過 Core Image 渲染。僅限 C++。"
+          }
+        }
+      }
+    },
+    "Lazy image" : {
+      "comment" : "Diagnostics, Power saving, engine A/B: switch title for a power cut. The frame's image is made only when text reading needs it.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "画像を遅延生成"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "延迟生成图像"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "延遲產生影像"
+          }
+        }
+      }
+    },
+    "Renders the frame only when the text reader takes it, not for every analysed frame." : {
+      "comment" : "Diagnostics, Power saving, engine A/B: one-line explanation under the 'Lazy image' switch.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "解析するフレームごとではなく、テキスト読み取りが使うときだけフレームを描画します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "仅在文字读取器取用时才渲染该帧，而不是每个分析帧都渲染。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "僅在文字讀取器取用時才渲染該幀，而不是每個分析幀都渲染。"
+          }
+        }
+      }
+    },
+    "Hunt in the array band" : {
+      "comment" : "Diagnostics, Power saving, engine A/B: switch title for a power cut. The search for the Glyph node array is limited to the screen rows where it is drawn.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "配列の帯域内だけを探索"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "仅在阵列区域搜索"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "僅在陣列區域搜尋"
+          }
+        }
+      }
+    },
+    "Searches for the node array only in the rows the gate calls the array area. C++ only." : {
+      "comment" : "Diagnostics, Power saving, engine A/B: one-line explanation under the 'Hunt in the array band' switch. 'The gate' is the luma gate that decides the analysis pace.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ゲートが配列領域とみなす行の範囲でのみノード配列を探します。C++ のみ。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "仅在门控判定为阵列区域的行中搜索节点阵列。仅限 C++。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "僅在閘門判定為陣列區域的列中搜尋節點陣列。僅限 C++。"
+          }
+        }
+      }
+    },
+    "Hunt at half resolution" : {
+      "comment" : "Diagnostics, Power saving, engine A/B: switch title for a power cut. Ring components are found on every second pixel.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "半分の解像度で探索"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "以一半分辨率搜索"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "以一半解析度搜尋"
+          }
+        }
+      }
+    },
+    "Finds ring components on every second pixel, then measures them on the full pixels. C++ only." : {
+      "comment" : "Diagnostics, Power saving, engine A/B: one-line explanation under the 'Hunt at half resolution' switch.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "リングの連結成分を 1 ピクセルおきに見つけ、その後フルピクセルで計測します。C++ のみ。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每隔一个像素查找环形连通域，再以全部像素测量。仅限 C++。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每隔一個像素尋找環形連通區，再以全部像素測量。僅限 C++。"
+          }
+        }
+      }
+    },
+    "Plane gate" : {
+      "comment" : "Diagnostics, Power saving, engine A/B: switch title for a power cut. The captured pixel planes are checked before small regions are rendered.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "プレーンで事前判定"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "按像素平面预先判断"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "按像素平面預先判斷"
+          }
+        }
+      }
+    },
+    "Skips rendering the drone footer and the command band when the captured planes show nothing there." : {
+      "comment" : "Diagnostics, Power saving, engine A/B: one-line explanation under the 'Plane gate' switch.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "キャプチャしたプレーンに何も映っていないとき、ドローンのフッターとコマンドの帯を描画しません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "当捕获的像素平面显示无人机底栏和指令区域为空时，跳过对它们的渲染。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "當擷取的像素平面顯示無人機底欄和指令區域為空時，略過對它們的渲染。"
+          }
+        }
+      }
+    },
+    "Portal settle" : {
+      "comment" : "Diagnostics, Power saving, engine A/B: switch title for a power cut. A portal screen stops being read once its resonator levels have settled.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ポータル画面の読み取りを打ち切る"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "能量塔画面读稳后停读"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "能量塔畫面讀穩後停讀"
+          }
+        }
+      }
+    },
+    "Stops reading a portal screen once its levels have settled." : {
+      "comment" : "Diagnostics, Power saving, engine A/B: one-line explanation under the 'Portal settle' switch. 'Levels' are the portal's resonator levels.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ポータル画面のレベルが確定したら、その画面の読み取りをやめます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "能量塔画面的等级读稳后，不再读取该画面。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "能量塔畫面的等級讀穩後，不再讀取該畫面。"
+          }
+        }
+      }
+    },
+    "Header still skip" : {
+      "comment" : "Diagnostics, Power saving, engine A/B: switch title for a power cut. The game's header text (the line naming the hack's phase at the top of the screen) is not read again while its pixels stay the same.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "静止したヘッダーの読み取りを省く"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "标题栏未变时跳过读取"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "標題列未變時跳過讀取"
+          }
+        }
+      }
+    },
+    "Skips reading the header while it has not changed since the last read, at most a second, during a hack too." : {
+      "comment" : "Diagnostics, Power saving, engine A/B: one-line explanation under the 'Header still skip' switch. 'Header' is the game's text line at the top of the screen; a real read still happens at least once a second.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "前回の読み取りからヘッダーが変わっていない間は、ハック中も含めて最長1秒まで読み取りを省きます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "标题栏自上次读取后未变化时跳过读取，最长1秒，Hack 进行中也是如此。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "標題列自上次讀取後未變化時跳過讀取，最長1秒，Hack 進行中也是如此。"
+          }
+        }
+      }
+    },
+    "Gear settle" : {
+      "comment" : "Diagnostics, Power saving, engine A/B: switch title for a power cut. A gear drop panel (the item list the game shows after a hack) stops being read once every row on it has been confirmed, while it stays still.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ドロップ画面の読み取りを打ち切る"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "掉落画面读稳后停读"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "掉落畫面讀穩後停讀"
+          }
+        }
+      }
+    },
+    "Once every row of a gear drop panel is confirmed, reads it only once a second while it stays still." : {
+      "comment" : "Diagnostics, Power saving, engine A/B: one-line explanation under the 'Gear settle' switch. A gear drop panel is the item list the game shows after a hack; a row is one item with its quantity.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ドロップ画面のすべての行が確定したら、画面が変わらない間は1秒に1回だけ読み取ります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "掉落画面的每一行都确认后，只要画面不变，每秒只读取一次。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "掉落畫面的每一行都確認後，只要畫面不變，每秒只讀取一次。"
+          }
+        }
+      }
+    },
+    "Once the game's language is found, reads gear drop panels in it alone unless a panel shows another language." : {
+      "comment" : "Diagnostics, Power saving, engine A/B: one-line explanation under the 'Gear language settle' switch. The game's language is the language the Ingress game's text is in, which the app detects; a gear drop panel is the item list the game shows after a hack.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ゲームの言語が分かったら、別の言語が表示されない限り、ドロップ画面をその言語だけで読み取ります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "识别出游戏语言后，除非掉落画面显示其他语言，否则只用该语言读取掉落画面。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "辨識出遊戲語言後，除非掉落畫面顯示其他語言，否則只用該語言讀取掉落畫面。"
+          }
+        }
+      }
+    },
+    "Result settle" : {
+      "comment" : "Diagnostics, Power saving, engine A/B: switch title for a power cut. A hack's result panel (the screen after a Glyph hack showing each Glyph's outcome and the bonuses) stops being read once the result is complete, while it stays still.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "結果画面の読み取りを打ち切る"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "结果画面读稳后停读"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "結果畫面讀穩後停讀"
+          }
+        }
+      }
+    },
+    "Once a hack's result is complete and read the same twice, reads it only once a second while it stays still." : {
+      "comment" : "Diagnostics, Power saving, engine A/B: one-line explanation under the 'Result settle' switch. A hack's result is the panel after a Glyph hack with each Glyph's outcome and the bonuses; complete means every outcome and both bonuses are final.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ハックの結果がすべて確定し、2回続けて同じ内容が読めたら、画面が変わらない間は1秒に1回だけ読み取ります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Hack 结果全部确定并连续两次读到相同内容后，只要画面不变，每秒只读取一次。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Hack 結果全部確定並連續兩次讀到相同內容後，只要畫面不變，每秒只讀取一次。"
+          }
+        }
+      }
+    },
+    "Gear lean read" : {
+      "comment" : "Diagnostics, Power saving, engine A/B: switch title for a power cut. A gear drop panel (the item list the game shows after a hack) is read with fewer extra text recognition passes per read.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ドロップ画面の再読み取りを省く"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "掉落画面精简读取"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "掉落畫面精簡讀取"
+          }
+        }
+      }
+    },
+    "Skips rereading a gear row read whole with a red quantity or an empty cell, and the separate quantity check in a game not in English." : {
+      "comment" : "Diagnostics, Power saving, engine A/B: one-line explanation under the 'Gear lean read' switch. A gear row is one item of a gear drop panel with its level and quantity; a red quantity marks a multiplied drop; an empty cell is the blank half of a row with one item; the quantity check is a second text recognition pass of the quantity alone.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "数量が赤で全項目を読めた行と空欄の再読み取り、英語以外のゲームでの数量の個別確認を省きます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "跳过对数量为红色且已完整读出的行和空格的重读，以及非英文游戏中单独的数量核对。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "跳過對數量為紅色且已完整讀出的行和空格的重讀，以及非英文遊戲中單獨的數量核對。"
+          }
+        }
+      }
+    },
+    "Header window mask" : {
+      "comment" : "Diagnostics, Power saving, engine A/B: switch title for a power cut. Works with 'Header still skip': the app's own floating (Picture in Picture) window is left out when it covers part of the game's header text line.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ヘッダー上のフローティングウインドウを除外"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "忽略标题栏上的浮动窗口"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "忽略標題列上的浮動視窗"
+          }
+        }
+      }
+    },
+    "Header cover skip" : {
+      "comment" : "Diagnostics, Power saving, engine A/B: switch title for a power cut. The game's header text line is not read while the app's own floating (Picture in Picture) window covers it.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ウインドウに覆われたヘッダーの読み取りを省く"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "标题栏被浮动窗口遮住时跳过读取"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "標題列被浮動視窗遮住時跳過讀取"
+          }
+        }
+      }
+    },
+    "Doesn't read the header while the floating window covers at least half of it, as nothing can be read there." : {
+      "comment" : "Diagnostics, Power saving, engine A/B: one-line explanation under the 'Header cover skip' switch. 'Header' is the game's text line at the top of the screen; the floating window is this app's Picture in Picture window, which can sit over it.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フローティングウインドウがヘッダーの半分以上を覆っている間は、読み取れる文字がないため、ヘッダーを読み取りません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "浮动窗口遮住标题栏一半以上时不读取标题栏，因为此时无法读出任何内容。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "浮動視窗遮住標題列一半以上時不讀取標題列，因為此時無法讀出任何內容。"
+          }
+        }
+      }
+    },
+    "With Header still skip, leaves the floating window out when it covers part of the header, so that changes inside the window alone don't cause a read." : {
+      "comment" : "Diagnostics, Power saving, engine A/B: one-line explanation under the 'Header window mask' switch. 'Header' is the game's text line at the top of the screen; the floating window is this app's Picture in Picture window, which can sit over it.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ヘッダー静止スキップと併用し、フローティングウインドウがヘッダーの一部を覆っているときはその部分を比較から外すため、ウインドウ内の変化だけでは読み取りません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "与“标题栏未变时跳过读取”配合使用：浮动窗口遮住部分标题栏时，比较时忽略窗口所在部分，仅窗口内容变化不会触发读取。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "與「標題列未變時跳過讀取」配合使用：浮動視窗遮住部分標題列時，比較時忽略視窗所在部分，僅視窗內容變化不會觸發讀取。"
+          }
+        }
+      }
+    },
+    "Unless set here or in Settings, a capture runs New: the C++ engine with Swift logic, Direct planes, Lazy image, both hunt cuts, Plane gate, Header still skip and Gear lean read. Old is the Swift engine and logic with no cuts. The engine and its cuts take effect at the next Start; Power says which engine ran. Only the C++ engine honours Direct planes and the hunt cuts." : {
+      "comment" : "Diagnostics, Power saving, engine A/B: footer. 'New' and 'Old' are the two choices of Settings' Recognition engine page; 'Direct planes', 'Lazy image', the hunt cuts, 'Plane gate', 'Header still skip' and 'Gear lean read' are the switch titles above. 'Power' is the untranslated title of a Diagnostics section; 'Start' the capture button.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ここか設定で変更しない限り、キャプチャは「新」で動作します。C++ エンジンと Swift ロジックに、「プレーンを直接読む」「画像を遅延生成」、2 つの探索のカット、「プレーンで事前判定」「静止したヘッダーの読み取りを省く」と「ドロップ画面の再読み取りを省く」を加えたものです。「旧」はカットなしの Swift エンジンと Swift ロジックです。エンジンとカットは次回の開始時から有効になり、「Power」にどのエンジンが動作したかが表示されます。「プレーンを直接読む」と探索のカットは C++ エンジンのみが適用します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "除非在此处或设置中更改，捕获会以“新版”运行：C++ 引擎与 Swift 逻辑，加上“直接读取平面”“延迟生成图像”、两项搜索削减项、“按像素平面预先判断”“标题栏未变时跳过读取”和“掉落画面精简读取”。“旧版”是不带削减项的 Swift 引擎与 Swift 逻辑。引擎和削减项在下次开始时生效；“Power”会显示实际运行的引擎。“直接读取平面”和搜索削减项仅由 C++ 引擎执行。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "除非在此處或設定中變更，擷取會以「新版」執行：C++ 引擎與 Swift 邏輯，加上「直接讀取平面」「延遲產生影像」、兩項搜尋削減項目、「按像素平面預先判斷」「標題列未變時跳過讀取」和「掉落畫面精簡讀取」。「舊版」是不含削減項目的 Swift 引擎與 Swift 邏輯。引擎和削減項目在下次開始時生效；「Power」會顯示實際運行的引擎。「直接讀取平面」和搜尋削減項目僅由 C++ 引擎執行。"
+          }
+        }
+      }
+    },
+    "Appearance" : {
+      "comment" : "Settings: the row that opens Appearance, and that screen's title.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "外観"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "外观"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "外觀"
+          }
+        }
+      }
+    },
+    "App Icon" : {
+      "comment" : "Appearance: the app icon section.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アプリアイコン"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "应用图标"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "App 圖示"
+          }
+        }
+      }
+    },
+    "Theme" : {
+      "comment" : "Appearance: the colour theme section.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "テーマ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "主题"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "主題"
+          }
+        }
+      }
+    },
+    "Preview" : {
+      "comment" : "Appearance: a sample of the theme's accent beside the colours that never change.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "プレビュー"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "预览"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "預覽"
+          }
+        }
+      }
+    },
+    "A theme changes the app's accent color. Colors that carry a meaning, such as reading status and multiplied items, always stay the same." : {
+      "comment" : "Appearance: under the themes.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "テーマはアプリのアクセントカラーを変えます。読み取り状態や倍増アイテムなど、意味のある色はいつも変わりません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "主题会改变应用的强调色。表示读取状态、加倍物品等含义的颜色始终保持不变。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "主題會改變 App 的強調色。表示讀取狀態、加倍物品等含義的顏色始終保持不變。"
+          }
+        }
+      }
+    },
+    "Collected" : {
+      "comment" : "Appearance preview, the floating window's colours: a Glyph already collected.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "収集済み"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已收集"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已收集"
+          }
+        }
+      }
+    },
+    "Reading" : {
+      "comment" : "Appearance preview, the floating window's colours: the Glyph being read.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "読み取り中"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "读取中"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "讀取中"
+          }
+        }
+      }
+    },
+    "Predicted" : {
+      "comment" : "Appearance preview, the floating window's colours: a predicted Glyph.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "予測"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "预测"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "預測"
+          }
+        }
+      }
+    },
+    "Default" : {
+      "comment" : "Appearance: the name of an app icon and of the colour theme of the same colour (AppTheme.spec's nameKey).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "標準"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "默认"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "預設"
+          }
+        }
+      }
+    },
+    "Violet" : {
+      "comment" : "Appearance: the name of an app icon and of the colour theme of the same colour (AppTheme.spec's nameKey).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "バイオレット"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "紫罗兰"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "紫羅蘭"
+          }
+        }
+      }
+    },
+    "Orchid" : {
+      "comment" : "Appearance: the name of an app icon and of the colour theme of the same colour (AppTheme.spec's nameKey).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "オーキッド"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "兰花紫"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "蘭花紫"
+          }
+        }
+      }
+    },
+    "Graphite" : {
+      "comment" : "Appearance: the name of an app icon and of the colour theme of the same colour (AppTheme.spec's nameKey).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "グラファイト"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "石墨色"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "石墨色"
+          }
+        }
+      }
+    },
+    "Cobalt" : {
+      "comment" : "Appearance: the name of an app icon and of the colour theme of the same colour (AppTheme.spec's nameKey).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "コバルト"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "钴蓝色"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "鈷藍色"
+          }
+        }
+      }
+    },
+    "Emerald" : {
+      "comment" : "Appearance: the name of an app icon and of the colour theme of the same colour (AppTheme.spec's nameKey).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "エメラルド"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "翡翠绿"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "翡翠綠"
+          }
+        }
+      }
+    },
+    "Crimson" : {
+      "comment" : "Appearance: the name of an app icon and of the colour theme of the same colour (AppTheme.spec's nameKey).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "クリムゾン"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "绯红色"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "緋紅色"
+          }
+        }
+      }
+    },
     "Not set" : {
       "comment" : "Settings, your faction: none chosen yet.",
       "localizations" : {
@@ -35,14 +1146,14 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "此后会随每次 Hack 一起保存，让导出数据能区分你的阵营、对方阵营和 Machina 的 Portal。已保存的 Hack 保持不变。"
+            "state" : "translated",
+            "value" : "此后会随每次 Hack 一起保存，让导出数据能区分你的阵营、对方阵营和 Machina 的能量塔。已保存的 Hack 保持不变。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "此後會隨每次 Hack 一起儲存，讓匯出資料能區分你的陣營、對方陣營和 Machina 的 Portal。已儲存的 Hack 保持不變。"
+            "state" : "translated",
+            "value" : "此後會隨每次 Hack 一起儲存，讓匯出資料能區分你的陣營、對方陣營和 Machina 的能量塔。已儲存的 Hack 保持不變。"
           }
         }
       }
@@ -70,6 +1181,81 @@
         }
       }
     },
+    "settings.group.reading" : {
+      "comment" : "Settings group header: Glyph assistance, game language, faction and Glyph data, what capture reads. Not the Appearance preview's Reading, the Glyph being read.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reading"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "読み取り"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "读取"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "讀取"
+          }
+        }
+      }
+    },
+    "While you play" : {
+      "comment" : "Settings group header: the floating window, the Dynamic Island and Appearance.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "プレイ中"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "游戏时"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "遊戲時"
+          }
+        }
+      }
+    },
+    "Recording and reports" : {
+      "comment" : "Settings group header: recording to Photos and bug reports.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "録画とレポート"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "录制与报告"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "錄影與回報"
+          }
+        }
+      }
+    },
     "Your faction, as set in Settings when each hack was captured, is included with the portal's faction." : {
       "comment" : "Gear export sheet: the player's faction is in the file.",
       "localizations" : {
@@ -81,14 +1267,14 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "会包含记录每次 Hack 时设置中你的阵营，以及 Portal 的阵营。"
+            "state" : "translated",
+            "value" : "会包含记录每次 Hack 时设置中你的阵营，以及能量塔的阵营。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "會包含記錄每次 Hack 時設定中你的陣營，以及 Portal 的陣營。"
+            "state" : "translated",
+            "value" : "會包含記錄每次 Hack 時設定中你的陣營，以及能量塔的陣營。"
           }
         }
       }
@@ -170,14 +1356,14 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "每条记录的时间是应用收到它时所在的小时或日期，使用拍摄该记录的 iPhone 的时区。应用开始保存时区之前的记录使用 UTC，且没有当地日期。不包含精确时间、Portal 名称、图片或设备信息。"
+            "state" : "translated",
+            "value" : "每条记录的时间是应用收到它时所在的小时或日期，使用拍摄该记录的 iPhone 的时区。应用开始保存时区之前的记录使用 UTC，且没有当地日期。不包含精确时间、能量塔名称、图片或设备信息。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "每筆記錄的時間是 App 收到它時所在的小時或日期，使用擷取該記錄的 iPhone 的時區。App 開始儲存時區之前的記錄使用 UTC，且沒有當地日期。不包含精確時間、Portal 名稱、圖片或裝置資訊。"
+            "state" : "translated",
+            "value" : "每筆記錄的時間是 App 收到它時所在的小時或日期，使用擷取該記錄的 iPhone 的時區。App 開始儲存時區之前的記錄使用 UTC，且沒有當地日期。不包含精確時間、能量塔名稱、圖片或裝置資訊。"
           }
         }
       }
@@ -332,6 +1518,29 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "此版本無法讀取格式的裝備"
+          }
+        }
+      }
+    },
+    "Gear language settle" : {
+      "comment" : "Diagnostics, Power saving, engine A/B: switch title for a power cut. Once the app has found the game's language, a gear drop panel (the item list the game shows after a hack) is read in that language only.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ドロップ画面の言語を固定"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "掉落画面语言固定"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "掉落畫面語言固定"
           }
         }
       }
@@ -1038,6 +2247,29 @@
             "value" : "面板圖片會留在工作階段記錄中，直到你在「設定 › 工作階段記錄與報告」中刪除。"
           }
         }
+      },
+      "extractionState" : "stale"
+    },
+    "Panel pictures stay in the session's logs until you delete them under Settings › Bug reports › Session logs and reports." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "パネルの画像は、設定 › 不具合の報告 › セッションのログとレポート で削除するまでログに残ります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "面板图片会留在会话日志中，直到你在“设置 › 错误报告 › 会话日志与报告”中删除。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "面板圖片會留在工作階段記錄中，直到你在「設定 › 錯誤回報 › 工作階段記錄與報告」中刪除。"
+          }
+        }
       }
     },
     "This can't be undone." : {
@@ -1217,14 +2449,14 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "每张面板图片对应时刻的整个屏幕，方便查看图片遗漏的部分。截图会显示地图和 Portal 名称，可能透露你所在的位置。"
+            "state" : "translated",
+            "value" : "每张面板图片对应时刻的整个屏幕，方便查看图片遗漏的部分。截图会显示地图和能量塔名称，可能透露你所在的位置。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "每張面板圖片對應時刻的整個螢幕，方便查看圖片遺漏的部分。截圖會顯示地圖和 Portal 名稱，可能透露你所在的位置。"
+            "state" : "translated",
+            "value" : "每張面板圖片對應時刻的整個螢幕，方便查看圖片遺漏的部分。截圖會顯示地圖和能量塔名稱，可能透露你所在的位置。"
           }
         }
       }
@@ -1567,14 +2799,14 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%1$lld 个 Glyph：Hack 加成 %2$@，速度加成 %3$@"
+            "state" : "translated",
+            "value" : "%1$lld 个 Glyph：Hack 奖励 %2$@，速度奖励 %3$@"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%1$lld 個 Glyph：Hack 加成 %2$@，速度加成 %3$@"
+            "state" : "translated",
+            "value" : "%1$lld 個 Glyph：Hack 獎勵 %2$@，速度獎勵 %3$@"
           }
         }
       }
@@ -2349,14 +3581,14 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "每次 Hack 后，从游戏的结果画面读取加成以及游戏接受了哪些 Glyph。所有数据都保留在你的手机上。"
+            "state" : "translated",
+            "value" : "每次 Hack 后，从游戏的结果画面读取奖励以及游戏接受了哪些 Glyph。所有数据都保留在你的手机上。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "每次 Hack 後，從遊戲的結果畫面讀取加成以及遊戲接受了哪些 Glyph。所有資料都保留在你的手機上。"
+            "state" : "translated",
+            "value" : "每次 Hack 後，從遊戲的結果畫面讀取獎勵以及遊戲接受了哪些 Glyph。所有資料都保留在你的手機上。"
           }
         }
       }
@@ -2371,14 +3603,14 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "每次 Hack 后，从游戏的结果画面读取加成以及游戏接受了哪些 Glyph。已保存的结果保留在你的手机和你的 iCloud 中。"
+            "state" : "translated",
+            "value" : "每次 Hack 后，从游戏的结果画面读取奖励以及游戏接受了哪些 Glyph。已保存的结果保留在你的手机和你的 iCloud 中。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "每次 Hack 後，從遊戲的結果畫面讀取加成以及遊戲接受了哪些 Glyph。已儲存的結果保留在你的手機和你的 iCloud 中。"
+            "state" : "translated",
+            "value" : "每次 Hack 後，從遊戲的結果畫面讀取獎勵以及遊戲接受了哪些 Glyph。已儲存的結果保留在你的手機和你的 iCloud 中。"
           }
         }
       }
@@ -2664,14 +3896,14 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "按 Hack 长度的平均加成"
+            "state" : "translated",
+            "value" : "按 Hack 长度的平均奖励"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "按 Hack 長度的平均加成"
+            "state" : "translated",
+            "value" : "按 Hack 長度的平均獎勵"
           }
         }
       }
@@ -2687,13 +3919,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "平均 Hack 加成"
+            "value" : "平均 Hack 奖励"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "平均 Hack 加成"
+            "value" : "平均 Hack 獎勵"
           }
         }
       }
@@ -2709,13 +3941,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "平均速度加成"
+            "value" : "平均速度奖励"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "平均速度加成"
+            "value" : "平均速度獎勵"
           }
         }
       }
@@ -2731,13 +3963,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "平均 Hack 加成"
+            "value" : "平均 Hack 奖励"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "平均 Hack 加成"
+            "value" : "平均 Hack 獎勵"
           }
         }
       }
@@ -2753,13 +3985,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "平均速度加成"
+            "value" : "平均速度奖励"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "平均速度加成"
+            "value" : "平均速度獎勵"
           }
         }
       }
@@ -2841,13 +4073,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "最高 Hack 加成"
+            "value" : "最高 Hack 奖励"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "最高 Hack 加成"
+            "value" : "最高 Hack 獎勵"
           }
         }
       }
@@ -2862,14 +4094,14 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "加成"
+            "state" : "translated",
+            "value" : "奖励"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "加成"
+            "state" : "translated",
+            "value" : "獎勵"
           }
         }
       }
@@ -2906,14 +4138,14 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "加成与准确率趋势"
+            "state" : "translated",
+            "value" : "奖励与准确率趋势"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "加成與準確率趨勢"
+            "state" : "translated",
+            "value" : "獎勵與準確率趨勢"
           }
         }
       }
@@ -3424,14 +4656,14 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Complex"
+            "state" : "translated",
+            "value" : "复杂"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Complex"
+            "state" : "translated",
+            "value" : "複雜"
           }
         }
       }
@@ -3446,14 +4678,14 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Complex Hack"
+            "state" : "translated",
+            "value" : "复杂入侵"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Complex Hack"
+            "state" : "translated",
+            "value" : "複雜入侵"
           }
         }
       }
@@ -4085,8 +5317,8 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "ドロップ"
+            "state" : "translated",
+            "value" : "ドロップ数"
           }
         },
         "zh-Hans" : {
@@ -4213,14 +5445,14 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "每个点是一天最终加成的平均值，以及游戏通过的 Glyph 比例。点按线条名称可显示或隐藏该线条。"
+            "state" : "translated",
+            "value" : "每个点是一天最终奖励的平均值，以及游戏通过的 Glyph 比例。点按线条名称可显示或隐藏该线条。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "每個點是一天最終加成的平均值，以及遊戲通過的 Glyph 比例。點按線條名稱可顯示或隱藏該線條。"
+            "state" : "translated",
+            "value" : "每個點是一天最終獎勵的平均值，以及遊戲通過的 Glyph 比例。點按線條名稱可顯示或隱藏該線條。"
           }
         }
       }
@@ -4275,13 +5507,13 @@
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "再生コントロールがまだ表示される場合は、フローティングウィンドウを閉じて開き直してください。"
+            "value" : "再生コントロールがまだ表示される場合は、フローティングウインドウを閉じて開き直してください。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "如果播放控件仍然显示，请关闭浮动窗口再重新打开。"
+            "value" : "如果播放控件仍然显示，请关闭悬浮窗再重新打开。"
           }
         },
         "zh-Hant" : {
@@ -4385,7 +5617,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "ほかの形は「設定」›「フローティングウインドウ」›「形とシャープさ」で選べます。ウインドウの大きさはiOSが決めます。ピンチで拡大・縮小できます。"
+            "value" : "ほかの形は「設定」›「フローティングウインドウ」›「形状と鮮明度」で選べます。ウインドウの大きさは iOS が決めます。ピンチで拡大・縮小できます。"
           }
         },
         "zh-Hans" : {
@@ -4870,14 +6102,14 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Hack 长度不一，因此不显示加成变化。详细信息中可按长度比较。"
+            "state" : "translated",
+            "value" : "Hack 长度不一，因此不显示奖励变化。详细信息中可按长度比较。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Hack 長度不一，因此不顯示加成變化。詳細資訊中可按長度比較。"
+            "state" : "translated",
+            "value" : "Hack 長度不一，因此不顯示獎勵變化。詳細資訊中可按長度比較。"
           }
         }
       }
@@ -4892,14 +6124,14 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Hack 长度不一，因此不显示加成变化。图表按长度分别比较。"
+            "state" : "translated",
+            "value" : "Hack 长度不一，因此不显示奖励变化。图表按长度分别比较。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Hack 長度不一，因此不顯示加成變化。圖表按長度分別比較。"
+            "state" : "translated",
+            "value" : "Hack 長度不一，因此不顯示獎勵變化。圖表按長度分別比較。"
           }
         }
       }
@@ -4921,14 +6153,14 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "在 Ingress 中 Hack Portal。别让悬浮窗挡住每次 Hack 后出现的物品面板。"
+            "state" : "translated",
+            "value" : "在 Ingress 中 Hack 能量塔。别让悬浮窗挡住每次 Hack 后出现的物品面板。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "在 Ingress 中 Hack Portal。別讓浮動視窗擋住每次 Hack 後出現的物品面板。"
+            "state" : "translated",
+            "value" : "在 Ingress 中 Hack 能量塔。別讓浮動視窗擋住每次 Hack 後出現的物品面板。"
           }
         }
       }
@@ -4966,13 +6198,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hack 加成"
+            "value" : "Hack 奖励"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hack 加成"
+            "value" : "Hack 獎勵"
           }
         }
       }
@@ -4988,14 +6220,14 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Hack 加成 %@"
+            "state" : "translated",
+            "value" : "Hack 奖励 %@"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Hack 加成 %@"
+            "state" : "translated",
+            "value" : "Hack 獎勵 %@"
           }
         }
       }
@@ -5010,14 +6242,14 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Hack 加成"
+            "state" : "translated",
+            "value" : "Hack 奖励"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Hack 加成"
+            "state" : "translated",
+            "value" : "Hack 獎勵"
           }
         }
       }
@@ -5026,8 +6258,8 @@
       "localizations" : {
         "ja" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "ハック"
+            "state" : "translated",
+            "value" : "ハック数"
           }
         },
         "zh-Hans" : {
@@ -5253,14 +6485,14 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "等级越高的 Portal Glyph 越多、时间越短，因此请在同一行内比较。等级来自装备读取到的结果。每个 Glyph 秒数是从输入界面到提交的时间除以 Glyph 数，只统计此功能加入后计时的 Hack。"
+            "state" : "translated",
+            "value" : "能量塔等级越高，Glyph 越多、时间越短，因此请在同一行内比较。等级来自装备读取到的结果。每个 Glyph 秒数是从输入界面到提交的时间除以 Glyph 数，只统计此功能加入后计时的 Hack。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "等級越高的 Portal Glyph 越多、時間越短，因此請在同一行內比較。等級來自裝備讀取到的結果。每個 Glyph 秒數是從輸入畫面到提交的時間除以 Glyph 數，只統計此功能加入後計時的 Hack。"
+            "state" : "translated",
+            "value" : "能量塔等級越高，Glyph 越多、時間越短，因此請在同一行內比較。等級來自裝備讀取到的結果。每個 Glyph 秒數是從輸入畫面到提交的時間除以 Glyph 數，只統計此功能加入後計時的 Hack。"
           }
         }
       }
@@ -6798,14 +8030,14 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "不要钥匙"
+            "state" : "translated",
+            "value" : "没有钥匙"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "不要鑰匙"
+            "state" : "translated",
+            "value" : "沒有鑰匙"
           }
         }
       }
@@ -7632,8 +8864,8 @@
       "localizations" : {
         "ja" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "ポータルレベルは未読"
+            "state" : "translated",
+            "value" : "ポータルレベル不明"
           }
         },
         "zh-Hans" : {
@@ -8175,6 +9407,29 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "回報問題或提出疑問。如果是辨識問題，請從「工作階段記錄與報告」分享一份報告，並附在訊息中。"
+          }
+        }
+      },
+      "extractionState" : "stale"
+    },
+    "Report a problem or ask a question. For a problem with recognition, share a report from Bug reports › Session logs and reports along with your message." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "不具合の報告や質問はこちらから。認識の問題の場合は、「不具合の報告」›「セッションのログとレポート」からレポートを共有してメッセージに添えてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "报告问题或提出疑问。如果是识别问题，请从“错误报告”›“会话日志与报告”分享一份报告，并附在消息中。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "回報問題或提出疑問。如果是辨識問題，請從「錯誤回報」›「工作階段記錄與報告」分享一份報告，並附在訊息中。"
           }
         }
       }
@@ -8784,20 +10039,20 @@
       "localizations" : {
         "ja" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "秒/グリフ"
+            "state" : "translated",
+            "value" : "グリフあたり"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "秒/Glyph"
+            "state" : "translated",
+            "value" : "每个 Glyph"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "秒/Glyph"
+            "state" : "translated",
+            "value" : "每個 Glyph"
           }
         }
       }
@@ -9391,14 +10646,14 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Simple"
+            "state" : "translated",
+            "value" : "简单"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Simple"
+            "state" : "translated",
+            "value" : "簡單"
           }
         }
       }
@@ -9413,14 +10668,14 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Simple Hack"
+            "state" : "translated",
+            "value" : "简单入侵"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Simple Hack"
+            "state" : "translated",
+            "value" : "簡單入侵"
           }
         }
       }
@@ -9474,13 +10729,13 @@
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "スロット列が何かで隠れています。フローティングウィンドウを動かすか、バナーが消えるのを待ってください。"
+            "value" : "スロット列が何かで隠れています。フローティングウインドウを動かすか、バナーが消えるのを待ってください。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "槽位行被遮挡了。请移动浮动窗口，或等横幅消失。"
+            "value" : "槽位行被遮挡了。请移动悬浮窗，或等横幅消失。"
           }
         },
         "zh-Hant" : {
@@ -9524,13 +10779,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "速度加成"
+            "value" : "速度奖励"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "速度加成"
+            "value" : "速度獎勵"
           }
         }
       }
@@ -9546,14 +10801,14 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "速度加成 %@"
+            "state" : "translated",
+            "value" : "速度奖励 %@"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "速度加成 %@"
+            "state" : "translated",
+            "value" : "速度獎勵 %@"
           }
         }
       }
@@ -9568,14 +10823,14 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "速度加成"
+            "state" : "translated",
+            "value" : "速度奖励"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "速度加成"
+            "state" : "translated",
+            "value" : "速度獎勵"
           }
         }
       }
@@ -9630,13 +10885,13 @@
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Ingressでグリフハックを始めてください。フローティングウィンドウはゲーム上部のスロット列にかからないように。"
+            "value" : "Ingress でグリフハックを始めてください。フローティングウインドウはゲーム上部のスロット列にかからないように。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "在 Ingress 中开始一次 Glyph Hack。让浮动窗口避开游戏顶部的槽位行。"
+            "value" : "在 Ingress 中开始一次 Glyph Hack。让悬浮窗避开游戏顶部的槽位行。"
           }
         },
         "zh-Hant" : {
@@ -9916,14 +11171,14 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "切换到 Ingress，照常 Hack Portal。"
+            "state" : "translated",
+            "value" : "切换到 Ingress，照常 Hack 能量塔。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "切換到 Ingress，照常 Hack Portal。"
+            "state" : "translated",
+            "value" : "切換到 Ingress，照常 Hack 能量塔。"
           }
         }
       }
@@ -10055,14 +11310,14 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "在主屏幕轻点“开始”并共享屏幕，然后在 Ingress 中 Hack Portal。"
+            "state" : "translated",
+            "value" : "在主页轻点“开始”并共享屏幕，然后在 Ingress 中 Hack 能量塔。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "在主畫面點一下「開始」並分享螢幕，然後在 Ingress 中 Hack Portal。"
+            "state" : "translated",
+            "value" : "在主頁點一下「開始」並分享螢幕，然後在 Ingress 中 Hack 能量塔。"
           }
         }
       }
@@ -10077,14 +11332,14 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "在主屏幕轻点“开始”并共享屏幕，然后在 Ingress 中开始 Glyph Hack。"
+            "state" : "translated",
+            "value" : "在主页轻点“开始”并共享屏幕，然后在 Ingress 中开始 Glyph Hack。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "在主畫面點一下「開始」並共享螢幕，然後在 Ingress 中開始 Glyph Hack。"
+            "state" : "translated",
+            "value" : "在主頁點一下「開始」並分享螢幕，然後在 Ingress 中開始 Glyph Hack。"
           }
         }
       }
@@ -10100,20 +11355,20 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "スタートをタップしてから、Ingress でポータルをハックしてください。ハックごとのドロップアイテムがここで数えられます。"
+            "state" : "translated",
+            "value" : "「開始」をタップしてから、Ingress でポータルをハックしてください。ハックごとのドロップアイテムがここで数えられます。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "轻点开始，然后在 Ingress 中 Hack Portal。每次 Hack 掉落的物品会在这里计数。"
+            "state" : "translated",
+            "value" : "轻点“开始”，然后在 Ingress 中 Hack 能量塔。每次 Hack 掉落的物品会在这里计数。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "點一下開始，然後在 Ingress 中 Hack Portal。每次 Hack 掉落的物品會在這裡計數。"
+            "state" : "translated",
+            "value" : "點一下「開始」，然後在 Ingress 中 Hack 能量塔。每次 Hack 掉落的物品會在這裡計數。"
           }
         }
       }
@@ -10793,14 +12048,14 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "触摸图表可查看当天的平均加成。"
+            "state" : "translated",
+            "value" : "触摸图表可查看当天的平均奖励。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "觸碰圖表可查看當天的平均加成。"
+            "state" : "translated",
+            "value" : "觸碰圖表可查看當天的平均獎勵。"
           }
         }
       }
@@ -12722,20 +13977,20 @@
       "localizations" : {
         "ja" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%2$@より**%1$@**増加"
+            "state" : "translated",
+            "value" : "**%1$@**増加（%2$@と比較）"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "比%2$@增加 **%1$@**"
+            "state" : "translated",
+            "value" : "增加 **%1$@**（与%2$@相比）"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "比%2$@增加 **%1$@**"
+            "state" : "translated",
+            "value" : "增加 **%1$@**（與%2$@相比）"
           }
         }
       }
@@ -12745,20 +14000,20 @@
       "localizations" : {
         "ja" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%2$@より**%1$@**減少"
+            "state" : "translated",
+            "value" : "**%1$@**減少（%2$@と比較）"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "比%2$@减少 **%1$@**"
+            "state" : "translated",
+            "value" : "减少 **%1$@**（与%2$@相比）"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "比%2$@減少 **%1$@**"
+            "state" : "translated",
+            "value" : "減少 **%1$@**（與%2$@相比）"
           }
         }
       }
@@ -12786,20 +14041,20 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%2$@よりアイテムが**%1$lld**個増加"
+            "state" : "translated",
+            "value" : "アイテムが**%1$lld**個増加（%2$@と比較）"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "比%2$@增加 **%1$lld** 件物品"
+            "state" : "translated",
+            "value" : "物品增加 **%1$lld** 件（与%2$@相比）"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "比%2$@增加 **%1$lld** 件物品"
+            "state" : "translated",
+            "value" : "物品增加 **%1$lld** 件（與%2$@相比）"
           }
         }
       }
@@ -12827,20 +14082,20 @@
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%2$@よりアイテムが**%1$lld**個減少"
+            "state" : "translated",
+            "value" : "アイテムが**%1$lld**個減少（%2$@と比較）"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "比%2$@减少 **%1$lld** 件物品"
+            "state" : "translated",
+            "value" : "物品减少 **%1$lld** 件（与%2$@相比）"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "比%2$@減少 **%1$lld** 件物品"
+            "state" : "translated",
+            "value" : "物品減少 **%1$lld** 件（與%2$@相比）"
           }
         }
       }
@@ -13197,7 +14452,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "フローティングウインドウの形とシャープさのプレビューです。"
+            "value" : "フローティングウインドウの形状と鮮明度のプレビューです。"
           }
         },
         "zh-Hans" : {
@@ -13285,6 +14540,7 @@
     },
     "Walks through the Dynamic Island and the floating window again." : {
       "comment" : "Settings footer under Run setup again.",
+      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -13348,6 +14604,328 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "視窗以每點這麼多像素繪製。越清晰，繪製時耗電越多一些；大多數 iPhone 選 2× 即可。"
+          }
+        }
+      }
+    },
+    "Rate on the App Store" : {
+      "comment" : "Settings row that opens the App Store's write-a-review page.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "App Store で評価"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 App Store 评分"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 App Store 評分"
+          }
+        }
+      }
+    },
+    "Source code on GitHub" : {
+      "comment" : "Settings row that opens the app's source code on GitHub.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "GitHub のソースコード"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "GitHub 上的源代码"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "GitHub 上的原始碼"
+          }
+        }
+      }
+    },
+    "If it's useful to you, give it a star." : {
+      "comment" : "Settings, under Source code on GitHub. A star is GitHub's bookmark.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "役に立ったら、スターをお願いします。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "如果觉得有用，欢迎点个 Star。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "如果覺得有用，歡迎點個 Star。"
+          }
+        }
+      }
+    },
+    "Copy link" : {
+      "comment" : "Context menu on the Source code on GitHub row.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "リンクをコピー"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "拷贝链接"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "拷貝連結"
+          }
+        }
+      }
+    },
+    "Start here" : {
+      "comment" : "Tip on Home, above the Start button. Title.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ここから始めます"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "从这里开始"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "從這裡開始"
+          }
+        }
+      }
+    },
+    "Tap Start and share your screen, then open a Glyph hack in the game." : {
+      "comment" : "Tip on Home, above the Start button.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "「開始」をタップして画面を共有し、ゲームでグリフハックを開いてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "轻点“开始”并共享屏幕，然后在游戏中打开 Glyph Hack。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "點一下「開始」並分享螢幕，然後在遊戲中打開 Glyph Hack。"
+          }
+        }
+      }
+    },
+    "Move the floating window" : {
+      "comment" : "Tip on Home, above the Floating window switch. Title.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フローティングウインドウを動かせます"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "悬浮窗可以移动"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "浮動視窗可以移動"
+          }
+        }
+      }
+    },
+    "Drag it away from the game's slot row and item panels so they can be read. Pinch to resize it." : {
+      "comment" : "Tip on Home, above the Floating window switch.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ゲームのスロット列やアイテムパネルにかからないよう、ドラッグで動かしてください。ピンチで大きさを変えられます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "把它拖离游戏的槽位行和物品面板，以免挡住读取。双指捏合可调整大小。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "把它拖離遊戲的槽位列和物品面板，以免擋住讀取。雙指捏合可調整大小。"
+          }
+        }
+      }
+    },
+    "Item names in your game language" : {
+      "comment" : "Tip on Statistics, above the items. Title.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アイテム名をゲームの言語で"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "用游戏语言显示物品名称"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "用遊戲語言顯示物品名稱"
+          }
+        }
+      }
+    },
+    "Item names follow the language your game is in. Change it in Settings › Game language." : {
+      "comment" : "Tip on Statistics, above the items. Keep the Settings path as the app names it.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アイテム名はゲームの言語に合わせて表示されます。「設定」›「ゲームの言語」で変更できます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "物品名称会跟随游戏语言显示。可在“设置”›“游戏语言”中更改。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "物品名稱會跟隨遊戲語言顯示。可在「設定」›「遊戲語言」中更改。"
+          }
+        }
+      }
+    },
+    "Start without opening the app" : {
+      "comment" : "Tip on Home, under the Start button. Title.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アプリを開かずに開始"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无需打开应用即可开始"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "不必打開 App 也能開始"
+          }
+        }
+      }
+    },
+    "Start and stop from Control Center or Shortcuts, and see your Statistics in a Home Screen widget." : {
+      "comment" : "Tip on Home, under the Start button.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "コントロールセンターやショートカットから開始・停止でき、ホーム画面ウィジェットで統計を確認できます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "可从控制中心或快捷指令启动和停止，也可在主屏幕小组件中查看统计。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "可從控制中心或捷徑啟動和停止，也可在主畫面小工具中查看統計。"
+          }
+        }
+      }
+    },
+    "Themes and app icons" : {
+      "comment" : "Tip on Home, under the Start button. Title.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "テーマとアプリアイコン"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "主题和应用图标"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "主題與 App 圖示"
+          }
+        }
+      }
+    },
+    "Pick a color theme and an app icon in Settings › Appearance. They're all free." : {
+      "comment" : "Tip on Home, under the Start button. Keep the Settings path as the app names it.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "「設定」›「外観」でカラーテーマとアプリアイコンを選べます。すべて無料です。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "可在“设置”›“外观”中选择颜色主题和应用图标，全部免费。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "可在「設定」›「外觀」中選擇顏色主題與 App 圖示，全部免費。"
           }
         }
       }

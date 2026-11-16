@@ -1,7 +1,7 @@
 # Portal level for gear drops
 
 Status: PL1–PL2 implemented behind “Read gear drops (test)”; PL3 field test
-pending. Companion to [gear-drop recognition](https://github.com/szres/dynamic-glyph-assets/blob/main/Docs/GEAR_DROP_RECOGNITION.md) (in the private test-assets repository).
+pending. A companion to gear-drop recognition.
 
 Each hack's gear record carries the hacked portal's level, with a confidence
 and every source that decided it. The level is never inferred from the items
@@ -25,7 +25,7 @@ The uncalibrated badge range warmer than L5 (L1–L4) doesn't narrow it either.
 The resonators, the calibrated hues and the L7 band narrow it as before, and
 the count and the badge read stay in the estimate. An L7 portal with 3
 Glyphs, an unread command and a badge read as L1–L4 had come out as L3–L4
-(2026-10-27); it now comes out as L1–L7, from its one read resonator.
+in a field session; it now comes out as L1–L7, from its one read resonator.
 
 - One level left: **high** confidence when an exact resonator read and at
   least one other source agree; **medium** with an exact resonator read alone,
@@ -41,7 +41,7 @@ Glyphs, an unread command and a badge read as L1–L4 had come out as L3–L4
   and “NO KEY”), then the presentation. The presentation tracker's hack start
   is 1.5–4 s after the portal screen.
 - All 11 readable hacks in field tests 1 and 2 match the Glyph-count table.
-  All were complex hacks: the player drew the complex command every time. A
+  All were complex hacks: the complex command was drawn every time. A
   normal hack has not been checked; the label is not read yet.
 - Resonator labels fade in with the screen, so often only one frame of two is
   readable. OCR reads labels with an agent name beneath them better than
@@ -55,8 +55,8 @@ Glyphs, an unread command and a badge read as L1–L4 had come out as L3–L4
   Resistance blue about (40, 105, 145), Enlightened green about
   (30, 80–186, 20–47), Machina red about (146, 0, 0). No other screen in the
   recordings has two such pairs; portal beams on the map can light one edge,
-  and Machina beams carry blue (143, 18, 43). Until 2026-10-05 only blue was
-  looked for, so Enlightened and Machina portals got no screen and no level
+  and Machina beams carry blue (143, 18, 43). Earlier versions looked only
+  for blue, so Enlightened and Machina portals got no screen and no level
   from it.
 - A neutral portal has no resonators, so no bars: its screen is not found
   this way, and no recording has one yet.

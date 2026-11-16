@@ -27,12 +27,18 @@ final class GlyphFrameFactory {
     /// source, which rendered the old layout at 0.37 scale and made every word
     /// on it unreadable. A wide, short canvas asks for a strip instead, and
     /// carries only the diagrams.
-    init(table: GlyphTable?, canvas: PiPCanvasConfiguration = .standard) {
+    ///
+    /// `accent` is the theme's Glyph accent: collected Glyphs and the
+    /// "drawing" edge. Nil, as the tests pass, keeps the renderer's own
+    /// palette exactly.
+    init(table: GlyphTable?, canvas: PiPCanvasConfiguration = .standard, accent: CGColor? = nil) {
         self.canvas = canvas
         self.width = canvas.pixelWidth
         self.height = canvas.pixelHeight
         self.table = table
-        self.renderer = GlyphDisplayRenderer(table: table)
+        var palette = GlyphDisplayRenderer.Palette()
+        if let accent { palette.confirmed = accent }
+        self.renderer = GlyphDisplayRenderer(table: table, palette: palette)
         makePool()
     }
 

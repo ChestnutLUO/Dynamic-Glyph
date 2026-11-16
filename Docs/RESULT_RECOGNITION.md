@@ -67,7 +67,7 @@ separate evidence store.
 
 ## What the current capture establishes
 
-Sources: `DynamicGlyph-spikeB-2026-09-23T23-00-56Z.zip`, specifically
+Sources: one field report of a four-slot hack, specifically
 `screen-recording.mp4`, `recognition.jsonl`, `tracking.jsonl`,
 `input-validation.jsonl`, and `snapshots.jsonl`. Video annotations use frames
 extracted at 20 Hz; log times below use `elapsed` or source timestamps relative
@@ -118,14 +118,14 @@ Annotate **two apparent Redo presses, one slot backward per press**, assuming
 the bright pulses are button press feedback. The disabled appearance is an
 observation, not proof of disabled interaction. This annotation combines the
 button and highlight evidence; highlight motion alone cannot count presses.
-The button is covered in other captures, including IMG_2003.MP4, so this is
+The button is covered in other captures, including the correct-drawing baseline, so this is
 annotation evidence, not a required live signal or a general reset rule.
 The final TRUTH and IDEA outcomes belong to attempts 3 and 4, never 1 and 2.
-The user's statement that both TRUTH drawings were correct remains separate
+The hand annotation that both TRUTH drawings were correct remains separate
 evidence about the superseded drawing.
 
 Replaying `input-validation.jsonl` edge coverage with `recognition.jsonl`
-context and original timestamps through the validator at `02f75f9` yields
+context and original timestamps through the validator's partial-edge rule yields
 `unavailable / partialEdge` for attempts 1 and 3; attempts 2, 4, and 5 match.
 This checks validator comparison input, not pixel/OCR recognition of the
 conclusion, and differs from resampling the encoded video at 20 Hz.
@@ -137,10 +137,9 @@ the drawing lattice calibration; it cannot wait for tracker.state == completed.
 
 ### Five-Glyph deliberate error and Redo
 
-Source: `5Glyphwitherrorglyphandredo.zip`, session
-`spikeB-2026-09-24T00-01-28Z`, its `screen-recording.mp4`, `recognition.jsonl`,
-`tracking.jsonl`, and `input-validation.jsonl`. The user annotates **one wrong
-drawing and one Redo**. Sequence: **OLD, NATURE, LESS, STRONG, NOW**.
+Source: a field session with a deliberate error, its `screen-recording.mp4`,
+`recognition.jsonl`, `tracking.jsonl`, and `input-validation.jsonl`. Its report
+notes **one wrong drawing and one Redo**. Sequence: **OLD, NATURE, LESS, STRONG, NOW**.
 
 At about 24.0 s the panel labels appear without values. OLD, NATURE, and LESS
 then raise the displayed Hacking Bonus to 10%, 20%, and 30%. During STRONG's
@@ -156,7 +155,7 @@ The highlight first advances to slot 2 at 16.581 s, then returns to slot 1 at
 Final comparisons use **1/OLD, 3/NATURE, 4/LESS, 5/STRONG**; NOW has no input
 validator attempt because the last slot remains outside its scope. The game
 rejects STRONG, agreeing with the validator's `differs` verdict. The other
-compared final attempts match. Press count here is the user's annotation;
+compared final attempts match. Press count here is a hand annotation;
 backward highlights alone remain insufficient to infer button presses.
 
 This supplies both gold/correct and magenta/incorrect examples for diagnostic
@@ -165,9 +164,7 @@ slot, another language, or another result layout. The app now displays the
 classified outcomes, while the missing last-slot example remains a release
 validation gap. Logs distinguish raw appearance, classified outcomes, and
 unknown fields.
-Sanitized region fixtures are in
-`Packages/GlyphRecognition/Tests/GlyphRecognitionTests/Fixtures/Assets/Screenshots/Results/`
-(the private test-assets submodule) and separate human assertions in
+Sanitized region fixtures and separate human assertions are in
 `Packages/GlyphRecognition/Tests/GlyphRecognitionTests/Fixtures/Results/`.
 
 ### M1 implementation and replay
@@ -180,8 +177,8 @@ Sanitized region fixtures are in
 - A value line ending in `%` that holds anything but ASCII digits, where no
   value was read, gets one second look at the same crop enlarged 1.5 times;
   only the panel's lines are taken from it. At capture size Vision read a
-  one-Glyph result's 38% as `З8%` (a Cyrillic Ze) on every frame of the
-  2026-10-05 field test. Enlarging every read instead lost short stage names
+  one-Glyph result's 38% as `З8%` (a Cyrillic Ze) on every frame of a
+  field test. Enlarging every read instead lost short stage names
   such as XM, so the stage name is always read at capture size.
 - One Glyph's lower contour sits at the centre, where three Glyphs' spacing
   puts a lone hexagon (`one-final.png`). Two Glyphs are still unrecorded.
@@ -223,7 +220,7 @@ Sanitized region fixtures are in
   the output with a human assertion JSON without passing annotations into
   recognition. It reports missing associations/coverage separately from errors.
 
-Example (use the corresponding original movie and private local path):
+Example (use the corresponding original movie and its local path):
 
 ```sh
 python3 Tools/check-result-replay.py <screen-recording.mp4> \
@@ -281,7 +278,7 @@ python3 Tools/check-result-replay.py <screen-recording.mp4> \
 ### Coverage and recognition scheduling
 
 Measure result-row/name visibility under the actual PiP placements in the
-15:07/15:08 and 23:00:56 captures before choosing crop coordinates. The conclusion
+thin-window captures and the four-slot report before choosing crop coordinates. The conclusion
 row uses a different position from the input strip and can lie under a window
 that previously left input indicators readable. Record visibility per region
 and the fraction of each short reveal stage that remains usable. Distinguish
@@ -518,7 +515,7 @@ Statistics page summary then says sync is paused. The account status from
 Pulling down on the Statistics page rereads the saved results once any running
 sync step ends, or after 20 seconds. CloudKit has no call that asks for a sync,
 and the store stays open. It imports by itself when it opens and when iCloud
-pushes another iPhone's changes. An earlier build reopened the store on each
+pushes another iPhone's changes. An earlier version reopened the store on each
 pull. That cancelled the steps in flight (Core Data error 134407, the store
 was removed) and set mirroring up again, so only the switch reopens it now.
 A setup that succeeds is not shown as synced: only a finished import or export

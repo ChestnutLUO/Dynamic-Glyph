@@ -6,7 +6,11 @@ import GlyphRecognition
 /// Reads the portal screen's resonator levels and level badge. Only the two
 /// label columns go to OCR; the portal's name and address above them never do.
 public struct PortalScreenReader: Sendable {
-    public init() {}
+    /// The labels' parser: the Swift `PortalScreenParser`, or a logic arm's
+    /// (`RecognitionLogicSet.portalScreenParser`).
+    private let parser: any PortalScreenParsing
+
+    public init(parser: any PortalScreenParsing = PortalScreenParser()) { self.parser = parser }
 
     /// Decodes only the detector's band: this runs on every frame.
     public func isCandidate(_ image: CGImage) throws -> Bool {
@@ -47,7 +51,7 @@ public struct PortalScreenReader: Sendable {
             }
             for observation in request.results ?? [] {
                 guard let best = observation.topCandidates(1).first else { continue }
-                if PortalScreenParser.isLevelOneYellow(hues: try labelHues(best, in: rect, of: image)) {
+                if type(of: parser).isLevelOneYellow(hues: try labelHues(best, in: rect, of: image)) {
                     yellowLabels.insert(lines.count)
                 }
                 let box = observation.boundingBox
@@ -57,8 +61,8 @@ public struct PortalScreenReader: Sendable {
                     width: box.width * rect.width / width, height: box.height * rect.height / height))
             }
         }
-        return PortalScreenParser().read(lines: lines, badgeHue: try badgeHue(in: image), at: sourceTime,
-                                         faction: try faction(image), yellowLabels: yellowLabels)
+        return parser.read(lines: lines, badgeHue: try badgeHue(in: image), at: sourceTime,
+                           faction: try faction(image), yellowLabels: yellowLabels)
     }
 
     /// Hues of the strongly coloured pixels in the character that stands for

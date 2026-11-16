@@ -3,7 +3,7 @@ import Testing
 @testable import GlyphRecognitionImages
 
 /// The probe's observer, which the app points at its power meter once at
-/// launch and keeps for the whole session. Build 97 crashed 31 minutes in:
+/// launch and keeps for the whole session. An earlier version crashed 31 minutes in:
 /// each report left the stored closure one layer of thunks deeper, so the
 /// ~3,300th call overflowed the reading thread's stack.
 ///

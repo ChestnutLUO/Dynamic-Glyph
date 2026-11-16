@@ -17,8 +17,8 @@ struct StopCaptureIntent: AppIntent {
         return .result(dialog: IntentDialog(outcome.dialog))
     }
 
-    /// `ToggleGlyphIntent`'s stop, followed by one more reading to decide
-    /// what to report. Kept apart so the switch's behaviour can't change
+    /// The switch's stop (`ControlSwitchStop`), followed by one more reading
+    /// to decide what to report. Kept apart so the switch's behaviour can't change
     /// with this action's. Also run by the debug page.
     static func run() async -> StopCaptureOutcome {
         guard let store = ControlCaptureStore.appGroup else {
@@ -28,7 +28,7 @@ struct StopCaptureIntent: AppIntent {
         if request.app { BroadcastChannel.post(ControlChannel.stopRequested) }
         if request.broadcast { BroadcastChannel.post(BroadcastChannel.stopRequested) }
         if request.askedAnything {
-            let deadline = ContinuousClock.now + ToggleGlyphIntent.stopPatience
+            let deadline = ContinuousClock.now + ControlSwitchStop.patience
             while store.isOn(), ContinuousClock.now < deadline {
                 try? await Task.sleep(for: .milliseconds(200))
             }

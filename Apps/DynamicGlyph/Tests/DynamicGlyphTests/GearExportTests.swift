@@ -5,7 +5,7 @@ import GlyphRecognition
 @MainActor
 @Suite("Gear export")
 struct GearExportTests {
-    private let base = Date(timeIntervalSince1970: 1_790_983_200) // 2026-10-02T23:20:00Z
+    private let base = Date(timeIntervalSince1970: 978_477_600) // 2001-01-02T23:20:00Z
 
     private func entry(_ position: Int, _ item: String?, level: Int? = nil, quantity: Int = 1,
                        rarity: GearDropEntry.Rarity? = nil, multiplied: Bool? = nil,
@@ -197,19 +197,19 @@ struct GearExportTests {
     func timeIntervals() {
         // 23:20 UTC is 07:20 the next day at UTC+8.
         let east = GearExport.timeCells(base, offsetMinutes: 480, precision: .hour)
-        #expect(east["time_bucket_start_utc"] == "2026-10-02T23:00:00Z" && east["time_bucket_end_utc"] == "2026-10-03T00:00:00Z")
-        #expect(east["local_date"] == "2026-10-03" && east["local_hour"] == "7" && east["utc_offset_minutes"] == "480")
+        #expect(east["time_bucket_start_utc"] == "2001-01-02T23:00:00Z" && east["time_bucket_end_utc"] == "2001-01-03T00:00:00Z")
+        #expect(east["local_date"] == "2001-01-03" && east["local_hour"] == "7" && east["utc_offset_minutes"] == "480")
         // At UTC+5:45 a local hour starts at a quarter past in UTC.
         let nepal = GearExport.timeCells(base, offsetMinutes: 345, precision: .hour)
-        #expect(nepal["time_bucket_start_utc"] == "2026-10-02T23:15:00Z" && nepal["local_hour"] == "5")
+        #expect(nepal["time_bucket_start_utc"] == "2001-01-02T23:15:00Z" && nepal["local_hour"] == "5")
         let west = GearExport.timeCells(base, offsetMinutes: -420, precision: .day)
-        #expect(west["time_bucket_start_utc"] == "2026-10-02T07:00:00Z" && west["time_bucket_end_utc"] == "2026-10-03T07:00:00Z")
-        #expect(west["local_date"] == "2026-10-02" && west["local_hour"] == nil)
+        #expect(west["time_bucket_start_utc"] == "2001-01-02T07:00:00Z" && west["time_bucket_end_utc"] == "2001-01-03T07:00:00Z")
+        #expect(west["local_date"] == "2001-01-02" && west["local_hour"] == nil)
         let unknown = GearExport.timeCells(base, offsetMinutes: nil, precision: .hour)
-        #expect(unknown["time_bucket_start_utc"] == "2026-10-02T23:00:00Z")
+        #expect(unknown["time_bucket_start_utc"] == "2001-01-02T23:00:00Z")
         #expect(unknown["local_date"] == nil && unknown["local_hour"] == nil && unknown["utc_offset_minutes"] == nil)
         let unknownDay = GearExport.timeCells(base, offsetMinutes: nil, precision: .day)
-        #expect(unknownDay["time_bucket_start_utc"] == "2026-10-02T00:00:00Z")
+        #expect(unknownDay["time_bucket_start_utc"] == "2001-01-02T00:00:00Z")
     }
 
     @Test("Records keep the offset and build they were captured with, across a time change and another exporter")
@@ -260,8 +260,8 @@ struct GearExportTests {
     func dateOnly() throws {
         let records = [HackResultRecord(id: "l/1/1", date: base, summary: hack(1, origin: origin(offset: 480)))]
         let rows = try table(GearExport.make(snapshot(records), options: .init(timePrecision: .day), exportedAt: base))
-        #expect(rows.first?["local_hour"] == "" && rows.first?["local_date"] == "2026-10-03")
-        #expect(rows.first?["time_bucket_start_utc"] == "2026-10-02T16:00:00Z")
+        #expect(rows.first?["local_hour"] == "" && rows.first?["local_date"] == "2001-01-03")
+        #expect(rows.first?["time_bucket_start_utc"] == "2001-01-02T16:00:00Z")
         #expect(GearExport.Options().timePrecision == .hour, "The hour is the default")
     }
 
@@ -371,12 +371,12 @@ struct GearExportTests {
         let snapshot = snapshot(records, drops)
         let counts = GearExport.make(snapshot, options: .init(), exportedAt: base).counts
         let hourly = GearExport.text(snapshot, counts: counts, scope: GearExport.scope(of: .drop), options: .init(), now: base)
-        #expect(hourly.contains("2026-10-03 07:00–08:00 UTC+08:00"))
-        #expect(hourly.contains("2026-10-02 23:00–00:00 UTC"), "No offset: the UTC hour")
-        #expect(hourly.contains("2026-10-02 19:00–20:00 UTC-03:30"))
+        #expect(hourly.contains("2001-01-03 07:00–08:00 UTC+08:00"))
+        #expect(hourly.contains("2001-01-02 23:00–00:00 UTC"), "No offset: the UTC hour")
+        #expect(hourly.contains("2001-01-02 19:00–20:00 UTC-03:30"))
         let daily = GearExport.text(snapshot, counts: counts, scope: GearExport.scope(of: .hack),
                                     options: .init(timePrecision: .day), now: base)
-        #expect(daily.contains("2026-10-03 UTC+08:00") && daily.contains("2026-10-02 UTC"))
+        #expect(daily.contains("2001-01-03 UTC+08:00") && daily.contains("2001-01-02 UTC"))
         for text in [hourly, daily] {
             // Any hh:mm left must be a whole hour or a UTC offset.
             let minutes = text.matches(of: /(UTC[+-])?\d{2}:(\d{2})/).filter { $0.output.1 == nil && $0.output.2 != "00" }
@@ -394,13 +394,13 @@ struct GearExportTests {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("export-files-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: root) }
-        let other = root.appendingPathComponent("spikeB-2026-10-02T18-06-56Z", isDirectory: true)
+        let other = root.appendingPathComponent("spikeB-2001-01-02T18-06-56Z", isDirectory: true)
         try FileManager.default.createDirectory(at: other, withIntermediateDirectories: true)
         var utc = Calendar(identifier: .gregorian)
         utc.timeZone = try #require(TimeZone(identifier: "UTC"))
         let file = GearExport.make(snapshot([HackResultRecord(id: "l/1/1", date: base, summary: hack(1))]),
                                    options: .init(), exportedAt: base, calendar: utc)
-        #expect(file.fileName == "DynamicGlyph-gear-v1-2026-10-02.csv")
+        #expect(file.fileName == "DynamicGlyph-gear-v1-2001-01-02.csv")
         let first = try GearExportFiles.write(file, in: root)
         let second = try GearExportFiles.write(file, in: root)
         #expect(try Data(contentsOf: first) == file.data)

@@ -4,13 +4,13 @@ import Testing
 @testable import GlyphRecognition
 @testable import GlyphRecognitionImages
 
-/// Build 103: a gear read can be stopped (`GearReadCancellation`) when a new
+/// A gear read can be stopped (`GearReadCancellation`) when a new
 /// panel replaces the one it reads. Stopped, it throws and returns nothing;
 /// left alone, the token changes nothing. The time from the stop to the read's
-/// return is printed (`GEAR103-CANCEL-LATENCY`), for the fix notes. Vision runs
+/// return is printed (`GEAR103-CANCEL-LATENCY`). Vision runs
 /// on a thread of its own (`offPool`), never on Swift's shared pool, and the
 /// suite is serialized: the reads here run one at a time.
-@Suite("Build 103: stopping a gear read", .serialized, .timeLimit(.minutes(3)))
+@Suite("Stopping a gear read", .serialized, .timeLimit(.minutes(3)))
 struct GearReadCancellationTests {
     struct Frame: @unchecked Sendable { let image: CGImage }
 

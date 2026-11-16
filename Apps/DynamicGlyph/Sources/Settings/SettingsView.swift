@@ -1,8 +1,11 @@
 import SwiftUI
 import GlyphRecognition
+import TipKit
 
 /// Everything the home screen leaves out: the data files, fine-tuning the
 /// floating window, bug-report recording, and the diagnostics a tester reads.
+/// Short rows in three groups, each opening its page (SettingsPages.swift),
+/// the way the iPhone's own Settings works.
 struct SettingsView: View {
     @ObservedObject var engine: CaptureEngine
     var onRunSetup: () -> Void = {}
@@ -12,41 +15,26 @@ struct SettingsView: View {
     private var isBusy: Bool { engine.isCapturing || engine.isPreparing || engine.isStopping }
     /// `AppPreferences.playerFaction`'s key: empty until the player sets it.
     @AppStorage("game.playerFaction") private var playerFactionCode = ""
+    /// The Recognition engine row's value, following its page and Diagnostics.
+    @State private var recognitionSelection = RecognitionEngineSelection(AppPreferences())
+    @Environment(AppearanceStore.self) private var appearance
 
     var body: some View {
         NavigationStack {
             Form {
-                // Only once a Glyph list is loaded: before that there is no
-                // Glyph assistance to switch, and nothing here promotes it.
-                if GlyphAssistance.showsSwitch(hasGlyphList: engine.hasGlyphList) { reading }
-                gameLanguage
-                playerFaction
-                floatingWindow
-                dynamicIsland
-                albumRecording
-                bugReports
+                readingGroup
+                whileYouPlayGroup
+                recordingGroup
+                rateAndSource
                 support
-                Section {
-                    NavigationLink("Diagnostics") { DiagnosticsView(engine: engine) }
-                } footer: {
-                    Text("Technical readouts for testing and bug reports.")
-                }
                 Section {
                     Button("Run setup again") {
                         AppPreferences().completedSetupVersion = 0
                         onRunSetup()
                     }
                     .disabled(isBusy)
-                } footer: {
-                    Text("Walks through the Dynamic Island and the floating window again.",
-                         comment: "Settings footer under Run setup again.")
-                }
-                Section {
                     LabeledContent("Version", value: SupportContact.appVersion)
                 }
-                // Last, and quiet: where a Glyph list is added. Glyph
-                // assistance appears at the top once one is loaded.
-                glyphData
                 #if targetEnvironment(simulator)
                 ScreenshotDemoSection()
                 #endif
@@ -72,254 +60,259 @@ struct SettingsView: View {
             .softTopScrollEdge()
             .navigationTitle("Settings")
         }
+        .onReceive(RecognitionEngineSelection.changes) { recognitionSelection = $0 }
     }
 
-    // MARK: - What capture reads
+    // MARK: - Reading
 
-    private var reading: some View {
+    /// What capture reads. The rows open their pages and stay tappable while
+    /// capturing, so people can look; the controls inside are disabled.
+    private var readingGroup: some View {
         Section {
-            Toggle("Glyph assistance", isOn: $engine.glyphAssistancePreferred).disabled(isBusy)
-        } footer: {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(engine.glyphAssistancePreferred
-                     ? LocalizedStringResource("Follows each Glyph hack and shows its sequence while you draw, using your Glyph list.",
-                                               comment: "Settings footer: Glyph assistance on. Shown only once a Glyph list is loaded.")
-                     : LocalizedStringResource("Off: only the item panels after each hack are read and counted. Your Glyph list stays saved.",
-                                               comment: "Settings footer: Glyph assistance off. Shown only once a Glyph list is loaded."))
-                if isBusy { Text("Changes to reading apply the next time you tap Start.") }
-            }
-        }
-    }
-
-    // MARK: - Game language
-
-    /// Ingress has its own language setting, apart from the iPhone's; the
-    /// game's text can only be read in its own script.
-    private var gameLanguage: some View {
-        Section {
-            Picker("Game language", selection: $engine.gameLanguage) {
-                Text("Automatic").tag(GameLanguage?.none)
-                ForEach(GameLanguage.allCases, id: \.self) { language in
-                    // Each language in its own name, as a language menu shows it.
-                    Text(verbatim: language.nativeName).tag(GameLanguage?.some(language))
-                }
-            }
-            .disabled(isBusy)
-        } footer: {
-            VStack(alignment: .leading, spacing: 4) {
-                if engine.gameLanguage == nil {
-                    if let detected = engine.detectedGameLanguage {
-                        Text("Found from the game's screens: \(detected.nativeName).",
-                             comment: "Settings, game language. The placeholder is a language's own name, such as 日本語.")
-                    } else {
-                        Text("Found from the game's screens during your first hack.")
+            // Only once a Glyph list is loaded: before that there is no
+            // Glyph assistance to switch, and nothing here promotes it.
+            if showsGlyphAssistance {
+                Toggle(isOn: $engine.glyphAssistancePreferred) {
+                    Label {
+                        Text("Glyph assistance")
+                    } icon: {
+                        SettingsIcon(systemName: "hand.draw.fill", background: SettingsSquare.purple)
                     }
                 }
-                Text("Choose the language Ingress shows, if it isn't found. 繁體中文 and 한국어 come from translated text and haven't been checked in the game yet.")
-            }
-        }
-    }
-
-    /// The player's own faction, so a hacked portal can be told as theirs,
-    /// the other side's or Machina's. Read as each record is made.
-    private var playerFaction: some View {
-        Section {
-            Picker("Your faction", selection: $playerFactionCode) {
-                Text("Not set").tag("")
-                // Game terms, as the English game names them.
-                Text(verbatim: "Resistance").tag(PortalFaction.resistance.rawValue)
-                Text(verbatim: "Enlightened").tag(PortalFaction.enlightened.rawValue)
-            }
-        } footer: {
-            Text("Saved with each hack from now on, so exports can tell your faction's portals from the other side's and Machina's. Hacks already saved keep what they had.")
-        }
-    }
-
-    // MARK: - Glyph data
-
-    private var glyphData: some View {
-        Section {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Glyph list")
-                Text(engine.tableStatus).font(.caption).foregroundStyle(.secondary)
-            }
-            Button(engine.glyphCount == 0
-                   ? LocalizedStringResource("Add Glyph list…")
-                   : LocalizedStringResource("Replace Glyph list…")) {
-                onImportTable()
-            }
-            .disabled(isBusy)
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Sequence list · optional")
-                Group {
-                    // Predictions need a Glyph list, so until there is one the
-                    // row says only that nothing is added, as the Glyph list's does.
-                    if engine.sequenceListNotAdded && !engine.hasGlyphList {
-                        Text("Not added yet", comment: "Shape list status before a file is added.")
-                    } else {
-                        Text(engine.sequenceStatus)
-                    }
-                    // Only once a Glyph list is loaded: before that it would
-                    // be the one line here advertising Glyph assistance.
-                    if engine.sequenceCount == 0 && engine.hasGlyphList {
-                        Text("Add one to see predicted Glyphs before they appear.")
-                    }
-                }
-                .font(.caption).foregroundStyle(.secondary)
-            }
-            Button(engine.sequenceCount == 0
-                   ? LocalizedStringResource("Add sequence list…")
-                   : LocalizedStringResource("Replace sequence list…")) {
-                onImportSequences()
-            }
-            .disabled(isBusy)
-        } header: {
-            Text("Glyph data")
-        } footer: {
-            Text(isBusy
-                 ? LocalizedStringResource("Stop watching to change these files.")
-                 : LocalizedStringResource("The Glyph list is glyph_line.csv and the sequence list is glyph.csv. You can also drop them into this app's folder in the Files app.",
-                                           comment: "Settings footer. Keep the two file names exactly as written."))
-        }
-    }
-
-    // MARK: - Floating window
-
-    private var floatingWindow: some View {
-        Section {
-            PiPCanvasControls(pip: engine.pip)
-            Toggle("Hide playback controls", isOn: Binding(
-                get: { engine.pip.hidesPlaybackControls },
-                set: { engine.pip.setHidesPlaybackControls($0) }))
-            Toggle("Hide from screenshots", isOn: Binding(
-                get: { engine.pip.preventsCapture },
-                set: { engine.pip.setPreventsCapture($0) }))
-        } header: {
-            Text("Floating window")
-        } footer: {
-            VStack(alignment: .leading, spacing: 6) {
-                if let note = engine.pip.playbackControlsNote { Text(note) }
-                if engine.pip.preventsCapture {
-                    Text("Screenshots and screen recordings show the window as black, including this app's own screen recording.")
-                }
-                Text("Pinch the window to resize it, drag to move it, or tuck it against the side of the screen to reach what's underneath.")
-            }
-        }
-    }
-
-    // MARK: - Dynamic Island
-
-    private var dynamicIsland: some View {
-        Section {
-            Toggle("Animate changes", isOn: $engine.islandAnimationEnabled)
-        } header: {
-            Text("Dynamic Island")
-        } footer: {
-            Text("Off, the Island switches to the next Glyph instantly. On, iOS slides and fades each update, which can look like the Island is shaking.")
-        }
-    }
-
-    // MARK: - Recording to Photos
-
-    private var albumRecording: some View {
-        Section {
-            Toggle("Save a recording to Photos", isOn: Binding(
-                get: { engine.albumRecordingEnabled },
-                set: { enabled in Task { await engine.setAlbumRecording(enabled) } }))
                 .disabled(isBusy)
-            if engine.albumRecordingEnabled {
-                Toggle("Include sound", isOn: $engine.albumRecordingIncludesSound)
-                    .disabled(isBusy)
             }
-            if let status = engine.albumRecordingStatus, status.isRecording {
-                Text(recordingLine(status))
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(.secondary)
-                Button("Stop and save to Photos") { engine.stopAlbumRecording() }
+            NavigationLink {
+                GameLanguageSettingsPage(engine: engine)
+            } label: {
+                LabeledContent {
+                    // As the page's list names it.
+                    if let language = engine.gameLanguage {
+                        Text(verbatim: language.nativeName)
+                    } else {
+                        Text("Automatic")
+                    }
+                } label: {
+                    Label {
+                        Text("Game language")
+                    } icon: {
+                        SettingsIcon(systemName: "globe", background: SettingsSquare.blue)
+                    }
+                }
             }
-            if let warning = engine.recordingWarnings.messages[.photos] {
-                Text(warning).font(.caption).foregroundStyle(.orange)
+            NavigationLink {
+                PlayerFactionSettingsPage()
+            } label: {
+                LabeledContent {
+                    playerFactionValue
+                } label: {
+                    Label {
+                        Text("Your faction")
+                    } icon: {
+                        // The chosen side's colour; grey while not set.
+                        SettingsIcon(systemName: "flag.fill", background: playerFactionSquare)
+                    }
+                }
             }
-            if let result = engine.albumRecordingResult {
-                Text(albumResultLine(result))
-                    .font(.caption)
-                    .foregroundStyle(result == .saved ? Color.secondary : Color.orange)
+            NavigationLink {
+                GlyphDataSettingsPage(engine: engine, onImportTable: onImportTable,
+                                      onImportSequences: onImportSequences)
+            } label: {
+                LabeledContent {
+                    rowValue(.glyphData(count: engine.glyphCount))
+                } label: {
+                    Label {
+                        Text("Glyph data")
+                    } icon: {
+                        SettingsIcon(systemName: "list.bullet.rectangle.fill", background: SettingsSquare.orange)
+                    }
+                }
+            }
+            NavigationLink {
+                RecognitionEngineSettingsPage(engine: engine)
+            } label: {
+                LabeledContent {
+                    Text(verbatim: recognitionSelection.label)
+                } label: {
+                    Label {
+                        Text("Recognition engine")
+                    } icon: {
+                        SettingsIcon(systemName: "cpu", background: SettingsSquare.brown)
+                    }
+                }
             }
         } header: {
-            Text("Recording")
+            Text(LocalizedStringResource("settings.group.reading", defaultValue: "Reading",
+                                         comment: "Settings group header: Glyph assistance, game language, faction and Glyph data, what capture reads. Not the Appearance preview's Reading, the Glyph being read."))
         } footer: {
-            VStack(alignment: .leading, spacing: 6) {
-                if engine.albumAccessDenied {
-                    Text("Allow Dynamic Glyph to add to Photos in the Settings app to use this.")
-                        .foregroundStyle(.orange)
-                }
-                Text("Records the whole screen during the next session, including notifications, and saves the video to Photos when you stop. It stops by itself after 30 minutes or 1 GB. Separate from the bug report recording.")
-                if engine.albumRecordingEnabled {
-                    Text("Sound is what the phone plays, such as the game's. The microphone is never recorded.")
-                    recordingWarningExplanation
+            // The one footer on the main page besides Get support's: what the
+            // switch does, beside it.
+            if showsGlyphAssistance {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(engine.glyphAssistancePreferred
+                         ? LocalizedStringResource("Follows each Glyph hack and shows its sequence while you draw, using your Glyph list.",
+                                                   comment: "Settings footer: Glyph assistance on. Shown only once a Glyph list is loaded.")
+                         : LocalizedStringResource("Off: only the item panels after each hack are read and counted. Your Glyph list stays saved.",
+                                                   comment: "Settings footer: Glyph assistance off. Shown only once a Glyph list is loaded."))
+                    if isBusy { Text("Changes to reading apply the next time you tap Start.") }
                 }
             }
         }
     }
 
-    private func albumResultLine(_ result: AlbumRecordingResult) -> String {
-        switch result {
-        case .saved:
-            return String(localized: "Saved to Photos.", comment: "After a recording was added to Photos.")
-        case .keptInFiles(let name, let reason):
-            return String(localized: "Couldn't save to Photos (\(reason)). The video is in this app's folder in the Files app as \(name).",
-                          comment: "First placeholder: the system's reason. Second: the video's file name.")
-        case .nothingRecorded:
-            return String(localized: "Nothing was recorded.", comment: "A recording ended before any frame was written.")
-        case .failed(let reason):
-            return String(localized: "The recording couldn't be saved: \(reason)",
-                          comment: "The placeholder is a technical reason.")
+    private var showsGlyphAssistance: Bool {
+        GlyphAssistance.showsSwitch(hasGlyphList: engine.hasGlyphList)
+    }
+
+    /// The faction picker's own words for the chosen value.
+    @ViewBuilder private var playerFactionValue: some View {
+        switch playerFactionCode {
+        case PortalFaction.resistance.rawValue: Text(verbatim: "Resistance")
+        case PortalFaction.enlightened.rawValue: Text(verbatim: "Enlightened")
+        default: Text("Not set")
         }
     }
 
-    // MARK: - Bug reports
+    /// The faction row's square: the chosen side's colour, grey when not set.
+    private var playerFactionSquare: Color {
+        switch playerFactionCode {
+        case PortalFaction.resistance.rawValue: SettingsSquare.resistance
+        case PortalFaction.enlightened.rawValue: SettingsSquare.enlightened
+        default: SettingsSquare.factionUnset
+        }
+    }
 
-    private var bugReports: some View {
+    // MARK: - While you play
+
+    private var whileYouPlayGroup: some View {
         Section {
-            NavigationLink("Session logs and reports") {
-                SessionReportsView(activeFolder: engine.isCapturing || engine.isStopping
-                                   ? engine.evidenceFolder : nil)
-            }
-            Toggle("Save logs and screenshots", isOn: $engine.sessionDiagnosticsEnabled)
-                .disabled(isBusy)
-            Toggle("Record the screen", isOn: Binding(
-                get: { engine.debugRecordingEnabled }, set: { engine.setDebugRecording($0) }))
-                .disabled(isBusy || !engine.sessionDiagnosticsEnabled)
-            if let status = engine.recordingStatus {
-                Text(recordingLine(status))
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(.secondary)
-                if status.isRecording {
-                    Button("Stop recording", role: .destructive) { engine.stopRecording() }
+            NavigationLink {
+                FloatingWindowSettingsPage(engine: engine)
+            } label: {
+                Label {
+                    Text("Floating window")
+                } icon: {
+                    SettingsIcon(systemName: "pip.fill", background: SettingsSquare.indigo)
                 }
             }
-            if let warning = engine.recordingWarnings.messages[.bugReport] {
-                Text(warning).font(.caption).foregroundStyle(.orange)
+            NavigationLink {
+                DynamicIslandSettingsPage(engine: engine)
+            } label: {
+                Label {
+                    Text("Dynamic Island")
+                } icon: {
+                    SettingsIcon(systemName: "capsule.fill", background: SettingsSquare.island)
+                }
+            }
+            appearanceRow
+        } header: {
+            Text("While you play", comment: "Settings group header: the floating window, the Dynamic Island and Appearance.")
+        }
+    }
+
+    // MARK: - Recording and reports
+
+    /// A running recording shows on its row, in orange, so it's never
+    /// hidden behind a page.
+    private var recordingGroup: some View {
+        Section {
+            NavigationLink {
+                AlbumRecordingSettingsPage(engine: engine)
+            } label: {
+                LabeledContent {
+                    rowValue(.switched(isOn: engine.albumRecordingEnabled,
+                                       runningLine: runningLine(engine.albumRecordingStatus)))
+                } label: {
+                    Label {
+                        Text("Recording")
+                    } icon: {
+                        SettingsIcon(systemName: "record.circle.fill", background: SettingsSquare.red)
+                    }
+                }
+            }
+            NavigationLink {
+                BugReportsSettingsPage(engine: engine)
+            } label: {
+                LabeledContent {
+                    rowValue(.switched(isOn: engine.sessionDiagnosticsEnabled,
+                                       runningLine: runningLine(engine.recordingStatus)))
+                } label: {
+                    Label {
+                        Text("Bug reports")
+                    } icon: {
+                        SettingsIcon(systemName: "ladybug.fill", background: SettingsSquare.green)
+                    }
+                }
             }
         } header: {
-            Text("Bug reports")
-        } footer: {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("When this is on, each session keeps a log and pictures of what the app saw, which can include notifications on screen. Recording the screen needs it.")
-                if engine.debugRecordingEnabled { recordingWarningExplanation }
-                Label("This records everything on your screen, not just the game: notifications, messages and anything you type. It's saved unencrypted in the app's folder and stops after 10 minutes or 300 MB. Turn it on only to report a problem, and watch the video yourself before sharing it.",
-                      systemImage: "exclamationmark.triangle")
-                    .foregroundStyle(engine.debugRecordingEnabled ? .orange : .secondary)
+            Text("Recording and reports", comment: "Settings group header: recording to Photos and bug reports.")
+        }
+    }
+
+    private func runningLine(_ status: DebugRecordingStatus?) -> String? {
+        guard let status, status.isRecording else { return nil }
+        return settingsRecordingLine(status)
+    }
+
+    /// A row's trailing value: secondary, as `LabeledContent` styles it, or
+    /// orange with steady digits while a recording runs.
+    @ViewBuilder private func rowValue(_ value: SettingsRowValue) -> some View {
+        if value.isRunning {
+            Text(verbatim: value.text).monospacedDigit().foregroundStyle(.orange)
+        } else {
+            Text(verbatim: value.text)
+        }
+    }
+
+    // MARK: - Appearance
+
+    /// The theme and app icon, free for everyone. Its square is the
+    /// theme's own tint.
+    private var appearanceRow: some View {
+        NavigationLink {
+            AppearanceView()
+                // What the themes tip suggests is done.
+                .onAppear { AppTips.retire(.appearance) }
+        } label: {
+            Label {
+                Text("Appearance")
+            } icon: {
+                SettingsIcon(systemName: "paintpalette.fill", background: appearance.theme.displayTint)
             }
         }
     }
 
-    private var recordingWarningExplanation: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Warns once at 90% of the size limit or with one minute remaining.")
-            if engine.recordingWarnings.notificationsAllowed == false {
-                Text("Notifications are off. Warnings will appear in this app. Allow notifications in Settings to see them while playing.")
-                    .foregroundStyle(.orange)
+    // MARK: - Rate and source code
+
+    /// Two rows that leave the app, styled like Get support's: no header,
+    /// no footer, no chevron.
+    private var rateAndSource: some View {
+        Section {
+            Link(destination: RatingLinks.writeReview) {
+                Label("Rate on the App Store", systemImage: "star")
+            }
+            Link(destination: RatingLinks.sourceCode) {
+                Label {
+                    // One text, so at large sizes both lines flow from the
+                    // leading edge like the Rate row's, and VoiceOver reads
+                    // title then subtitle. A line separator, not "\n": at
+                    // accessibility sizes the icon sits inline as the first
+                    // line's indent, and a new paragraph would get it again.
+                    // The subtitle is the label grey of Email's address, not
+                    // a shade of the link's tint.
+                    Text("Source code on GitHub", comment: "Settings row that opens the app's source code on GitHub.")
+                        + Text(verbatim: "\u{2028}")
+                        + Text("If it's useful to you, give it a star.",
+                               comment: "Settings, under Source code on GitHub. A star is GitHub's bookmark.")
+                            .font(.footnote)
+                            .foregroundStyle(Color(.secondaryLabel))
+                } icon: {
+                    Image(systemName: "chevron.left.forwardslash.chevron.right")
+                }
+            }
+            .contextMenu {
+                Button("Copy link", systemImage: "doc.on.doc") {
+                    UIPasteboard.general.url = RatingLinks.sourceCode
+                }
             }
         }
     }
@@ -354,16 +347,28 @@ struct SettingsView: View {
         } header: {
             Text("Get support")
         } footer: {
-            Text("Report a problem or ask a question. For a problem with recognition, share a report from Session logs and reports along with your message.")
+            Text("Report a problem or ask a question. For a problem with recognition, share a report from Bug reports › Session logs and reports along with your message.")
         }
     }
+}
 
-    private func recordingLine(_ status: DebugRecordingStatus) -> String {
-        // The recorder's own messages are technical and stay in English.
-        if let message = status.message, !status.isRecording { return message }
-        let elapsed = Duration.seconds(Int(status.coveredDuration)).formatted(.time(pattern: .minuteSecond))
-        let size = ByteCountFormatter.string(fromByteCount: Int64(status.byteCount), countStyle: .file)
-        return String(localized: "Recording · \(elapsed) · \(size)",
-                      comment: "Screen recording progress. First: minutes and seconds recorded. Second: file size.")
-    }
+/// The squares' colours, iOS Settings' own. They stay the same in Dark;
+/// only the Dynamic Island's lightens, so it isn't lost on a dark row.
+enum SettingsSquare {
+    static let purple = Color(red: 0xAF / 255, green: 0x52 / 255, blue: 0xDE / 255)
+    static let blue = Color(red: 0x00 / 255, green: 0x7A / 255, blue: 0xFF / 255)
+    static let brown = Color(red: 0xA2 / 255, green: 0x84 / 255, blue: 0x5E / 255)
+    static let orange = Color(red: 0xFF / 255, green: 0x95 / 255, blue: 0x00 / 255)
+    static let indigo = Color(red: 0x58 / 255, green: 0x56 / 255, blue: 0xD6 / 255)
+    static let red = Color(red: 0xFF / 255, green: 0x3B / 255, blue: 0x30 / 255)
+    static let green = Color(red: 0x34 / 255, green: 0xC7 / 255, blue: 0x59 / 255)
+    // The faction row: one value each, the same in light and dark.
+    static let factionUnset = Color(red: 0x8E / 255, green: 0x8E / 255, blue: 0x93 / 255)
+    static let resistance = Color(red: 0x0E / 255, green: 0x86 / 255, blue: 0xCF / 255)
+    static let enlightened = Color(red: 0x05 / 255, green: 0x96 / 255, blue: 0x3F / 255)
+    static let island = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0x48 / 255, green: 0x48 / 255, blue: 0x4A / 255, alpha: 1)
+            : UIColor(red: 0x1C / 255, green: 0x1C / 255, blue: 0x1E / 255, alpha: 1)
+    })
 }

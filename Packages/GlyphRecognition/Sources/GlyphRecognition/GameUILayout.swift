@@ -2,9 +2,9 @@
 ///
 /// Every number here was measured, not guessed, from 603 x 1311 captures of the
 /// English portrait layout: the eight recording fixtures in
-/// `Fixtures/Assets/Screenshots/Recording/` and the field screenshots in
-/// `spikeB-2026-09-18T14-11-47Z/`. `GameUILayoutTests` re-measures them, so a
-/// changed layout fails a test instead of silently mis-cropping.
+/// `Fixtures/Recording/` and the screenshots of a field session.
+/// `GameUILayoutTests` re-measures them, so a changed layout fails a test
+/// instead of silently mis-cropping.
 ///
 /// Fractions rather than pixels because the capture resolution is chosen by the
 /// system and has already differed between runs. They are *not* claimed to hold
@@ -53,7 +53,7 @@ public struct GameUILayout: Sendable, Equatable {
     public var inputTimerEndpointTolerance = 0.035
 
     /// A notification banner over the strip lit at least 0.85 of the columns
-    /// of every covered row in the 2026-09-23 field recording; four indicators
+    /// of every covered row in a field recording; four indicators
     /// with the gold glow lit at most 0.24. Five indicators stay well below.
     public var bannerMinimumRowCoverage = 0.75
     /// Shorter runs of lit rows at the top of the strip are the lower edge of
@@ -69,6 +69,32 @@ public struct GameUILayout: Sendable, Equatable {
     /// 1218 px frame.
     func bannerEdgeTolerance(frameHeight: Int) -> Int {
         max(1, Int((0.002 * Double(frameHeight)).rounded(.up)))
+    }
+
+    /// Columns at each side of the frame that no slot indicator can reach
+    /// (`margin`) or start in (`zone`), less a hundredth of the width (6 px
+    /// at 603) spare for antialiasing and rounding.
+    ///
+    /// The outer indicators of a full row are centred at most (n - 1) / 2 x
+    /// `slotCenterPitch` + `slotCenterTolerance` from the centre, and each is
+    /// between `slotMarkerMinimumWidth` and `slotMarkerMaximumWidth` wide.
+    /// With the defaults and five slots, no indicator comes within 0.05 of the
+    /// width of either edge (0.5 - 0.32 - 0.035 - 0.095), so `margin` is 0.04.
+    /// None starts within 0.1875 of the right edge, or ends within 0.1875 of
+    /// the left (0.5 - 0.32 - 0.035 + 0.0425), so `zone` is 0.1775. The
+    /// measured row's outer indicators lie from 0.115 to 0.885.
+    ///
+    /// A run of indicator-coloured columns wholly within `zone` of an edge
+    /// holds no whole indicator, and one that reaches into `margin` holds
+    /// something that is no part of one: an object at the screen's edge, such
+    /// as a tucked floating window's tab.
+    func slotEdgeColumns(frameWidth: Int, maximumSlots: Int) -> (margin: Int, zone: Int) {
+        let allowance = 0.01
+        let outerCentre = 0.5 - Double(maximumSlots - 1) / 2 * slotCenterPitch - slotCenterTolerance
+        let width = Double(frameWidth)
+        let margin = Int((outerCentre - slotMarkerMaximumWidth / 2 - allowance) * width)
+        let zone = Int((outerCentre + slotMarkerMinimumWidth / 2 - allowance) * width)
+        return (max(0, margin), max(0, zone))
     }
 
     /// The whole band a caller must decode in colour to use this layout.

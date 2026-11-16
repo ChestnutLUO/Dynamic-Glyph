@@ -347,8 +347,8 @@ struct HackResultsTests {
     @Test("A panel picture resolves only to one gear JPEG inside one session folder")
     func picturePaths() throws {
         let root = URL(fileURLWithPath: "/tmp/documents", isDirectory: true)
-        let good = HackGearPicture(path: "spikeB-2026-09-25T01-56-13Z/gear-110.310000.jpg", stage: .portal)
-        #expect(good.url(in: root)?.path == "/tmp/documents/spikeB-2026-09-25T01-56-13Z/gear-110.310000.jpg")
+        let good = HackGearPicture(path: "spikeB-2001-01-03T01-56-13Z/gear-110.310000.jpg", stage: .portal)
+        #expect(good.url(in: root)?.path == "/tmp/documents/spikeB-2001-01-03T01-56-13Z/gear-110.310000.jpg")
         for path in ["../spikeB-x/gear-1.jpg", "spikeB-x/../gear-1.jpg", "spikeB-x/sub/gear-1.jpg", "/spikeB-x/gear-1.jpg",
                      "spikeB-x/frames.csv", "other/gear-1.jpg", "spikeB-x/", "gear-1.jpg"] {
             #expect(HackGearPicture(path: path, stage: .bonus).url(in: root) == nil, "\(path)")

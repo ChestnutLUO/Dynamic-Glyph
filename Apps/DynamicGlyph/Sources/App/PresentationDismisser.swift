@@ -38,6 +38,12 @@ enum PresentationDismisser {
         }
     }
 
+    /// Whether the app presents anything at all: a sheet, alert, dialog,
+    /// the file importer or a system sheet over the window.
+    static var isPresenting: Bool {
+        keyWindow?.rootViewController?.presentedViewController != nil
+    }
+
     private static var keyWindow: UIWindow? {
         UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
             .flatMap(\.windows).first(where: \.isKeyWindow)

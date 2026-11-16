@@ -11,8 +11,8 @@ public struct GearDropObservationSession: Sendable {
         public var maximumWaiting = 16
         /// How soon after a group that ended on its Bonus panel an empty
         /// Bonus-only group counts as that panel found again. An untouched
-        /// panel shows for about 2 s; pickup sparks hid a tester's Bonus
-        /// panel from the detector for 1.05 s while it stayed on screen.
+        /// panel shows for about 2 s; in a field recording pickup sparks hid a
+        /// Bonus panel from the detector for 1.05 s while it stayed on screen.
         /// The tracker holds a group whose Bonus rows are unconfirmed, so
         /// such a panel joins it; this covers a panel that left confirmed.
         public var repeatedBonusWindow = 2.0
